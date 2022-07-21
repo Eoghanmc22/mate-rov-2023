@@ -20,7 +20,7 @@ pub fn write<S: Encode, W: io::Write>(data: &S, writer: &mut W) -> anyhow::Resul
 
 #[cfg(test)]
 mod tests {
-    use std::io::{Cursor, Seek, SeekFrom, Write};
+    use std::io::{Cursor, Seek, SeekFrom};
     use crate::io::data::{read, write};
     use bincode::{Encode, Decode};
 
@@ -51,7 +51,7 @@ mod tests {
         let amount = write(&packet, &mut buffer).expect("Write fail");
 
         // read packet back from buffer
-        let read_packet = read(&mut &buffer[..amount]).expect("Read fail");
+        let read_packet = read(&mut &buffer[..amount]).expect("Read fail (ended)").expect("Read fail");
 
         // verify packet was read correctly
         assert_eq!(packet, read_packet);
@@ -119,11 +119,11 @@ mod tests {
         buffer.seek(SeekFrom::Start(0)).expect("Seek fail");
 
         // read packets back from buffer
-        let read_packet1 = read(&mut buffer).expect("Read fail");
-        let read_packet2 = read(&mut buffer).expect("Read fail");
-        let read_packet3 = read(&mut buffer).expect("Read fail");
-        let read_packet4 = read(&mut buffer).expect("Read fail");
-        let read_packet5 = read(&mut buffer).expect("Read fail");
+        let read_packet1 = read(&mut buffer).expect("Read fail (ended)").expect("Read fail");
+        let read_packet2 = read(&mut buffer).expect("Read fail (ended)").expect("Read fail");
+        let read_packet3 = read(&mut buffer).expect("Read fail (ended)").expect("Read fail");
+        let read_packet4 = read(&mut buffer).expect("Read fail (ended)").expect("Read fail");
+        let read_packet5 = read(&mut buffer).expect("Read fail (ended)").expect("Read fail");
 
         // verify packets were read correctly
         assert_eq!(packet1, read_packet1);
