@@ -1,9 +1,17 @@
 use std::io;
 use anyhow::Context;
 use bincode::{config, Encode, Decode};
+use bincode::error::DecodeError;
 
-pub fn read<D: Decode, R: io::Read>(reader: & mut R) -> anyhow::Result<D> {
-    bincode::decode_from_std_read(reader, config::standard()).context("Could not read")
+pub fn read<D: Decode, R: io::Read>(reader: &mut R) -> Option<anyhow::Result<D>> {
+    match bincode::decode_from_std_read(reader, config::standard()) {
+        Err(DecodeError::UnexpectedEnd) => {
+            None
+        }
+        res => {
+            Some(res.context("Could not read"))
+        }
+    }
 }
 
 pub fn write<S: Encode, W: io::Write>(data: &S, writer: &mut W) -> anyhow::Result<usize> {

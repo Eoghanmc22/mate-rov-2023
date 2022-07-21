@@ -8,7 +8,9 @@ edition = "2021"
 [dependencies]
 bincode = "2.0.0-rc.1"
 
-mio = "0.8"
+mio = { version = "0.8", features = ["os-poll", "net"] }
 flate2 = "1.0"
 
-anyhow = "1"
+anyhow = { version = "1", features = ["backtrace"] }
+
+crossbeam = "0.8"
