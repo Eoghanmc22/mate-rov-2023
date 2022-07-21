@@ -1,3 +1,6 @@
+pub mod packets;
+pub mod io;
+
 #[cfg(test)]
 mod tests {
     #[test]
