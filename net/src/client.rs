@@ -4,7 +4,7 @@ use std::net::SocketAddr;
 use std::time::Duration;
 use anyhow::Context;
 use bincode::{Decode, Encode};
-use crossbeam::channel::{bounded, Receiver, Sender};
+use crossbeam::channel::{Receiver, Sender, unbounded};
 use mio::{Events, Interest, Poll, Token};
 use mio::net::TcpStream;
 use crate::net;
@@ -12,7 +12,7 @@ use crate::net;
 const CONNECTION: Token = Token(0);
 
 pub fn start_client<Out: Encode + Send + 'static, In: Decode, Handler: FnMut(In, &Sender<Out>) + Send + 'static>(addr: SocketAddr, mut packet_handler: Handler) -> Sender<Out> {
-    let (packet_producer, packet_provider) = bounded(25);
+    let (packet_producer, packet_provider) = unbounded();
 
     {
         let packet_producer = packet_producer.clone();
@@ -41,7 +41,7 @@ fn client<Out: Encode, In: Decode, Handler: FnMut(In)>(addr: SocketAddr, packet_
     //TODO Compression?
 
     loop {
-        poll.poll(&mut events, Some(Duration::from_millis(10))).context("Could not poll")?;
+        poll.poll(&mut events, Some(Duration::from_millis(1))).context("Could not poll")?;
 
         for event in &events {
             match event.token() {
