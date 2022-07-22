@@ -21,7 +21,7 @@ pub fn write<S: Encode, W: io::Write>(data: &S, writer: &mut W) -> anyhow::Resul
 #[cfg(test)]
 mod tests {
     use std::io::{Cursor, Seek, SeekFrom};
-    use crate::io::data::{read, write};
+    use crate::data::{read, write};
     use bincode::{Encode, Decode};
 
     #[test]

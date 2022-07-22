@@ -3,7 +3,7 @@ use bincode::{Decode, Encode};
 use mio::event::Event;
 use crossbeam::channel::Receiver;
 use anyhow::Context;
-use crate::io::data;
+use crate::data;
 
 pub fn handle_event<Out: Encode, In: Decode, Handler: FnMut(In), S: Read + Write>(
     event: &Event,
@@ -20,43 +20,79 @@ pub fn handle_event<Out: Encode, In: Decode, Handler: FnMut(In), S: Read + Write
         *connected = true;
         *writeable = true;
 
-        let (close, would_block) = write_remaining(connection, write_buffer).context("write_remaining")?;
-        if close { return Ok(true) }
-
-        if !would_block {
-            for packet in packet_provider {
-                packet_buffer.clear();
-                let amount = data::write(&packet, packet_buffer).unwrap();
-
-                let (amount_written, would_block) = write(connection, &packet_buffer[..amount]).context("write")?;
-                if amount_written == 0 { return Ok(true) }
-                if amount_written != amount { write_buffer.write(&packet_buffer[amount_written..]).unwrap(); }
-
-                if would_block {
-                    *writeable = false;
-                    break
-                }
-            }
+        if try_write(connection, packet_buffer, write_buffer, packet_provider, writeable, connected).context("try_write")? {
+            return Ok(true)
         }
     }
 
     if event.is_readable() && *connected {
-        let amount_read = read(connection, read_buffer).context("read")?;
-        if amount_read == 0 { return Ok(true) }
+        if try_read(connection, read_buffer, packet_handler, connected).context("try_write")? {
+            return Ok(true)
+        }
+    }
 
-        let max_pos = read_buffer.position() as usize;
-        let mut reader = Cursor::new(&read_buffer.get_ref()[..max_pos]);
+    Ok(false)
+}
 
-        loop {
-            match data::read(&mut reader) {
-                Some(Ok(packet)) => (packet_handler)(packet),
-                Some(Err(err)) => return Err(err).context("parse"),
-                None => {
-                    let position = reader.position();
-                    read_buffer.get_mut().copy_within(position as usize.., 0);
-                    read_buffer.seek(SeekFrom::Current(-(position as i64))).expect("seek");
-                    break
-                }
+pub fn try_write<Out: Encode, S: Read + Write>(
+    connection: &mut S,
+    packet_buffer: &mut Vec<u8>,
+    write_buffer: &mut Cursor<Vec<u8>>,
+    packet_provider: &Receiver<Out>,
+    writeable: &mut bool,
+    connected: &bool
+) -> anyhow::Result<bool> {
+    if !*connected || !*writeable {
+        return Ok(false);
+    }
+
+    let (close, would_block) = write_remaining(connection, write_buffer).context("write_remaining")?;
+    if close { return Ok(true) }
+
+    if !would_block {
+        for packet in packet_provider.try_iter() {
+            packet_buffer.clear();
+            let amount = data::write(&packet, packet_buffer).unwrap();
+
+            let (amount_written, would_block) = write(connection, &packet_buffer[..amount]).context("write")?;
+            if amount_written == 0 { return Ok(true) }
+            if amount_written != amount { write_buffer.write(&packet_buffer[amount_written..]).unwrap(); }
+
+            if would_block {
+                *writeable = false;
+                break
+            }
+        }
+    }
+
+    Ok(false)
+}
+
+pub fn try_read<In: Decode, Handler: FnMut(In), S: Read + Write>(
+    connection: &mut S,
+    read_buffer: &mut Cursor<Vec<u8>>,
+    packet_handler: &mut Handler,
+    connected: &mut bool
+) -> anyhow::Result<bool> {
+    if !*connected {
+        return Ok(false);
+    }
+
+    let amount_read = read(connection, read_buffer).context("read")?;
+    if amount_read == 0 { return Ok(true) }
+
+    let max_pos = read_buffer.position() as usize;
+    let mut reader = Cursor::new(&read_buffer.get_ref()[..max_pos]);
+
+    loop {
+        match data::read(&mut reader) {
+            Some(Ok(packet)) => (packet_handler)(packet),
+            Some(Err(err)) => return Err(err).context("parse"),
+            None => {
+                let position = reader.position();
+                read_buffer.get_mut().copy_within(position as usize.., 0);
+                read_buffer.seek(SeekFrom::Current(-(position as i64))).expect("seek");
+                break
             }
         }
     }
@@ -66,6 +102,7 @@ pub fn handle_event<Out: Encode, In: Decode, Handler: FnMut(In), S: Read + Write
 
 fn write_remaining<W: Write>(writer: &mut W, write_buffer: &mut Cursor<Vec<u8>>) -> anyhow::Result<(bool, bool)> { // close, would block
     let cursor = write_buffer.position() as usize;
+    if cursor == 0 { return Ok((false, false)) }
 
     let (amount_written, would_block) = write(writer, &write_buffer.get_ref()[..cursor]).context("write")?;
     if amount_written == 0 { return Ok((true, true)) }
@@ -111,7 +148,7 @@ fn read<R: Read>(reader: &mut R, read_buffer: &mut Cursor<Vec<u8>>) -> anyhow::R
 #[cfg(test)]
 mod tests {
     use std::io::{Cursor, Error, ErrorKind, Read, Seek, SeekFrom, Write};
-    use crate::io::net::{read, write};
+    use crate::net::{read, write};
 
     // constant stuff
     const LEN: usize = 255;

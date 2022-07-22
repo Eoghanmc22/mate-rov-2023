@@ -7,3 +7,4 @@ edition = "2021"
 
 [dependencies]
 net = { path = "../net" }
+packets = { path = "../packets" }

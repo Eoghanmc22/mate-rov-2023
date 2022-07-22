@@ -1,22 +1,26 @@
 use std::thread;
 use std::io::{Cursor, ErrorKind};
 use std::net::SocketAddr;
+use std::time::Duration;
 use anyhow::{bail, Context};
 use bincode::{Decode, Encode};
 use crossbeam::channel::{bounded, Receiver, Sender};
 use mio::{Events, Interest, Poll, Token};
-use mio::net::{TcpListener, TcpStream};
-use crate::io::net;
+use mio::net::TcpListener;
+use crate::net;
 
 const SERVER: Token = Token(0);
 const CLIENT: Token = Token(1);
 
-pub fn start_server<Out: Encode + Send + 'static, In: Decode, Handler: FnMut(In) + Send + 'static>(addr: SocketAddr, packet_handler: Handler) -> Sender<Out> {
+pub fn start_server<Out: Encode + Send + 'static, In: Decode, Handler: FnMut(In, &Sender<Out>) + Send + 'static>(addr: SocketAddr, mut packet_handler: Handler) -> Sender<Out> {
     let (packet_producer, packet_provider) = bounded(25);
 
-    thread::spawn(move || {
-        server(addr, packet_provider, packet_handler).unwrap();
-    });
+    {
+        let packet_producer = packet_producer.clone();
+        thread::spawn(move || {
+            server(addr, packet_provider, |packet| (packet_handler)(packet, &packet_producer)).unwrap();
+        });
+    }
 
     packet_producer
 }
@@ -40,7 +44,7 @@ fn server<Out: Encode, In: Decode, Handler: FnMut(In)>(addr: SocketAddr, packet_
     //TODO Compression?
 
     loop {
-        poll.poll(&mut events, None).context("Poll")?;
+        poll.poll(&mut events, Some(Duration::from_millis(10))).context("Poll")?;
 
         for event in &events {
             match event.token() {
@@ -71,9 +75,20 @@ fn server<Out: Encode, In: Decode, Handler: FnMut(In)>(addr: SocketAddr, packet_
 
                     if net::handle_event(event, connection, &mut packet_buffer, &mut read_buffer, &mut write_buffer, &packet_provider, &mut packet_handler, &mut writable, &mut connected).context("handle event")? {
                         poll.registry().deregister(connection)?;
+                        writable = false;
+                        connected = false;
+                        client = None;
                     }
                 }
                 _ => {}
+            }
+        }
+
+        if let Some(ref mut connection) = client {
+            if net::try_write(connection, &mut packet_buffer, &mut write_buffer, &packet_provider, &mut writable, &mut connected).context("handle event")? {
+                poll.registry().deregister(connection)?;
+                writable = false;
+                connected = false;
             }
         }
     }
