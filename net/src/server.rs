@@ -73,11 +73,13 @@ fn server<Out: Encode, In: Decode, Handler: FnMut(In)>(addr: SocketAddr, packet_
                 CLIENT => {
                     let connection = client.as_mut().unwrap();
 
-                    if net::handle_event(event, connection, &mut packet_buffer, &mut read_buffer, &mut write_buffer, &packet_provider, &mut packet_handler, &mut writable, &mut connected).context("handle event")? {
+                    if net::handle_event(event, connection, &mut packet_buffer, &mut read_buffer, &mut write_buffer, &packet_provider, &mut packet_handler, &mut writable, &mut connected) {
                         poll.registry().deregister(connection)?;
                         writable = false;
                         connected = false;
                         client = None;
+                        read_buffer.set_position(0);
+                        write_buffer.set_position(0);
                     }
                 }
                 _ => {}
@@ -85,10 +87,13 @@ fn server<Out: Encode, In: Decode, Handler: FnMut(In)>(addr: SocketAddr, packet_
         }
 
         if let Some(ref mut connection) = client {
-            if net::try_write(connection, &mut packet_buffer, &mut write_buffer, &packet_provider, &mut writable, &mut connected).context("handle event")? {
+            if net::try_write(connection, &mut packet_buffer, &mut write_buffer, &packet_provider, &mut writable, &mut connected) {
                 poll.registry().deregister(connection)?;
                 writable = false;
                 connected = false;
+                client = None;
+                read_buffer.set_position(0);
+                write_buffer.set_position(0);
             }
         }
     }

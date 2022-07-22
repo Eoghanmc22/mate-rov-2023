@@ -5,6 +5,8 @@ use crossbeam::channel::Receiver;
 use anyhow::Context;
 use crate::data;
 
+const PROBE_LEN: usize = 4096;
+
 pub fn handle_event<Out: Encode, In: Decode, Handler: FnMut(In), S: Read + Write>(
     event: &Event,
     connection: &mut S,
@@ -15,23 +17,23 @@ pub fn handle_event<Out: Encode, In: Decode, Handler: FnMut(In), S: Read + Write
     packet_handler: &mut Handler,
     writeable: &mut bool,
     connected: &mut bool
-) -> anyhow::Result<bool> {
+) -> bool {
     if event.is_writable() {
         *connected = true;
         *writeable = true;
 
-        if try_write(connection, packet_buffer, write_buffer, packet_provider, writeable, connected).context("try_write")? {
-            return Ok(true)
+        if try_write(connection, packet_buffer, write_buffer, packet_provider, writeable, connected) {
+            return true
         }
     }
 
     if event.is_readable() && *connected {
-        if try_read(connection, read_buffer, packet_handler, connected).context("try_read")? {
-            return Ok(true)
+        if try_read(connection, read_buffer, packet_handler, connected) {
+            return true
         }
     }
 
-    Ok(false)
+    false
 }
 
 pub fn try_write<Out: Encode, S: Read + Write>(
@@ -41,21 +43,21 @@ pub fn try_write<Out: Encode, S: Read + Write>(
     packet_provider: &Receiver<Out>,
     writeable: &mut bool,
     connected: &bool
-) -> anyhow::Result<bool> {
+) -> bool {
     if !*connected || !*writeable {
-        return Ok(false);
+        return false;
     }
 
-    let (close, would_block) = write_remaining(connection, write_buffer).context("write_remaining")?;
-    if close { return Ok(true) }
+    let (close, would_block) = write_remaining(connection, write_buffer);
+    if close { return true }
 
     if !would_block {
         for packet in packet_provider.try_iter() {
             packet_buffer.clear();
             let amount = data::write(&packet, packet_buffer).unwrap();
 
-            let (amount_written, should_close, would_block) = write(connection, &packet_buffer[..amount]).context("write")?;
-            if should_close { return Ok(true) }
+            let (amount_written, should_close, would_block) = write(connection, &packet_buffer[..amount]);
+            if should_close { return true }
             if amount_written < amount { write_buffer.write(&packet_buffer[amount_written..]).unwrap(); }
 
             if would_block {
@@ -67,7 +69,7 @@ pub fn try_write<Out: Encode, S: Read + Write>(
         *writeable = false;
     }
 
-    Ok(false)
+    false
 }
 
 // TODO improve
@@ -76,77 +78,93 @@ pub fn try_read<In: Decode, Handler: FnMut(In), S: Read + Write>(
     read_buffer: &mut Cursor<Vec<u8>>,
     packet_handler: &mut Handler,
     connected: &mut bool
-) -> anyhow::Result<bool> {
+) -> bool {
     if !*connected {
-        return Ok(false);
+        return false;
     }
 
-    let (amount_read, should_close) = read(connection, read_buffer).context("read")?;
-    if should_close { return Ok(true) }
-
-    let max_pos = read_buffer.position() as usize;
-    let mut reader = Cursor::new(&read_buffer.get_ref()[..max_pos]);
-
-    let mut last_safe = 0;
     loop {
-        match data::read(&mut reader) {
-            Some(Ok(packet)) => {
-                (packet_handler)(packet);
-                last_safe = reader.position()
-            },
-            Some(Err(err)) => return Err(err).context("parse"),
-            None => {
-                read_buffer.get_mut().copy_within(last_safe as usize.., 0);
-                read_buffer.seek(SeekFrom::Current(-(last_safe as i64))).expect("seek");
-                break
+        let (amount_read, should_close, would_block) = read(connection, read_buffer);
+        if should_close { return true }
+        if would_block { break }
+
+        let max_pos = read_buffer.position() as usize;
+        let mut reader = Cursor::new(&read_buffer.get_ref()[..max_pos]);
+
+        let mut last_safe = 0;
+        loop {
+            match data::read(&mut reader) {
+                Some(Ok(packet)) => {
+                    (packet_handler)(packet);
+                    last_safe = reader.position()
+                },
+                Some(Err(err)) => {
+                    println!("parse error: {}", err);
+                    return true
+                },
+                None => {
+                    if last_safe != 0 {
+                        read_buffer.get_mut().copy_within(last_safe as usize.., 0);
+                        read_buffer.seek(SeekFrom::Current(-(last_safe as i64))).expect("seek");
+                    }
+                    break
+                }
             }
         }
     }
 
-    Ok(false)
+    false
 }
 
-fn write_remaining<W: Write>(writer: &mut W, write_buffer: &mut Cursor<Vec<u8>>) -> anyhow::Result<(bool, bool)> { // close, would block
+fn write_remaining<W: Write>(writer: &mut W, write_buffer: &mut Cursor<Vec<u8>>) -> (bool, bool) { // close, would block
     let cursor = write_buffer.position() as usize;
-    if cursor == 0 { return Ok((false, false)) }
+    if cursor == 0 { return (false, false) }
 
-    let (amount_written, should_close, would_block) = write(writer, &write_buffer.get_ref()[..cursor]).context("write")?;
-    if should_close { return Ok((true, false)) }
+    let (amount_written, should_close, would_block) = write(writer, &write_buffer.get_ref()[..cursor]);
+    if should_close { return (true, false) }
 
     write_buffer.get_mut().copy_within(amount_written.., 0);
     write_buffer.seek(SeekFrom::Current(-(amount_written as i64))).expect("seek");
 
-    Ok((false, would_block))
+    (false, would_block)
 }
 
-fn write<W: Write>(writer: &mut W, mut data: &[u8]) -> anyhow::Result<(usize, bool, bool)> { // amount, should close, would block
+fn write<W: Write>(writer: &mut W, mut data: &[u8]) -> (usize, bool, bool) { // amount, should close, would block
     let start_len = data.len();
 
     while !data.is_empty() {
         match writer.write(data) {
-            Ok(0) => return Ok((0, true, false)),
+            Ok(0) => return (0, true, false),
             Ok(amt) => data = &data[amt..],
-            Err(ref err) if err.kind() == ErrorKind::WouldBlock => return Ok((start_len - data.len(), false, true)),
+            Err(ref err) if err.kind() == ErrorKind::WouldBlock => return (start_len - data.len(), false, true),
             Err(ref e) if e.kind() == ErrorKind::Interrupted => {}
-            Err(err) => return Err(err).context("Write")
+            Err(err) => {
+                println!("write error: {}", err);
+                return (0, true, false)
+            }
         }
     }
 
-    Ok((start_len, false, false))
+    (start_len, false, false)
 }
 
 // TODO improve
-fn read<R: Read>(reader: &mut R, read_buffer: &mut Cursor<Vec<u8>>) -> anyhow::Result<(usize, bool)> { // amount, should close
-    let mut probe = [0u8; 128];
-    let start_pos = read_buffer.position();
+fn read<R: Read>(reader: &mut R, read_buffer: &mut Cursor<Vec<u8>>) -> (usize, bool, bool) { // amount, should close, would block
+    let mut probe = [0u8; PROBE_LEN];
 
     loop {
         match reader.read(&mut probe[..]) {
-            Ok(0) => return Ok((0, true)),
-            Ok(amt) => { read_buffer.write(&probe[..amt]).unwrap(); }
-            Err(ref err) if err.kind() == ErrorKind::WouldBlock => return Ok(((read_buffer.position() - start_pos) as usize, false)),
+            Ok(0) => return (0, true, false),
+            Ok(amt) => {
+                read_buffer.write(&probe[..amt]).unwrap();
+                return (amt, false, false)
+            }
+            Err(ref err) if err.kind() == ErrorKind::WouldBlock => return (0, false, true),
             Err(ref e) if e.kind() == ErrorKind::Interrupted => {}
-            Err(err) => return Err(err).context("Read")
+            Err(err) => {
+                println!("read error: {:?}", err);
+                return (0, true, false)
+            }
         }
     }
 }
@@ -180,7 +198,7 @@ mod tests {
         let mut writer = Cursor::new(Vec::new());
 
         // write
-        let (amt, should_close, would_block) = write(&mut writer, &buffer[..]).unwrap();
+        let (amt, should_close, would_block) = write(&mut writer, &buffer[..]);
         assert_eq!(amt, LEN);
         assert_eq!(should_close, false);
         assert_eq!(would_block, false);
@@ -192,7 +210,7 @@ mod tests {
         let mut read_buffer = Cursor::new(Vec::new());
 
         // read
-        let (amt, should_close) = read(&mut reader, &mut read_buffer).unwrap();
+        let (amt, should_close) = read(&mut reader, &mut read_buffer);
         assert_eq!(amt, LEN);
         assert_eq!(should_close, false);
 
@@ -207,7 +225,7 @@ mod tests {
         let mut writer = Cursor::new(Vec::new());
 
         // write
-        let (amt, should_close, would_block) = write(&mut writer, &buffer[..]).unwrap();
+        let (amt, should_close, would_block) = write(&mut writer, &buffer[..]);
         assert_eq!(amt, LEN);
         assert_eq!(should_close, false);
         assert_eq!(would_block, false);
@@ -222,7 +240,7 @@ mod tests {
         read_buffer.write_all(&[APPEND_VAL; APPEND]).unwrap();
 
         // read
-        let (amt, should_close) = read(&mut reader, &mut read_buffer).unwrap();
+        let (amt, should_close) = read(&mut reader, &mut read_buffer);
         assert_eq!(amt, LEN);
         assert_eq!(should_close, false);
 

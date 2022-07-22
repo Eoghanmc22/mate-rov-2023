@@ -46,20 +46,24 @@ fn client<Out: Encode, In: Decode, Handler: FnMut(In)>(addr: SocketAddr, packet_
         for event in &events {
             match event.token() {
                 CONNECTION => {
-                    if net::handle_event(event, &mut connection, &mut packet_buffer, &mut read_buffer, &mut write_buffer, &packet_provider, &mut packet_handler, &mut writable, &mut connected).context("handle event")? {
+                    if net::handle_event(event, &mut connection, &mut packet_buffer, &mut read_buffer, &mut write_buffer, &packet_provider, &mut packet_handler, &mut writable, &mut connected) {
                         poll.registry().deregister(&mut connection)?;
                         writable = false;
                         connected = false;
+                        read_buffer.set_position(0);
+                        write_buffer.set_position(0);
                     }
                 }
                 _ => {}
             }
         }
 
-        if net::try_write(&mut connection, &mut packet_buffer, &mut write_buffer, &packet_provider, &mut writable, &mut connected).context("handle event")? {
+        if net::try_write(&mut connection, &mut packet_buffer, &mut write_buffer, &packet_provider, &mut writable, &mut connected) {
             poll.registry().deregister(&mut connection)?;
             writable = false;
             connected = false;
+            read_buffer.set_position(0);
+            write_buffer.set_position(0);
         }
     }
 }
