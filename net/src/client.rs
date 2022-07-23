@@ -31,9 +31,9 @@ fn client<Out: Encode, In: Decode, Handler: FnMut(In)>(addr: SocketAddr, packet_
 
     poll.registry().register(&mut connection, CONNECTION, Interest::READABLE | Interest::WRITABLE).context("Register")?;
 
-    let mut packet_buffer = Vec::new();
-    let mut read_buffer = Cursor::new(Vec::new());
-    let mut write_buffer = Cursor::new(Vec::new());
+    let mut packet_buffer = Vec::with_capacity(4096);
+    let mut read_buffer = Vec::with_capacity(4096);
+    let mut write_buffer = Vec::with_capacity(4096);
 
     let mut writable = false;
     let mut connected = false;
@@ -50,8 +50,8 @@ fn client<Out: Encode, In: Decode, Handler: FnMut(In)>(addr: SocketAddr, packet_
                         poll.registry().deregister(&mut connection)?;
                         writable = false;
                         connected = false;
-                        read_buffer.set_position(0);
-                        write_buffer.set_position(0);
+                        read_buffer.clear();
+                        write_buffer.clear();
                     }
                 }
                 _ => {}
@@ -62,8 +62,8 @@ fn client<Out: Encode, In: Decode, Handler: FnMut(In)>(addr: SocketAddr, packet_
             poll.registry().deregister(&mut connection)?;
             writable = false;
             connected = false;
-            read_buffer.set_position(0);
-            write_buffer.set_position(0);
+            read_buffer.clear();
+            write_buffer.clear();
         }
     }
 }
