@@ -1,8 +1,7 @@
-use std::io::{Cursor, ErrorKind, Read, Seek, SeekFrom, Write};
+use std::io::{BufWriter, Cursor, ErrorKind, Read, Write};
 use bincode::{Decode, Encode};
 use mio::event::Event;
 use crossbeam::channel::Receiver;
-use anyhow::Context;
 use crate::data;
 
 const PROBE_LEN: usize = 4096;
@@ -52,17 +51,46 @@ pub fn try_write<Out: Encode, W: Write>(
     if close { return true }
 
     if !would_block {
+        let mut buffered_writer = BufWriter::new(writer);
+        let mut additional = None;
+
         for packet in packet_provider.try_iter() {
             packet_buffer.clear();
             let amount = data::write(&packet, packet_buffer).unwrap();
 
-            let (amount_written, should_close, would_block) = write(writer, &packet_buffer[..amount]);
+            let (amount_written, should_close, would_block) = write(&mut buffered_writer, &packet_buffer[..amount]);
             if should_close { return true }
-            if amount_written < amount { write_buffer.write(&packet_buffer[amount_written..]).unwrap(); }
+            assert_eq!(amount_written < amount, would_block);
 
             if would_block {
+                additional = Some(&packet_buffer[amount_written..]);
                 *writeable = false;
                 break
+            }
+        }
+
+        if *writeable {
+            loop {
+                match buffered_writer.flush() {
+                    Err(ref e) if e.kind() == ErrorKind::Interrupted => {}
+                    Err(ref err) if err.kind() == ErrorKind::WouldBlock => {
+                        *writeable = false;
+                        break
+                    },
+                    Err(err) => {
+                        println!("flush error: {err:?}");
+                        return true
+                    }
+                    _ => { break }
+                }
+            }
+        }
+
+        if !*writeable {
+            write_buffer.write_all(&buffered_writer.into_parts().1.unwrap()[..]).unwrap();
+
+            if let Some(buffer) = additional {
+                write_buffer.write_all(buffer).unwrap();
             }
         }
     } else {
@@ -94,10 +122,10 @@ pub fn try_read<In: Decode, Handler: FnMut(In), R: Read>(
             match data::read(&mut reader) {
                 Some(Ok(packet)) => {
                     (packet_handler)(packet);
-                    last_safe = reader.position()
+                    last_safe = reader.position() as usize;
                 },
                 Some(Err(err)) => {
-                    println!("parse error: {}", err);
+                    println!("parse error: {err:?}");
                     return true
                 },
                 None => {
@@ -132,9 +160,10 @@ fn write<W: Write>(writer: &mut W, mut data: &[u8]) -> (usize, bool, bool) { // 
             Ok(0) => return (0, true, false),
             Ok(amt) => data = &data[amt..],
             Err(ref err) if err.kind() == ErrorKind::WouldBlock => return (start_len - data.len(), false, true),
+            Err(ref err) if err.kind() == ErrorKind::WriteZero => return (0, true, false),
             Err(ref e) if e.kind() == ErrorKind::Interrupted => {}
             Err(err) => {
-                println!("write error: {}", err);
+                println!("write error: {err:?}");
                 return (0, true, false)
             }
         }
@@ -151,13 +180,14 @@ fn read<R: Read>(reader: &mut R, read_buffer: &mut Vec<u8>) -> (usize, bool, boo
         match reader.read(&mut probe[..]) {
             Ok(0) => return (0, true, false),
             Ok(amt) => {
-                read_buffer.write(&probe[..amt]).unwrap();
+                read_buffer.write_all(&probe[..amt]).unwrap();
                 return (amt, false, false)
             }
             Err(ref err) if err.kind() == ErrorKind::WouldBlock => return (0, false, true),
+            Err(ref err) if err.kind() == ErrorKind::WriteZero => return (0, true, false),
             Err(ref e) if e.kind() == ErrorKind::Interrupted => {}
             Err(err) => {
-                println!("read error: {:?}", err);
+                println!("read error: {err:?}");
                 return (0, true, false)
             }
         }
@@ -202,15 +232,16 @@ mod tests {
         // setup read
         writer.seek(SeekFrom::Start(0)).unwrap();
         let mut reader = EOF2WouldBlock(writer);
-        let mut read_buffer = Cursor::new(Vec::new());
+        let mut read_buffer = Vec::new();
 
         // read
-        let (amt, should_close) = read(&mut reader, &mut read_buffer);
+        let (amt, should_close, would_block) = read(&mut reader, &mut read_buffer);
         assert_eq!(amt, LEN);
         assert_eq!(should_close, false);
+        assert_eq!(would_block, false);
 
         // verify
-        assert_eq!(&buffer, read_buffer.get_ref());
+        assert_eq!(buffer, read_buffer);
     }
 
     #[test]
@@ -235,12 +266,13 @@ mod tests {
         read_buffer.write_all(&[APPEND_VAL; APPEND]).unwrap();
 
         // read
-        let (amt, should_close) = read(&mut reader, &mut read_buffer);
+        let (amt, should_close, would_block) = read(&mut reader, &mut read_buffer);
         assert_eq!(amt, LEN);
         assert_eq!(should_close, false);
+        assert_eq!(would_block, false);
 
         // verify
-        assert_eq!(&[APPEND_VAL; APPEND], &read_buffer.get_ref()[..APPEND]);
-        assert_eq!(&buffer, &read_buffer.get_ref()[APPEND..]);
+        assert_eq!(&[APPEND_VAL; APPEND], &read_buffer[..APPEND]);
+        assert_eq!(&buffer, &read_buffer[APPEND..]);
     }
 }

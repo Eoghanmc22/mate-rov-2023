@@ -1,5 +1,5 @@
 use std::thread;
-use std::io::{Cursor, ErrorKind};
+use std::io::ErrorKind;
 use std::net::SocketAddr;
 use std::time::Duration;
 use anyhow::{bail, Context};
@@ -44,7 +44,7 @@ fn server<Out: Encode, In: Decode, Handler: FnMut(In)>(addr: SocketAddr, packet_
     //TODO Compression?
 
     loop {
-        poll.poll(&mut events, Some(Duration::from_millis(1))).context("Poll")?;
+        poll.poll(&mut events, Some(Duration::from_millis(5))).context("Poll")?;
 
         for event in &events {
             match event.token() {
