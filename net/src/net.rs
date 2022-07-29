@@ -52,6 +52,7 @@ pub fn try_write<Out: Encode, W: Write>(
 
     if !would_block {
         let mut buffered_writer = BufWriter::new(writer);
+        let mut additional = None;
 
         for packet in packet_provider.try_iter() {
             packet_buffer.clear();
@@ -59,9 +60,10 @@ pub fn try_write<Out: Encode, W: Write>(
 
             let (amount_written, should_close, would_block) = write(&mut buffered_writer, &packet_buffer[..amount]);
             if should_close { return true }
-            if amount_written < amount { write_buffer.write(&packet_buffer[amount_written..]).unwrap(); }
+            assert_eq!(amount_written < amount, would_block);
 
             if would_block {
+                additional = Some(&packet_buffer[amount_written..]);
                 *writeable = false;
                 break
             }
@@ -85,7 +87,11 @@ pub fn try_write<Out: Encode, W: Write>(
         }
 
         if !*writeable {
-            write_buffer.write(&buffered_writer.into_parts().1.unwrap()[..]).unwrap();
+            write_buffer.write_all(&buffered_writer.into_parts().1.unwrap()[..]).unwrap();
+
+            if let Some(buffer) = additional {
+                write_buffer.write_all(buffer).unwrap();
+            }
         }
     } else {
         *writeable = false;
@@ -174,7 +180,7 @@ fn read<R: Read>(reader: &mut R, read_buffer: &mut Vec<u8>) -> (usize, bool, boo
         match reader.read(&mut probe[..]) {
             Ok(0) => return (0, true, false),
             Ok(amt) => {
-                read_buffer.write(&probe[..amt]).unwrap();
+                read_buffer.write_all(&probe[..amt]).unwrap();
                 return (amt, false, false)
             }
             Err(ref err) if err.kind() == ErrorKind::WouldBlock => return (0, false, true),
