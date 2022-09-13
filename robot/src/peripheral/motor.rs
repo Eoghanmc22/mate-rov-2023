@@ -102,7 +102,7 @@ impl Speed {
     pub const ZERO: Speed = Speed(0);
 
     pub const fn new(speed: i8) -> Self {
-        Self(speed).clamp(Speed::MIN_VAL, Speed::MAX_VAL)
+        Self(speed).clamp(Self::MIN_VAL, Self::MAX_VAL)
     }
 
     // This can be improved once PartialOrd becomes constant
