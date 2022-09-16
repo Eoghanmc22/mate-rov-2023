@@ -39,7 +39,7 @@ impl DepthSensor {
             calibration: [0; 8],
         };
 
-        sensor.connect().context("Connect")?;
+        sensor.connect().context("Connect to depth sensor")?;
 
         Ok(sensor)
     }
