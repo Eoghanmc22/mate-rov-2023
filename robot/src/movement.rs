@@ -23,42 +23,42 @@ impl<PinType: PwmDevice> MovementController<PinType> {
 
         if let Occupied(mut entry) = motors.entry(MotorId::UpF) {
             let motor = entry.get_mut();
-            motor.set_speed(Speed::percent(movement.z + movement.x_rot))?;
+            motor.set_speed(Speed::new(movement.z + movement.x_rot))?;
         }
 
         if let Occupied(mut entry) = motors.entry(MotorId::UpB) {
             let motor = entry.get_mut();
-            motor.set_speed(Speed::percent(movement.z - movement.x_rot))?;
+            motor.set_speed(Speed::new(movement.z - movement.x_rot))?;
         }
 
         if let Occupied(mut entry) = motors.entry(MotorId::UpR) {
             let motor = entry.get_mut();
-            motor.set_speed(Speed::percent(movement.z + movement.y_rot))?;
+            motor.set_speed(Speed::new(movement.z + movement.y_rot))?;
         }
 
         if let Occupied(mut entry) = motors.entry(MotorId::UpL) {
             let motor = entry.get_mut();
-            motor.set_speed(Speed::percent(movement.z - movement.y_rot))?;
+            motor.set_speed(Speed::new(movement.z - movement.y_rot))?;
         }
 
         if let Occupied(mut entry) = motors.entry(MotorId::FrontL) {
             let motor = entry.get_mut();
-            motor.set_speed(Speed::percent(movement.y + movement.x + movement.z_rot))?;
+            motor.set_speed(Speed::new(movement.y + movement.x + movement.z_rot))?;
         }
 
         if let Occupied(mut entry) = motors.entry(MotorId::FrontR) {
             let motor = entry.get_mut();
-            motor.set_speed(Speed::percent(movement.y - movement.x - movement.z_rot))?;
+            motor.set_speed(Speed::new(movement.y - movement.x - movement.z_rot))?;
         }
 
         if let Occupied(mut entry) = motors.entry(MotorId::RearL) {
             let motor = entry.get_mut();
-            motor.set_speed(Speed::percent(-movement.y + movement.x - movement.z_rot))?;
+            motor.set_speed(Speed::new(-movement.y + movement.x - movement.z_rot))?;
         }
 
         if let Occupied(mut entry) = motors.entry(MotorId::RearR) {
             let motor = entry.get_mut();
-            motor.set_speed(Speed::percent(-movement.y - movement.x + movement.z_rot))?;
+            motor.set_speed(Speed::new(-movement.y - movement.x + movement.z_rot))?;
         }
 
         Ok(())

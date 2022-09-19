@@ -8,12 +8,12 @@ use tracing::trace;
 
 const DEFAULT_MOTOR: MotorConfig = MotorConfig {
     signal_pin: 255,
-    min_speed: Speed::new(-50),
-    max_speed: Speed::new(50),
+    max_speed: Speed::new(0.5), // Full speed on all motors would blow fuse
+    // Taken from basic esc spec
     reverse: Duration::from_micros(1100),
     forward: Duration::from_micros(1900),
     center: Duration::from_micros(1500),
-    period: Duration::from_nanos(1_000_000_000 / 400),
+    period: Duration::from_nanos(1_000_000_000 / 400), // 400Hz
 };
 
 //TODO get the actual pins
@@ -31,6 +31,7 @@ pub const MOTOR_L: MotorConfig = MotorConfig { signal_pin: 255, ..DEFAULT_MOTOR 
 pub struct Motor<PinType: Debug> {
     config: MotorConfig,
     pin: PinType,
+    speed: Speed
 }
 
 impl<P: PwmDevice> Motor<P> {
@@ -43,25 +44,26 @@ impl<P: PwmDevice> Motor<P> {
 
         Ok(Motor {
             config,
-            pin
+            pin,
+            speed: Speed::ZERO,
         })
     }
 
     #[tracing::instrument]
     pub fn set_speed(&mut self, speed: Speed) -> anyhow::Result<()> {
         trace!("Motor::set_speed()");
+        self.speed = speed;
 
-        let speed = speed.clamp(self.config.min_speed, self.config.max_speed);
-        let speed = speed.get();
+        let speed = speed.get() * self.config.max_speed.get();
 
-        let upper = if speed >= 0 {
+        let upper = if speed >= 0.0 {
             self.config.forward.as_micros()
         } else {
             self.config.reverse.as_micros()
         };
         let lower = self.config.center.as_micros();
 
-        let speed = speed.abs();
+        let speed = speed.abs() * 100.0;
         let pulse = (upper as i64 * speed as i64 + lower as i64 * (100 - speed as i64)) / 100;
         let pulse = Duration::from_micros(pulse as u64);
 
@@ -82,8 +84,7 @@ pub struct MotorConfig {
     /// PWM signal pin
     signal_pin: u8,
     
-    /// Speed settings
-    min_speed: Speed,
+    /// Speed settings, can be negative to reverse direction
     max_speed: Speed,
     
     /// PWM info
@@ -94,19 +95,17 @@ pub struct MotorConfig {
 }
 
 #[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Debug, Default, Serialize, Deserialize)]
-pub struct Speed(i8);
+pub struct Speed(f64);
 
 impl Speed {
-    pub const MAX_VAL: Speed = Speed(100);
-    pub const MIN_VAL: Speed = Speed(-100);
-    pub const ZERO: Speed = Speed(0);
+    pub const MAX_VAL: Speed = Speed(1.0);
+    pub const MIN_VAL: Speed = Speed(-1.0);
+    pub const ZERO: Speed = Speed(0.0);
 
-    pub const fn new(speed: i8) -> Self {
+    /// Creates a new `Speed`. Input should be between -1.0 and 1.0
+    pub const fn new(speed: f64) -> Self {
+        assert!(speed.is_normal());
         Self(speed).clamp(Self::MIN_VAL, Self::MAX_VAL)
-    }
-
-    pub const fn percent(percent: f64) -> Self {
-        Self::new((percent.clamp(-1.0, 1.0) * 100.0) as i8)
     }
 
     // This can be improved once PartialOrd becomes constant
@@ -120,12 +119,13 @@ impl Speed {
         }
     }
 
-    pub const fn get(self) -> i8 {
+    pub const fn get(self) -> f64 {
         self.0
     }
 }
 
 pub trait PwmDevice: Debug {
+    /// Send pulses of width `pulse_width` every `period` to this device
     fn set_pwm(&mut self, period: Duration, pulse_width: Duration) -> anyhow::Result<()>;
 }
 
@@ -156,7 +156,8 @@ mod tests {
 
         let mut motor = Motor {
             config: DEFAULT_MOTOR,
-            pin: DummyPwm::default()
+            pin: DummyPwm::default(),
+            speed: Default::default()
         };
 
         motor.set_speed(Speed::MAX_VAL).unwrap();
@@ -167,7 +168,8 @@ mod tests {
 
         let mut motor = Motor {
             config: DEFAULT_MOTOR,
-            pin: DummyPwm::default()
+            pin: DummyPwm::default(),
+            speed: Default::default()
         };
 
         motor.set_speed(Speed::MIN_VAL).unwrap();
@@ -178,7 +180,8 @@ mod tests {
 
         let mut motor = Motor {
             config: DEFAULT_MOTOR,
-            pin: DummyPwm::default()
+            pin: DummyPwm::default(),
+            speed: Default::default()
         };
 
         motor.stop().unwrap();

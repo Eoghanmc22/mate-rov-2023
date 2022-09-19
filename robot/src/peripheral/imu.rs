@@ -114,7 +114,7 @@ impl Magnetometer {
 
         // Initialise the accelerometer
         // TODO adjust
-        magnetometer.write_byte(LIS3MDL_CTRL_REG1, 0b11011100)?;           // Temp sensor enabled, High performance, ODR 80 Hz, FAST ODR disabled and Selft test disabled.
+        magnetometer.write_byte(LIS3MDL_CTRL_REG1, 0b11011100)?;           // Temp sensor enabled, High performance, ODR 80 Hz, FAST ODR disabled and Self test disabled.
         magnetometer.write_byte(LIS3MDL_CTRL_REG2, 0b00100000)?;           // +/- 8 gauss
         magnetometer.write_byte(LIS3MDL_CTRL_REG3, 0b00000000)?;           // Continuous-conversion mode
 
@@ -127,9 +127,9 @@ impl Magnetometer {
 
         Ok(MagFrame {
             // todo choose units
-            mag_x: ((buffer[1] as i16) << 8 | buffer[0] as i16) as f64 / MAGNETIC_SENSITIVITY,
-            mag_y: ((buffer[3] as i16) << 8 | buffer[2] as i16) as f64 / MAGNETIC_SENSITIVITY,
-            mag_z: ((buffer[5] as i16) << 8 | buffer[4] as i16) as f64 / MAGNETIC_SENSITIVITY,
+            mag_x: ((buffer[1] as i16) << 8 | buffer[0] as i16) as f64 / Self::MAGNETIC_SENSITIVITY,
+            mag_y: ((buffer[3] as i16) << 8 | buffer[2] as i16) as f64 / Self::MAGNETIC_SENSITIVITY,
+            mag_z: ((buffer[5] as i16) << 8 | buffer[4] as i16) as f64 / Self::MAGNETIC_SENSITIVITY,
         })
     }
 }
@@ -164,12 +164,13 @@ impl Inertial {
 
         Ok(InertialFrame {
             // todo choose units
-            gyro_x: ((buffer[1] as i16) << 8 | buffer[0] as i16) as f64 / ANGULAR_SENSITIVITY,
-            gyro_y: ((buffer[3] as i16) << 8 | buffer[2] as i16) as f64 / ANGULAR_SENSITIVITY,
-            gyro_z: ((buffer[5] as i16) << 8 | buffer[4] as i16) as f64 / ANGULAR_SENSITIVITY,
-            accel_x: ((buffer[7] as i16) << 8 | buffer[6] as i16) as f64 / LINEAR_SENSITIVITY,
-            accel_y: ((buffer[9] as i16) << 8 | buffer[8] as i16) as f64 / LINEAR_SENSITIVITY,
-            accel_z: ((buffer[11] as i16) << 8 | buffer[10] as i16) as f64 / LINEAR_SENSITIVITY,
+            gyro_x: ((buffer[1] as i16) << 8 | buffer[0] as i16) as f64 / Self::ANGULAR_SENSITIVITY,
+            gyro_y: ((buffer[3] as i16) << 8 | buffer[2] as i16) as f64 / Self::ANGULAR_SENSITIVITY,
+            gyro_z: ((buffer[5] as i16) << 8 | buffer[4] as i16) as f64 / Self::ANGULAR_SENSITIVITY,
+
+            accel_x: ((buffer[7] as i16) << 8 | buffer[6] as i16) as f64 / Self::LINEAR_SENSITIVITY,
+            accel_y: ((buffer[9] as i16) << 8 | buffer[8] as i16) as f64 / Self::LINEAR_SENSITIVITY,
+            accel_z: ((buffer[11] as i16) << 8 | buffer[10] as i16) as f64 / Self::LINEAR_SENSITIVITY,
         })
     }
 }
