@@ -28,9 +28,9 @@ pub const MOTOR_R: MotorConfig = MotorConfig { signal_pin: 255, ..DEFAULT_MOTOR 
 pub const MOTOR_L: MotorConfig = MotorConfig { signal_pin: 255, ..DEFAULT_MOTOR };
 
 #[derive(Debug)]
-pub struct Motor<Pin: Debug> {
+pub struct Motor<PinType: Debug> {
     config: MotorConfig,
-    pin: Pin,
+    pin: PinType,
 }
 
 impl<P: PwmDevice> Motor<P> {
@@ -103,6 +103,10 @@ impl Speed {
 
     pub const fn new(speed: i8) -> Self {
         Self(speed).clamp(Self::MIN_VAL, Self::MAX_VAL)
+    }
+
+    pub const fn percent(percent: f64) -> Self {
+        Self::new((percent.clamp(-1.0, 1.0) * 100.0) as i8)
     }
 
     // This can be improved once PartialOrd becomes constant
