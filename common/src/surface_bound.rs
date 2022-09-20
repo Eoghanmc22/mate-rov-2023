@@ -1,10 +1,20 @@
 use std::net::SocketAddr;
 use anyhow::Context;
 use serde::{Serialize, Deserialize};
+use crate::types::{DepthFrame, InertialFrame, MotorFrame, Orientation, Role};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum Packet {
-    // TODO
+    OrientationUpdate(Orientation),
+    InertialUpdate(InertialFrame),
+    DepthUpdate(DepthFrame),
+    MotorUpdate(MotorFrame),
+    AddCameras(Vec<SocketAddr>),
+    RemoveCameras(Vec<SocketAddr>),
+    Log(String),
+    Role(Role),
+    Armed(bool),
+    Pong(u128, u128),
 }
 
 impl TryInto<Vec<u8>> for &Packet {

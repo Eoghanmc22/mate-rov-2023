@@ -9,3 +9,5 @@ edition = "2021"
 serde = { version = "1", features = ["derive"] }
 bincode = "1"
 anyhow = "1"
+glam = { version =  "0.21.3", features = ["serde"] }
+bitflags = "1"

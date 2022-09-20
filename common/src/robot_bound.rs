@@ -1,9 +1,15 @@
 use anyhow::Context;
 use serde::{Serialize, Deserialize};
+use crate::types::{Filter, Meters, Movement};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum Packet {
-    // TODO
+    Arm, // Enable Motors
+    Disarm, // Disable Motors
+    MovementCommand(bool, Movement), // Updates motor speed targets: absolute, movement
+    DepthPid(bool, Meters), // Sets depth target: enable, target depth (meters)
+    SetFilter(Filter), // Set intents
+    Ping(u128), // Used to measure latency: wall clock time of send
 }
 
 impl TryInto<Vec<u8>> for &Packet {

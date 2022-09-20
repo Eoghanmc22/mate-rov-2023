@@ -2,6 +2,13 @@ use anyhow::Context;
 use rppal::spi;
 use rppal::spi::Spi;
 use tracing::trace;
+use common::types::{Degrees, Gauss, GForce, InertialFrame, MagFrame};
+
+// TODO Verify correctness
+// TODO Simplify impl
+// TODO Extract constants
+// TODO interact with chip registers more cleanly (bitflags?)
+// TODO Extract spi stuff
 
 const LSM6DSL_ADDRESS: u8          =  0x6A;
 
@@ -126,10 +133,10 @@ impl Magnetometer {
         self.read(LIS3MDL_OUT_BLOCK, &mut buffer)?;
 
         Ok(MagFrame {
-            // todo choose units
-            mag_x: ((buffer[1] as i16) << 8 | buffer[0] as i16) as f64 / Self::MAGNETIC_SENSITIVITY,
-            mag_y: ((buffer[3] as i16) << 8 | buffer[2] as i16) as f64 / Self::MAGNETIC_SENSITIVITY,
-            mag_z: ((buffer[5] as i16) << 8 | buffer[4] as i16) as f64 / Self::MAGNETIC_SENSITIVITY,
+            // TODO check units
+            mag_x: Gauss(((buffer[1] as i16) << 8 | buffer[0] as i16) as f64 / Self::MAGNETIC_SENSITIVITY),
+            mag_y: Gauss(((buffer[3] as i16) << 8 | buffer[2] as i16) as f64 / Self::MAGNETIC_SENSITIVITY),
+            mag_z: Gauss(((buffer[5] as i16) << 8 | buffer[4] as i16) as f64 / Self::MAGNETIC_SENSITIVITY),
         })
     }
 }
@@ -163,34 +170,16 @@ impl Inertial {
         self.read(LSM6DSL_OUT_BLOCK, &mut buffer)?;
 
         Ok(InertialFrame {
-            // todo choose units
-            gyro_x: ((buffer[1] as i16) << 8 | buffer[0] as i16) as f64 / Self::ANGULAR_SENSITIVITY,
-            gyro_y: ((buffer[3] as i16) << 8 | buffer[2] as i16) as f64 / Self::ANGULAR_SENSITIVITY,
-            gyro_z: ((buffer[5] as i16) << 8 | buffer[4] as i16) as f64 / Self::ANGULAR_SENSITIVITY,
+            // todo check units
+            gyro_x: Degrees(((buffer[1] as i16) << 8 | buffer[0] as i16) as f64 / Self::ANGULAR_SENSITIVITY),
+            gyro_y: Degrees(((buffer[3] as i16) << 8 | buffer[2] as i16) as f64 / Self::ANGULAR_SENSITIVITY),
+            gyro_z: Degrees(((buffer[5] as i16) << 8 | buffer[4] as i16) as f64 / Self::ANGULAR_SENSITIVITY),
 
-            accel_x: ((buffer[7] as i16) << 8 | buffer[6] as i16) as f64 / Self::LINEAR_SENSITIVITY,
-            accel_y: ((buffer[9] as i16) << 8 | buffer[8] as i16) as f64 / Self::LINEAR_SENSITIVITY,
-            accel_z: ((buffer[11] as i16) << 8 | buffer[10] as i16) as f64 / Self::LINEAR_SENSITIVITY,
+            accel_x: GForce(((buffer[7] as i16) << 8 | buffer[6] as i16) as f64 / Self::LINEAR_SENSITIVITY),
+            accel_y: GForce(((buffer[9] as i16) << 8 | buffer[8] as i16) as f64 / Self::LINEAR_SENSITIVITY),
+            accel_z: GForce(((buffer[11] as i16) << 8 | buffer[10] as i16) as f64 / Self::LINEAR_SENSITIVITY),
         })
     }
-}
-
-#[derive(Debug, Clone)]
-pub struct InertialFrame {
-    pub gyro_x: f64,
-    pub gyro_y: f64,
-    pub gyro_z: f64,
-
-    pub accel_x: f64,
-    pub accel_y: f64,
-    pub accel_z: f64,
-}
-
-#[derive(Debug, Clone)]
-pub struct MagFrame {
-    pub mag_x: f64,
-    pub mag_y: f64,
-    pub mag_z: f64,
 }
 
 trait SpiDevice {
@@ -204,31 +193,31 @@ impl SpiDevice for Magnetometer {
     fn read_byte(&mut self, address: u8) -> anyhow::Result<u8> {
         let address = address & 0b00111111 | 0b10000000; // Read
         let buffer = &mut [0];
-        spi.write(&[address])?;
-        spi.read(buffer)?;
+        self.0.write(&[address])?;
+        self.0.read(buffer)?;
 
         Ok(buffer[0])
     }
 
     fn read(&mut self, address: u8, buffer: &mut [u8]) -> anyhow::Result<()> {
         let address = address & 0b00111111 | 0b11000000; // Read with address auto increment
-        spi.write(&[address])?;
-        spi.read(buffer)?;
+        self.0.write(&[address])?;
+        self.0.read(buffer)?;
 
         Ok(())
     }
 
     fn write_byte(&mut self, address: u8, byte: u8) -> anyhow::Result<()> {
         let address = address & 0b00111111 | 0b00000000; // Write
-        spi.write(&[address, byte])?;
+        self.0.write(&[address, byte])?;
 
         Ok(())
     }
 
-    fn write(&mut self, address: u8, buffer: &mut [u8]) -> anyhow::Result<()> {
+    fn write(&mut self, address: u8, buffer: &[u8]) -> anyhow::Result<()> {
         let address = address & 0b00111111 | 0b01000000; // Write with address auto increment
-        spi.write(&[address])?;
-        spi.write(buffer)?;
+        self.0.write(&[address])?;
+        self.0.write(buffer)?;
 
         Ok(())
     }
@@ -238,31 +227,31 @@ impl SpiDevice for Inertial {
     fn read_byte(&mut self, address: u8) -> anyhow::Result<u8> {
         let address = address & 0b01111111 | 0b10000000; // Read
         let buffer = &mut [0];
-        spi.write(&[address])?;
-        spi.read(buffer)?;
+        self.0.write(&[address])?;
+        self.0.read(buffer)?;
 
         Ok(buffer[0])
     }
 
     fn read(&mut self, address: u8, buffer: &mut [u8]) -> anyhow::Result<()> {
         let address = address & 0b01111111 | 0b10000000; // Read with address auto increment
-        spi.write(&[address])?;
-        spi.read(buffer)?;
+        self.0.write(&[address])?;
+        self.0.read(buffer)?;
 
         Ok(())
     }
 
     fn write_byte(&mut self, address: u8, byte: u8) -> anyhow::Result<()> {
         let address = address & 0b01111111 | 0b00000000; // Write
-        spi.write(&[address, byte])?;
+        self.0.write(&[address, byte])?;
 
         Ok(())
     }
 
-    fn write(&mut self, address: u8, buffer: &mut [u8]) -> anyhow::Result<()> {
+    fn write(&mut self, address: u8, buffer: &[u8]) -> anyhow::Result<()> {
         let address = address & 0b01111111 | 0b00000000; // Write with address auto increment
-        spi.write(&[address])?;
-        spi.write(buffer)?;
+        self.0.write(&[address])?;
+        self.0.write(buffer)?;
 
         Ok(())
     }

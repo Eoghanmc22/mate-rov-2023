@@ -1,9 +1,9 @@
 use std::collections::HashMap;
-use std::sync::RwLock;
-use message_io::network::{Endpoint, NetEvent, Transport};
+use message_io::network::{Endpoint, NetEvent, SendStatus, Transport};
 use message_io::node::{NodeEvent, NodeHandler, NodeTask};
 use tracing::{error, info};
 use common::*;
+use common::robot_bound::Packet;
 
 pub struct Server {
     handler: NodeHandler<WorkerEvent>,
@@ -25,13 +25,11 @@ impl Server {
                         match event {
                             NetEvent::Connected(_, _) => unreachable!(),
                             NetEvent::Accepted(endpoint, _resource_id) => {
-                                if ok {
-                                    info!("Got connection from {}", endpoint);
-                                    clients.insert(endpoint, Connection {
-                                        endpoint: endpoint.clone(),
-                                        handler: handler.clone()
-                                    });
-                                }
+                                info!("Got connection from {}", endpoint);
+                                clients.insert(endpoint, Connection {
+                                    endpoint: endpoint.clone(),
+                                    handler: handler.clone()
+                                });
                             }
                             NetEvent::Message(endpoint, data) => {
                                 if let Some(connection) = clients.get_mut(&endpoint) {
@@ -42,17 +40,18 @@ impl Server {
                                 }
                             }
                             NetEvent::Disconnected(endpoint) => {
-                                clients.remove(&Endpoint);
+                                clients.remove(&endpoint);
                             }
                         }
                     }
                     NodeEvent::Signal(event) => {
                         match event {
                             WorkerEvent::Broadcast(packet) => {
-                                let buffer = packet.into();
+                                let buffer: Vec<u8> = (&packet).try_into()?;
                                 for client in clients.keys().copied() {
-                                    if let Err(error) = handler.network().send(client, buffer) {
-                                        error!("Error sending packet: {:?}", error);
+                                    match handler.network().send(client, &buffer) {
+                                        SendStatus::Sent => {}
+                                        err => error!("Error sending packet: {:?}", err)
                                     }
                                 }
                             }
@@ -69,7 +68,6 @@ impl Server {
     }
 }
 
-#[derive(Debug)]
 pub struct Connection {
     endpoint: Endpoint,
     handler: NodeHandler<WorkerEvent>
@@ -77,10 +75,16 @@ pub struct Connection {
 
 pub enum WorkerEvent {
     Broadcast(surface_bound::Packet)
+    // TODO
 }
 
 fn handle_packet(client: &mut Connection, packet: robot_bound::Packet) -> anyhow::Result<()> {
     match packet {
-
+        Packet::Arm => todo!(),
+        Packet::Disarm => todo!(),
+        Packet::MovementCommand(_, _) => todo!(),
+        Packet::DepthPid(_, _) => todo!(),
+        Packet::SetFilter(_) => todo!(),
+        Packet::Ping(_) => todo!(),
     }
 }

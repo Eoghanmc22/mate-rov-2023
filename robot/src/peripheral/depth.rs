@@ -7,6 +7,13 @@ use anyhow::Context;
 
 use rppal::i2c::I2c;
 use tracing::{error, trace};
+use common::types::{Celsius, DepthFrame, Meters};
+
+// TODO Verify correctness
+// TODO Simplify impl
+// TODO Extract constants
+// TODO interact with chip registers more cleanly (bitflags?)
+// TODO Extract i2c stuff
 
 const MS5837_ADDR: u16 = 0x76;
 const MS5837_RESET: u8 = 0x76;
@@ -85,7 +92,7 @@ impl DepthSensor {
     }
 
     /// Takes a minimum of 40ms
-    pub fn read_depth(&mut self) -> anyhow::Result<(f64, f64)> { // depth, temperature
+    pub fn read_depth(&mut self) -> anyhow::Result<DepthFrame> { // depth, temperature
         let buffer = &mut [0, 0, 0];
         // Read new data from the sensor
         // Request D1 conversion
@@ -132,7 +139,10 @@ impl DepthSensor {
         let pressure = (pressure_d1 as i32 * sens as i32 / 2097152 - off as i32) / 32768;
 
         // Compute pressure into depth
-        Ok(((pressure as f64 - 101300.0) / (self.fluid_density * 9.80665), temp as f64 / 100.0))
+        Ok(DepthFrame {
+            depth: Meters((pressure as f64 - 101300.0) / (self.fluid_density * 9.80665)),
+            temperature: Celsius(temp as f64 / 100.0, )
+        })
     }
 }
 

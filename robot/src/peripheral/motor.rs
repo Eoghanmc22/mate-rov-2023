@@ -2,9 +2,12 @@ use std::fmt::Debug;
 use std::time::Duration;
 use anyhow::Context;
 use rppal::gpio::{Gpio, OutputPin};
-use serde::Serialize;
-use serde::Deserialize;
 use tracing::trace;
+use common::types::Speed;
+
+// TODO Verify correctness
+// TODO Simplify impl
+// TODO Extract constants
 
 const DEFAULT_MOTOR: MotorConfig = MotorConfig {
     signal_pin: 255,
@@ -79,7 +82,7 @@ impl<P: PwmDevice> Motor<P> {
     }
 }
 
-#[derive(Copy, Clone, Eq, PartialEq, Debug,)]
+#[derive(Copy, Clone, PartialEq, Debug,)]
 pub struct MotorConfig {
     /// PWM signal pin
     signal_pin: u8,
@@ -92,36 +95,6 @@ pub struct MotorConfig {
     forward: Duration,
     center: Duration,
     period: Duration,
-}
-
-#[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Debug, Default, Serialize, Deserialize)]
-pub struct Speed(f64);
-
-impl Speed {
-    pub const MAX_VAL: Speed = Speed(1.0);
-    pub const MIN_VAL: Speed = Speed(-1.0);
-    pub const ZERO: Speed = Speed(0.0);
-
-    /// Creates a new `Speed`. Input should be between -1.0 and 1.0
-    pub const fn new(speed: f64) -> Self {
-        assert!(speed.is_normal());
-        Self(speed).clamp(Self::MIN_VAL, Self::MAX_VAL)
-    }
-
-    // This can be improved once PartialOrd becomes constant
-    pub const fn clamp(self, min: Speed, max: Speed) -> Speed {
-        if self.0 > max.0 {
-            max
-        } else if self.0 < min.0 {
-            min
-        } else {
-            self
-        }
-    }
-
-    pub const fn get(self) -> f64 {
-        self.0
-    }
 }
 
 pub trait PwmDevice: Debug {
