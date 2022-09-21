@@ -1,9 +1,10 @@
 use std::collections::hash_map::Entry::Occupied;
 use std::collections::HashMap;
 use std::fmt::Debug;
-use common::types::{MotorId, Movement, Speed};
+use common::types::{MotorId, Movement};
 use crate::peripheral::motor::{Motor, PwmDevice};
 
+#[derive(Debug)]
 pub struct MovementController<PinType: Debug> {
     motors: HashMap<MotorId, Motor<PinType>>
 }
@@ -16,7 +17,9 @@ impl<PinType: Debug> MovementController<PinType> {
     }
 }
 
-impl<PinType: PwmDevice> MovementController<PinType> {
+impl<PinType: Debug + PwmDevice> MovementController<PinType> {
+    #[tracing::instrument]
+    // TODO log stuff
     pub fn send_movement(&mut self, movement: Movement) -> anyhow::Result<()> {
         let motors = &mut self.motors;
 

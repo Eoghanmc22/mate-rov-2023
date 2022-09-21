@@ -16,12 +16,12 @@ bitflags! {
     }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Copy, Clone, Serialize, Deserialize)]
 pub struct Orientation(pub Quat);
 
 /// +X: Right, +Y: Forwards, +Z: Up
 /// +XR: Pitch Up, +YR: Roll Counterclockwise, +ZR: Yaw Clockwise (top view)
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Copy, Clone, Serialize, Deserialize)]
 pub struct Movement {
     pub x: Speed,      // Right
     pub y: Speed,      // Forwards
@@ -53,13 +53,13 @@ pub enum Role {
 
 // Raw Data Frames
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Copy, Clone, Serialize, Deserialize)]
 pub struct DepthFrame {
     pub depth: Meters,
     pub temperature: Celsius,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Copy, Clone, Serialize, Deserialize)]
 pub struct InertialFrame {
     pub gyro_x: Degrees,
     pub gyro_y: Degrees,
@@ -70,7 +70,7 @@ pub struct InertialFrame {
     pub accel_z: GForce,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Copy, Clone, Serialize, Deserialize)]
 pub struct MagFrame {
     pub mag_x: Gauss,
     pub mag_y: Gauss,
@@ -107,16 +107,16 @@ impl Speed {
     pub const ZERO: Speed = Speed(0.0);
 
     /// Creates a new `Speed`. Input should be between -1.0 and 1.0
-    pub fn new(speed: f64) -> Self {
+    pub const fn new(speed: f64) -> Self {
         assert!(speed.is_normal());
         Self(speed).clamp(Self::MIN_VAL, Self::MAX_VAL)
     }
 
     /// Clamps a speed to be between `min` and `max`
-    pub fn clamp(self, min: Speed, max: Speed) -> Speed {
-        if self > max {
+    pub const fn clamp(self, min: Speed, max: Speed) -> Speed {
+        if self.0 > max.0 {
             max
-        } else if self < min {
+        } else if self.0 < min.0 {
             min
         } else {
             self
