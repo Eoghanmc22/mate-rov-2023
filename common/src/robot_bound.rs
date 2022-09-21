@@ -6,8 +6,8 @@ use crate::types::{Filter, Meters, Movement};
 pub enum Packet {
     Arm, // Enable Motors
     Disarm, // Disable Motors
-    MovementCommand(bool, Movement), // Updates motor speed targets: absolute, movement
-    DepthPid(bool, Meters), // Sets depth target: enable, target depth (meters)
+    MovementCommand(bool, Option<Movement>), // Updates motor speed targets: absolute, movement
+    DepthPid(Option<Meters>), // Sets depth target: target depth (meters)
     SetFilter(Filter), // Set intents
     Ping(u128), // Used to measure latency: wall clock time of send
 }

@@ -424,6 +424,7 @@ dependencies = [
  "anyhow",
  "common",
  "crossbeam",
+ "lazy_static",
  "message-io",
  "rppal",
  "serde",

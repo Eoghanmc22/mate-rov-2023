@@ -1,7 +1,12 @@
 use std::collections::{HashMap, HashSet};
 use std::time::Instant;
-use common::types::{DepthFrame, InertialFrame, MagFrame, MotorFrame, MotorId, Movement, Orientation};
+use lazy_static::lazy_static;
+use common::types::{DepthFrame, InertialFrame, MagFrame, Meters, MotorFrame, MotorId, Movement, Orientation};
 use crate::event::Notify;
+
+lazy_static! {
+    pub static ref ROBOT: Robot = Robot::new();
+}
 
 pub struct Robot {
     orientation: Notify<Option<(Orientation, Instant)>>,
@@ -10,10 +15,12 @@ pub struct Robot {
     inertial: Notify<Option<(InertialFrame, Instant)>>,
     mag: Notify<Option<(MagFrame, Instant)>>,
     motors: HashMap<MotorId, Notify<Option<(MotorFrame, Instant)>>>,
+    armed: Notify<bool>,
+    depth_target: Notify<Option<(Meters, Instant)>>
 }
 
 impl Robot {
-    pub fn new(motor_ids: HashSet<MotorId>) -> Self {
+    fn new(motor_ids: HashSet<MotorId>) -> Self {
         let mut motors = HashMap::new();
 
         for motor in motor_ids {
@@ -26,7 +33,9 @@ impl Robot {
             depth: Default::default(),
             inertial: Default::default(),
             mag: Default::default(),
-            motors
+            motors,
+            armed: Default::default(),
+            depth_target: Default::default()
         }
     }
 
@@ -48,5 +57,11 @@ impl Robot {
     }
     pub fn motors(&self) -> &HashMap<MotorId, Notify<Option<(MotorFrame, Instant)>>> {
         &self.motors
+    }
+    pub fn armed(&self) -> &Notify<bool> {
+        &self.armed
+    }
+    pub fn depth_target(&self) -> &Notify<Option<(Meters, Instant)>> {
+        &self.depth_target
     }
 }
