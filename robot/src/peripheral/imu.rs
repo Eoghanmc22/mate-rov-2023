@@ -9,6 +9,7 @@ use common::types::{Degrees, Gauss, GForce, InertialFrame, MagFrame};
 // TODO Extract constants
 // TODO interact with chip registers more cleanly (bitflags?)
 // TODO Extract spi stuff
+// TODO Make api better lol
 
 const LSM6DSL_ADDRESS: u8          =  0x6A;
 
@@ -86,7 +87,7 @@ const LIS3MDL_INT_THS_H: u8   = 0x33;
 
 pub struct ImuSensor {
     lsm6dsl: Inertial, // Gyro and accelerometer
-    lis3mdl: Magnetometer, // Magnetometer TODO
+    lis3mdl: Magnetometer, // Magnetometer
 }
 
 impl ImuSensor {
@@ -102,6 +103,12 @@ impl ImuSensor {
             lsm6dsl: Inertial::new(lsm6dsl)?,
             lis3mdl: Magnetometer::new(lis3mdl)?,
         })
+    }
+    pub fn inertial(&mut self) -> &Inertial {
+        &mut self.lsm6dsl
+    }
+    pub fn magnetometer(&mut self) -> &Magnetometer {
+        &mut self.lis3mdl
     }
 }
 
