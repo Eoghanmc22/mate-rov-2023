@@ -6,7 +6,7 @@ use rppal::spi::Spi;
 use tracing::error;
 use crate::network::Server;
 use crate::peripheral::depth::DepthSensor;
-use crate::peripheral::imu::ImuSensor;
+use crate::peripheral::imu::{Inertial, Magnetometer};
 
 pub mod peripheral;
 pub mod movement;
@@ -15,12 +15,17 @@ pub mod robot;
 pub mod event;
 
 const DEPTH_SENSOR: bool = true;
-const IMU_SENSOR: bool = true;
+const INERTIAL_SENSOR: bool = true;
+const MAGNETIC_SENSOR: bool = true;
 const MOTOR_ENABLE: bool = true;
 
 const FLUID_DENSITY: f64 = 1029.0;
 
-fn main() -> anyhow::Result<()> {
+fn main() {
+    
+}
+
+/*fn main() -> anyhow::Result<()> {
     let server = Server::start()?;
 
     if DEPTH_SENSOR {
@@ -31,8 +36,12 @@ fn main() -> anyhow::Result<()> {
         start_inertial_sensor()?;
     }
 
+    if MAGNETIC_SENSOR {
+        start_magnetic_sensor()?;
+    }
+
     if MOTOR_ENABLE {
-        start_motors()?;
+        //start_motors()?;
     }
 
     Ok(())
@@ -48,7 +57,7 @@ fn start_depth_sensor() -> anyhow::Result<()> {
             loop {
                 let start = Instant::now();
 
-                if let Some(depth_frame) = depth_sensor.read_depth() {
+                if let Ok(depth_frame) = depth_sensor.read_depth() {
                     robot::ROBOT.depth().store(Some(depth_frame).zip(Some(Instant::now())));
                 } else {
                     error!("Could not read depth frame");
@@ -61,19 +70,19 @@ fn start_depth_sensor() -> anyhow::Result<()> {
     Ok(())
 }
 
-fn start_imu_sensor_a_g() -> anyhow::Result<()> {
+fn start_inertial_sensor() -> anyhow::Result<()> {
     // TODO make api
-    Spi::new(spi::Bus::Spi0, spi::SlaveSelect::Ss0, 10_000_000, spi::Mode::Mode2).context("Create spi for lsm6dsl")?;
+    let spi = Spi::new(spi::Bus::Spi0, spi::SlaveSelect::Ss0, 10_000_000, spi::Mode::Mode2).context("Create spi for lsm6dsl")?;
 
     thread::Builder::new()
         .name("IMU Sensor A/G".to_owned())
         .spawn(|| {
-            let mut imu_sensor = ImuSensor::new().expect("Could not connect to imu sensor");
+            let mut inertial_sensor = Inertial::new(spi).expect("Could not connect to imu sensor");
             loop {
                 let start = Instant::now();
 
-                let depth_frame = depth_sensor.read_depth()?;
-                robot::ROBOT.depth().store(Some(depth_frame).zip(Some(Instant::now())));
+                let inertial_frame = inertial_sensor.read_sensor().unwrap()/*?*/;
+                robot::ROBOT.inertial().store(Some(inertial_frame).zip(Some(Instant::now())));
 
                 thread::sleep(Duration::from_millis(50) - start.elapsed());
             }
@@ -81,3 +90,24 @@ fn start_imu_sensor_a_g() -> anyhow::Result<()> {
 
     Ok(())
 }
+
+fn start_magnetic_sensor() -> anyhow::Result<()> {
+    // TODO make api
+    let spi = Spi::new(spi::Bus::Spi0, spi::SlaveSelect::Ss0, 10_000_000, spi::Mode::Mode2).context("Create spi for lsm6dsl")?;
+
+    thread::Builder::new()
+        .name("IMU Sensor M".to_owned())
+        .spawn(|| {
+            let mut magnetic_sensor = Magnetometer::new(spi).expect("Could not connect to imu sensor");
+            loop {
+                let start = Instant::now();
+
+                let magnetic_frame = magnetic_sensor.read_sensor().unwrap()/*?*/;
+                robot::ROBOT.mag().store(Some(magnetic_frame).zip(Some(Instant::now())));
+
+                thread::sleep(Duration::from_millis(50) - start.elapsed());
+            }
+        })?;
+
+    Ok(())
+}*/

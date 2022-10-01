@@ -14,14 +14,18 @@ pub struct Server {
     task: NodeTask
 }
 
+#[derive(Debug)]
 struct ServerContext {
-    handler: NodeHandler<WorkerEvent>,
+    handler: NodeHandlerWrapper,
     clients: HashMap<Endpoint, Connection>,
 }
 
-impl Debug for ServerContext {
+#[derive(Clone)]
+pub struct NodeHandlerWrapper(NodeHandler<WorkerEvent>);
+
+impl Debug for NodeHandlerWrapper {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        <HashMap<Endpoint, Connection> as Debug>::fmt(&self.clients, f)
+        write!(f, "NodeHandler")
     }
 }
 
@@ -33,7 +37,7 @@ impl Server {
 
         let task = {
             let mut server = ServerContext {
-                handler: handler.clone(),
+                handler: NodeHandlerWrapper(handler.clone()),
                 clients: HashMap::new(),
             };
 
@@ -95,9 +99,10 @@ fn handle_network_event(server: &mut ServerContext, event: NetEvent) -> anyhow::
             });
         }
         NetEvent::Message(endpoint, data) => {
-            if let Some(connection) = server.clients.get_mut(&endpoint) {
+            let ServerContext { handler, clients } = server;
+            if let Some(connection) = clients.get_mut(&endpoint) {
                 let packet = data.try_into().context("Could not decode packet")?;
-                handle_packet(server, connection, packet)?;
+                handle_packet(handler, connection, packet)?;
             } else {
                 error!("Received packet from unknown endpoint: {:?}", endpoint);
             }
@@ -117,7 +122,7 @@ fn handle_signal_event(server: &mut ServerContext, event: WorkerEvent) -> anyhow
             // Only write the buffer once, cant use sent packet
             let buffer: Vec<u8> = (&packet).try_into().context("Could not encode packet")?;
             for client in server.clients.keys().copied() {
-                match server.handler.network().send(client, &buffer) {
+                match server.handler.0.network().send(client, &buffer) {
                     SendStatus::Sent => {}
                     err => error!("Error sending packet: {:?}", err)
                 }
@@ -129,7 +134,7 @@ fn handle_signal_event(server: &mut ServerContext, event: WorkerEvent) -> anyhow
 }
 
 #[tracing::instrument]
-fn handle_packet(server: &mut ServerContext, client: &mut Connection, packet: robot_bound::Packet) -> anyhow::Result<()> {
+fn handle_packet(handler: &mut NodeHandlerWrapper, client: &mut Connection, packet: robot_bound::Packet) -> anyhow::Result<()> {
     match packet {
         robot_bound::Packet::Arm => {
             if let Role::Controller = client.role {
@@ -163,7 +168,7 @@ fn handle_packet(server: &mut ServerContext, client: &mut Connection, packet: ro
             client.last_ping = time;
 
             let response = surface_bound::Packet::Pong(ping, time.duration_since(SystemTime::UNIX_EPOCH).context("Could calculate wall clock time")?.as_millis());
-            send_packet(client, server.handler.network(), response).context("Could send packet")?;
+            send_packet(client, handler, response).context("Could send packet")?;
         },
     }
 
@@ -171,10 +176,10 @@ fn handle_packet(server: &mut ServerContext, client: &mut Connection, packet: ro
 }
 
 #[tracing::instrument]
-pub fn send_packet(client: &Connection, handler: &NetworkController, packet: surface_bound::Packet) -> anyhow::Result<()> {
+pub fn send_packet(client: &Connection, handler: &NodeHandlerWrapper, packet: surface_bound::Packet) -> anyhow::Result<()> {
     let data: Vec<u8> = (&packet).try_into().context("Could not encode packet")?;
 
-    match handler.send(client.endpoint, &data) {
+    match handler.0.network().send(client.endpoint, &data) {
         SendStatus::Sent => {}
         err => bail!("Could not send packet")
     }

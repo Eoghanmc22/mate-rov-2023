@@ -34,7 +34,12 @@ pub const LIS3MDL_INT_THS_H: u8   = 0x33;
 
 
 pub trait WriteableRegister {
-    fn write(&self, dest: &mut impl Device);
+    const ADDRESS: u8;
+    const BYTE: u8;
+
+    fn write(&self, dest: &mut impl Device) -> anyhow::Result<()> {
+        dest.write_byte(Self::ADDRESS, Self::BYTE)
+    }
 }
 
 trait Field<T> {
@@ -42,48 +47,37 @@ trait Field<T> {
     const SHIFT: usize;
 }
 
-macro_rules! write_fields {
-    ($addrs:expr, $device:ident: $( $field:ty ),+) => {
-        let reg: u8 = $( (<$field as Field<_>>::FIELD).bits() << <$field as Field<_>>::SHIFT | )* 0;
-        Device::write_byte($device, $addrs, reg);
+macro_rules! fields_to_byte {
+    ($( $field:ty ),+) => {
+        $( (<$field as Field<_>>::FIELD).bits() << <$field as Field<_>>::SHIFT | )* 0
     };
 }
 
 //TODO implement useful stuff lol
 pub struct Lis3mdl {
     // TODO who_am_i
-    crtl_reg_1: crtl_reg_1::CrtlReg1,
-    crtl_reg_2: crtl_reg_2::CrtlReg2,
-    crtl_reg_3: crtl_reg_3::CrtlReg3,
-    // TODO crtl_reg_4
-    // TODO crtl_reg_5
+    ctrl_reg_1: ctrl_reg_1::CtrlReg1,
+    ctrl_reg_2: ctrl_reg_2::CtrlReg2,
+    ctrl_reg_3: ctrl_reg_3::CtrlReg3,
+    ctrl_reg_4: ctrl_reg_4::CtrlReg4,
+    ctrl_reg_5: ctrl_reg_5::CtrlReg5,
     // TODO status_reg
 
     // TODO out block
     // TODO interrupts
 }
 
-pub mod crtl_reg_1 {
+pub mod ctrl_reg_1 {
     use std::marker::PhantomData;
     use bitflags::bitflags;
     use crate::peripheral::lis3mdl::{Field, WriteableRegister};
-    use crate::peripheral::spi::Device;
 
-    #[derive(Copy, Clone)]
-    pub struct CrtlReg1<Temperature = TemperatureDisable, Performance = LowPerformance, OutputDataRate = OutputDataRate10_0, FastOdr = FastOdrDisable, SelfTest = SelfTestDisable>(PhantomData<Temperature>, PhantomData<Performance>, PhantomData<OutputDataRate>, PhantomData<FastOdr>, PhantomData<SelfTest>);
+    #[derive(Copy, Clone, Default)]
+    pub struct CtrlReg1<Temperature = TemperatureDisable, PerformanceXY = PerformanceLowXY, OutputDataRate = OutputDataRate10_0, FastOdr = FastOdrDisable, SelfTest = SelfTestDisable>(PhantomData<(Temperature, PerformanceXY, OutputDataRate, FastOdr, SelfTest)>);
 
-    impl<Temperature_: Temperature, Performance_: Performance, OutputDataRate_: OutputDataRate, FastOdr_: FastOdr, SelfTest_: SelfTest> CrtlReg1<Temperature_, Performance_, OutputDataRate_, FastOdr_, SelfTest_>  {
-        pub const ADDRESS: u8 = 0x20;
-
-        pub fn new() -> Self {
-            Self(Default::default(), Default::default(), Default::default(), Default::default(), Default::default())
-        }
-    }
-
-    impl<Temperature_: Temperature, Performance_: Performance, OutputDataRate_: OutputDataRate, FastOdr_: FastOdr, SelfTest_: SelfTest> WriteableRegister for CrtlReg1<Temperature_, Performance_, OutputDataRate_, FastOdr_, SelfTest_>  {
-        fn write(&self, dest: &mut impl Device) {
-            write_fields!(Self::ADDRESS, dest: Temperature_, Performance_, OutputDataRate_, FastOdr_, SelfTest_);
-        }
+    impl<Temperature_: Temperature, PerformanceXY_: PerformanceXY, OutputDataRate_: OutputDataRate, FastOdr_: FastOdr, SelfTest_: SelfTest> WriteableRegister for CtrlReg1<Temperature_, PerformanceXY_, OutputDataRate_, FastOdr_, SelfTest_>  {
+        const ADDRESS: u8 = 0x20;
+        const BYTE: u8 = fields_to_byte!(Temperature_, PerformanceXY_, OutputDataRate_, FastOdr_, SelfTest_);
     }
 
 
@@ -111,7 +105,7 @@ pub mod crtl_reg_1 {
 
 
     bitflags! {
-        pub struct PerformanceFlags: u8 {
+        pub struct PerformanceXYFlags: u8 {
             const LOW_PERFORMANCE        = 0b00;
             const MEDIUM_PERFORMANCE     = 0b01;
             const HIGH_PERFORMANCE       = 0b10;
@@ -119,24 +113,24 @@ pub mod crtl_reg_1 {
         }
     }
 
-    pub trait Performance {
-        const PERFORMANCE: PerformanceFlags;
+    pub trait PerformanceXY {
+        const PERFORMANCE_XY: PerformanceXYFlags;
         const SHIFT: usize = 5;
     }
 
-    impl<T> Field<PerformanceFlags> for T where T: Performance {
-        const FIELD: PerformanceFlags = <T as Performance>::PERFORMANCE;
-        const SHIFT: usize = <T as Performance>::SHIFT;
+    impl<T> Field<PerformanceXYFlags> for T where T: PerformanceXY {
+        const FIELD: PerformanceXYFlags = <T as PerformanceXY>::PERFORMANCE_XY;
+        const SHIFT: usize = <T as PerformanceXY>::SHIFT;
     }
 
-    pub struct LowPerformance;
-    pub struct MediumPerformance;
-    pub struct HighPerformance;
-    pub struct UltraHighPerformance;
-    impl Performance for LowPerformance { const PERFORMANCE: PerformanceFlags = PerformanceFlags::LOW_PERFORMANCE; }
-    impl Performance for MediumPerformance { const PERFORMANCE: PerformanceFlags = PerformanceFlags::MEDIUM_PERFORMANCE; }
-    impl Performance for HighPerformance { const PERFORMANCE: PerformanceFlags = PerformanceFlags::HIGH_PERFORMANCE; }
-    impl Performance for UltraHighPerformance { const PERFORMANCE: PerformanceFlags = PerformanceFlags::ULTRA_HIGH_PERFORMANCE; }
+    pub struct PerformanceLowXY;
+    pub struct PerformanceMediumXY;
+    pub struct PerformanceHighXY;
+    pub struct PerformanceUltraHighXY;
+    impl PerformanceXY for PerformanceLowXY { const PERFORMANCE_XY: PerformanceXYFlags = PerformanceXYFlags::LOW_PERFORMANCE; }
+    impl PerformanceXY for PerformanceMediumXY { const PERFORMANCE_XY: PerformanceXYFlags = PerformanceXYFlags::MEDIUM_PERFORMANCE; }
+    impl PerformanceXY for PerformanceHighXY { const PERFORMANCE_XY: PerformanceXYFlags = PerformanceXYFlags::HIGH_PERFORMANCE; }
+    impl PerformanceXY for PerformanceUltraHighXY { const PERFORMANCE_XY: PerformanceXYFlags = PerformanceXYFlags::ULTRA_HIGH_PERFORMANCE; }
 
 
     bitflags! {
@@ -230,23 +224,13 @@ pub mod ctrl_reg_2 {
     use std::marker::PhantomData;
     use bitflags::bitflags;
     use crate::peripheral::lis3mdl::{Field, WriteableRegister};
-    use crate::peripheral::spi::Device;
 
-    #[derive(Copy, Clone)]
-    pub struct CrtlReg2<Scale = Scale4Gauss, Reboot = RebootNormalMode, SoftReset = SoftResetNormalMode>(PhantomData<Scale>, PhantomData<Reboot>, PhantomData<SoftReset>);
+    #[derive(Copy, Clone, Default)]
+    pub struct CtrlReg2<Scale = Scale4Gauss, Reboot = RebootNormalMode, SoftReset = SoftResetNormalMode>(PhantomData<(Scale, Reboot, SoftReset)>);
 
-    impl<Scale_: Scale, Reboot_: Reboot, SoftReset_: SoftReset> CrtlReg2<Scale_, Reboot_, SoftReset_>  {
-        pub const ADDRESS: u8 = 0x21;
-
-        pub fn new() -> Self {
-            Self(Default::default(), Default::default(), Default::default())
-        }
-    }
-
-    impl<Scale_: Scale, Reboot_: Reboot, SoftReset_: SoftReset> WriteableRegister for CrtlReg2<Scale_, Reboot_, SoftReset_>  {
-        fn write(&self, dest: &mut impl Device) {
-            write_fields!(Self::ADDRESS, dest: Scale_, Reboot_, SoftReset_);
-        }
+    impl<Scale_: Scale, Reboot_: Reboot, SoftReset_: SoftReset> WriteableRegister for CtrlReg2<Scale_, Reboot_, SoftReset_>  {
+        const ADDRESS: u8 = 0x21;
+        const BYTE: u8 = fields_to_byte!(Scale_, Reboot_, SoftReset_);
     }
 
 
@@ -321,31 +305,21 @@ pub mod ctrl_reg_2 {
 
     pub struct SoftResetNormalMode;
     pub struct SoftResetRegisters;
-    impl SoftReset for SoftResetNormalMode { const SOFT_RESET: SoftResetFlags = SoftResetFlags::RESET; }
-    impl SoftReset for SoftResetRegisters { const SOFT_RESET: SoftResetFlags = SoftResetFlags::NORMAL_MODE; }
+    impl SoftReset for SoftResetNormalMode { const SOFT_RESET: SoftResetFlags = SoftResetFlags::NORMAL_MODE; }
+    impl SoftReset for SoftResetRegisters { const SOFT_RESET: SoftResetFlags = SoftResetFlags::RESET; }
 }
 
 pub mod ctrl_reg_3 {
     use std::marker::PhantomData;
     use bitflags::bitflags;
     use crate::peripheral::lis3mdl::{Field, WriteableRegister};
-    use crate::peripheral::spi::Device;
 
-    #[derive(Copy, Clone)]
-    pub struct CrtlReg3<LowPower = LowPowerDisable, SpiMode = SpiMode4Wire, OperatingMode = OperatingModePowerDown>(PhantomData<LowPower>, PhantomData<SpiMode>, PhantomData<OperatingMode>);
+    #[derive(Copy, Clone, Default)]
+    pub struct CtrlReg3<LowPower = LowPowerDisable, SpiMode = SpiMode4Wire, OperatingMode = OperatingModePowerDown>(PhantomData<(LowPower, SpiMode, OperatingMode)>);
 
-    impl<LowPower_: LowPower, SpiMode_: SpiMode, OperatingMode_: OperatingMode> CrtlReg3<LowPower_, SpiMode_, OperatingMode_>  {
-        pub const ADDRESS: u8 = 0x22;
-
-        pub fn new() -> Self {
-            Self(Default::default(), Default::default(), Default::default())
-        }
-    }
-
-    impl<LowPower_: LowPower, SpiMode_: SpiMode, OperatingMode_: OperatingMode> WriteableRegister for CrtlReg3<LowPower_, SpiMode_, OperatingMode_>  {
-        fn write(&self, dest: &mut impl Device) {
-            write_fields!(Self::ADDRESS, dest: LowPower_, SpiMode_, OperatingMode_);
-        }
+    impl<LowPower_: LowPower, SpiMode_: SpiMode, OperatingMode_: OperatingMode> WriteableRegister for CtrlReg3<LowPower_, SpiMode_, OperatingMode_>  {
+        const ADDRESS: u8 = 0x22;
+        const BYTE: u8 = fields_to_byte!(LowPower_, SpiMode_, OperatingMode_);
     }
 
 
@@ -419,4 +393,171 @@ pub mod ctrl_reg_3 {
     impl OperatingMode for OperatingModeContinuousConversion { const OPERATING_MODE: OperatingModeFlags = OperatingModeFlags::CONTINUOUS_CONVERSION; }
     impl OperatingMode for OperatingModeSingleConversion { const OPERATING_MODE: OperatingModeFlags = OperatingModeFlags::SINGLE_CONVERSION; }
     impl OperatingMode for OperatingModePowerDown { const OPERATING_MODE: OperatingModeFlags = OperatingModeFlags::POWER_DOWN; }
+}
+
+pub mod ctrl_reg_4 {
+    use std::marker::PhantomData;
+    use bitflags::bitflags;
+    use crate::peripheral::lis3mdl::{Field, WriteableRegister};
+
+    #[derive(Copy, Clone, Default)]
+    pub struct CtrlReg4<PerformanceZ = PerformanceLowZ, Endianness = EndiannessBig>(PhantomData<(PerformanceZ, Endianness)>);
+
+    impl<PerformanceZ_: PerformanceZ, Endianness_: Endianness> WriteableRegister for CtrlReg4<PerformanceZ_, Endianness_>  {
+        const ADDRESS: u8 = 0x23;
+        const BYTE: u8 = fields_to_byte!(PerformanceZ_, Endianness_);
+    }
+
+
+    bitflags! {
+        pub struct PerformanceZFlags: u8 {
+            const LOW_PERFORMANCE        = 0b00;
+            const MEDIUM_PERFORMANCE     = 0b01;
+            const HIGH_PERFORMANCE       = 0b10;
+            const ULTRA_HIGH_PERFORMANCE = 0b11;
+        }
+    }
+
+    pub trait PerformanceZ {
+        const PERFORMANCE_Z: PerformanceZFlags;
+        const SHIFT: usize = 2;
+    }
+
+    impl<T> Field<PerformanceZFlags> for T where T: PerformanceZ {
+        const FIELD: PerformanceZFlags = <T as PerformanceZ>::PERFORMANCE_Z;
+        const SHIFT: usize = <T as PerformanceZ>::SHIFT;
+    }
+
+    pub struct PerformanceLowZ;
+    pub struct PerformanceMediumZ;
+    pub struct PerformanceHighZ;
+    pub struct PerformanceUltraHighZ;
+    impl PerformanceZ for PerformanceLowZ { const PERFORMANCE_Z: PerformanceZFlags = PerformanceZFlags::LOW_PERFORMANCE; }
+    impl PerformanceZ for PerformanceMediumZ { const PERFORMANCE_Z: PerformanceZFlags = PerformanceZFlags::MEDIUM_PERFORMANCE; }
+    impl PerformanceZ for PerformanceHighZ { const PERFORMANCE_Z: PerformanceZFlags = PerformanceZFlags::HIGH_PERFORMANCE; }
+    impl PerformanceZ for PerformanceUltraHighZ { const PERFORMANCE_Z: PerformanceZFlags = PerformanceZFlags::ULTRA_HIGH_PERFORMANCE; }
+
+
+    bitflags! {
+        pub struct EndiannessFlags: u8 {
+            const BIG_ENDIAN    = 0b0;
+            const LITTLE_ENDIAN = 0b1;
+        }
+    }
+
+    pub trait Endianness {
+        const ENDIANNESS: EndiannessFlags;
+        const SHIFT: usize = 1;
+    }
+
+    impl<T> Field<EndiannessFlags> for T where T: Endianness {
+        const FIELD: EndiannessFlags = <T as Endianness>::ENDIANNESS;
+        const SHIFT: usize = <T as Endianness>::SHIFT;
+    }
+
+    pub struct EndiannessBig;
+    pub struct EndiannessLittle;
+    impl Endianness for EndiannessBig { const ENDIANNESS: EndiannessFlags = EndiannessFlags::BIG_ENDIAN; }
+    impl Endianness for EndiannessLittle { const ENDIANNESS: EndiannessFlags = EndiannessFlags::LITTLE_ENDIAN; }
+}
+
+pub mod ctrl_reg_5 {
+    use std::marker::PhantomData;
+    use bitflags::bitflags;
+    use crate::peripheral::lis3mdl::{Field, WriteableRegister};
+
+    #[derive(Copy, Clone, Default)]
+    pub struct CtrlReg5<FastRead = FastReadDisable, BlockDataUpdate = BlockDataUpdateDisable>(PhantomData<(FastRead, BlockDataUpdate)>);
+
+    impl<FastRead_: FastRead, BlockDataUpdate_: BlockDataUpdate> WriteableRegister for CtrlReg5<FastRead_, BlockDataUpdate_>  {
+        const ADDRESS: u8 = 0x24;
+        const BYTE: u8 = fields_to_byte!(FastRead_, BlockDataUpdate_);
+    }
+
+
+    bitflags! {
+        pub struct FastReadFlags: u8 {
+            const ENABLE  = 0b1;
+            const DISABLE = 0b0;
+        }
+    }
+
+    pub trait FastRead {
+        const FAST_READ: FastReadFlags;
+        const SHIFT: usize = 7;
+    }
+
+    impl<T> Field<FastReadFlags> for T where T: FastRead {
+        const FIELD: FastReadFlags = <T as FastRead>::FAST_READ;
+        const SHIFT: usize = <T as FastRead>::SHIFT;
+    }
+
+    pub struct FastReadEnable;
+    pub struct FastReadDisable;
+    impl FastRead for FastReadEnable { const FAST_READ: FastReadFlags = FastReadFlags::ENABLE; }
+    impl FastRead for FastReadDisable { const FAST_READ: FastReadFlags = FastReadFlags::DISABLE; }
+
+
+    bitflags! {
+        pub struct BlockDataUpdateFlags: u8 {
+            const ENABLE  = 0b1;
+            const DISABLE = 0b0;
+        }
+    }
+
+    pub trait BlockDataUpdate {
+        const BLOCK_DATA_UPDATE: BlockDataUpdateFlags;
+        const SHIFT: usize = 6;
+    }
+
+    impl<T> Field<BlockDataUpdateFlags> for T where T: BlockDataUpdate {
+        const FIELD: BlockDataUpdateFlags = <T as BlockDataUpdate>::BLOCK_DATA_UPDATE;
+        const SHIFT: usize = <T as BlockDataUpdate>::SHIFT;
+    }
+
+    pub struct BlockDataUpdateEnable;
+    pub struct BlockDataUpdateDisable;
+    impl BlockDataUpdate for BlockDataUpdateEnable { const BLOCK_DATA_UPDATE: BlockDataUpdateFlags = BlockDataUpdateFlags::ENABLE; }
+    impl BlockDataUpdate for BlockDataUpdateDisable { const BLOCK_DATA_UPDATE: BlockDataUpdateFlags = BlockDataUpdateFlags::DISABLE; }
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::peripheral::lis3mdl::ctrl_reg_1::{CtrlReg1, FastOdrEnable, OutputDataRate2_5, PerformanceMediumXY, SelfTestEnable, TemperatureEnable};
+    use crate::peripheral::lis3mdl::ctrl_reg_2::{CtrlReg2, RebootMemory, Scale, Scale12Gauss, SoftResetRegisters};
+    use crate::peripheral::lis3mdl::ctrl_reg_3::{CtrlReg3, LowPowerEnable, OperatingModeSingleConversion, SpiMode3Wire};
+    use crate::peripheral::lis3mdl::ctrl_reg_4::{CtrlReg4, EndiannessLittle, PerformanceHighZ};
+    use crate::peripheral::lis3mdl::ctrl_reg_5::{BlockDataUpdateEnable, CtrlReg5, FastReadEnable};
+    use crate::peripheral::lis3mdl::WriteableRegister;
+
+    #[test]
+    fn default() {
+        assert_eq!(<CtrlReg1>::ADDRESS, 0x20);
+        assert_eq!(<CtrlReg1>::BYTE, 0b0001_0000);
+
+        assert_eq!(<CtrlReg2>::ADDRESS, 0x21);
+        assert_eq!(<CtrlReg2>::BYTE, 0b0000_0000);
+
+        assert_eq!(<CtrlReg3>::ADDRESS, 0x22);
+        assert_eq!(<CtrlReg3>::BYTE, 0b0000_0011);
+
+        assert_eq!(<CtrlReg4>::ADDRESS, 0x23);
+        assert_eq!(<CtrlReg4>::BYTE, 0b0000_0000);
+
+        assert_eq!(<CtrlReg5>::ADDRESS, 0x24);
+        assert_eq!(<CtrlReg5>::BYTE, 0b0000_0000);
+    }
+
+    #[test]
+    fn states() {
+        assert_eq!(<CtrlReg1<TemperatureEnable, PerformanceMediumXY, OutputDataRate2_5, FastOdrEnable, SelfTestEnable>>::BYTE, 0b1010_1011);
+
+        assert_eq!(<CtrlReg2<Scale12Gauss, RebootMemory, SoftResetRegisters>>::BYTE, 0b0100_1100);
+
+        assert_eq!(<CtrlReg3<LowPowerEnable, SpiMode3Wire, OperatingModeSingleConversion>>::BYTE, 0b0010_0101);
+
+        assert_eq!(<CtrlReg4<PerformanceHighZ, EndiannessLittle>>::BYTE, 0b0000_1010);
+
+        assert_eq!(<CtrlReg5<FastReadEnable, BlockDataUpdateEnable>>::BYTE, 0b1100_0000);
+    }
 }
