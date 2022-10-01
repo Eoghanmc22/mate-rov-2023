@@ -1,11 +1,14 @@
 use crate::peripheral::spi::Device;
 
+// TODO WRITE TESTS
+// - Data sheet has a list of default values for each reg
+// TODO Write Comments
+
 pub const LIS3MDL_ADDRESS: u8     = 0x1C;
 
 pub const LIS3MDL_WHO_AM_I: u8    = 0x0F;
 
 pub const LIS3MDL_CTRL_REG1: u8   = 0x20;
-
 pub const LIS3MDL_CTRL_REG2: u8   = 0x21;
 pub const LIS3MDL_CTRL_REG3: u8   = 0x22;
 pub const LIS3MDL_CTRL_REG4: u8   = 0x23;
@@ -29,13 +32,11 @@ pub const LIS3MDL_INT_SRC: u8     = 0x31;
 pub const LIS3MDL_INT_THS_L: u8   = 0x32;
 pub const LIS3MDL_INT_THS_H: u8   = 0x33;
 
-// TODO who am i
 
 pub trait WriteableRegister {
     fn write(&self, dest: &mut impl Device);
 }
 
-//TODO is this needed?
 trait Field<T> {
     const FIELD: T;
     const SHIFT: usize;
@@ -48,14 +49,26 @@ macro_rules! write_fields {
     };
 }
 
-// todo visibility
+//TODO implement useful stuff lol
+pub struct Lis3mdl {
+    // TODO who_am_i
+    crtl_reg_1: crtl_reg_1::CrtlReg1,
+    crtl_reg_2: crtl_reg_2::CrtlReg2,
+    crtl_reg_3: crtl_reg_3::CrtlReg3,
+    // TODO crtl_reg_4
+    // TODO crtl_reg_5
+    // TODO status_reg
+
+    // TODO out block
+    // TODO interrupts
+}
+
 pub mod crtl_reg_1 {
     use std::marker::PhantomData;
     use bitflags::bitflags;
     use crate::peripheral::lis3mdl::{Field, WriteableRegister};
     use crate::peripheral::spi::Device;
 
-    // FIXME prob need phantom data to compile
     #[derive(Copy, Clone)]
     pub struct CrtlReg1<Temperature = TemperatureDisable, Performance = LowPerformance, OutputDataRate = OutputDataRate10_0, FastOdr = FastOdrDisable, SelfTest = SelfTestDisable>(PhantomData<Temperature>, PhantomData<Performance>, PhantomData<OutputDataRate>, PhantomData<FastOdr>, PhantomData<SelfTest>);
 
@@ -76,8 +89,8 @@ pub mod crtl_reg_1 {
 
     bitflags! {
         pub struct TempatureFlags: u8 {
-            const ENABLE  = 0b0000_0001;
-            const DISABLE = 0b0000_0000;
+            const ENABLE  = 0b1;
+            const DISABLE = 0b0;
         }
     }
 
@@ -169,8 +182,8 @@ pub mod crtl_reg_1 {
 
     bitflags! {
         pub struct FastOdrFlags: u8 {
-            const ENABLE  = 0b0000_0001;
-            const DISABLE = 0b0000_0000;
+            const ENABLE  = 0b1;
+            const DISABLE = 0b0;
         }
     }
 
@@ -192,8 +205,8 @@ pub mod crtl_reg_1 {
 
     bitflags! {
         pub struct SelfTestFlags: u8 {
-            const ENABLE  = 0b0000_0001;
-            const DISABLE = 0b0000_0000;
+            const ENABLE  = 0b1;
+            const DISABLE = 0b0;
         }
     }
 
@@ -213,3 +226,197 @@ pub mod crtl_reg_1 {
     impl SelfTest for SelfTestDisable { const SELF_TEST: SelfTestFlags = SelfTestFlags::DISABLE; }
 }
 
+pub mod ctrl_reg_2 {
+    use std::marker::PhantomData;
+    use bitflags::bitflags;
+    use crate::peripheral::lis3mdl::{Field, WriteableRegister};
+    use crate::peripheral::spi::Device;
+
+    #[derive(Copy, Clone)]
+    pub struct CrtlReg2<Scale = Scale4Gauss, Reboot = RebootNormalMode, SoftReset = SoftResetNormalMode>(PhantomData<Scale>, PhantomData<Reboot>, PhantomData<SoftReset>);
+
+    impl<Scale_: Scale, Reboot_: Reboot, SoftReset_: SoftReset> CrtlReg2<Scale_, Reboot_, SoftReset_>  {
+        pub const ADDRESS: u8 = 0x21;
+
+        pub fn new() -> Self {
+            Self(Default::default(), Default::default(), Default::default())
+        }
+    }
+
+    impl<Scale_: Scale, Reboot_: Reboot, SoftReset_: SoftReset> WriteableRegister for CrtlReg2<Scale_, Reboot_, SoftReset_>  {
+        fn write(&self, dest: &mut impl Device) {
+            write_fields!(Self::ADDRESS, dest: Scale_, Reboot_, SoftReset_);
+        }
+    }
+
+
+    bitflags! {
+        pub struct ScaleFlags: u8 {
+            const SCALE_4_GAUSS   = 0b00;
+            const SCALE_8_GAUSS   = 0b01;
+            const SCALE_12_GAUSS  = 0b10;
+            const SCALE_16_GAUSS  = 0b11;
+        }
+    }
+
+    pub trait Scale {
+        const SCALE: ScaleFlags;
+        const SHIFT: usize = 5;
+    }
+
+    impl<T> Field<ScaleFlags> for T where T: Scale {
+        const FIELD: ScaleFlags = <T as Scale>::SCALE;
+        const SHIFT: usize = <T as Scale>::SHIFT;
+    }
+
+    pub struct Scale4Gauss;
+    pub struct Scale8Gauss;
+    pub struct Scale12Gauss;
+    pub struct Scale16Gauss;
+    impl Scale for Scale4Gauss { const SCALE: ScaleFlags = ScaleFlags::SCALE_4_GAUSS; }
+    impl Scale for Scale8Gauss { const SCALE: ScaleFlags = ScaleFlags::SCALE_8_GAUSS; }
+    impl Scale for Scale12Gauss { const SCALE: ScaleFlags = ScaleFlags::SCALE_12_GAUSS; }
+    impl Scale for Scale16Gauss { const SCALE: ScaleFlags = ScaleFlags::SCALE_16_GAUSS; }
+
+
+    bitflags! {
+        pub struct RebootFlags: u8 {
+            const NORMAL_MODE = 0b0;
+            const REBOOT      = 0b1;
+        }
+    }
+
+    pub trait Reboot {
+        const REBOOT: RebootFlags;
+        const SHIFT: usize = 3;
+    }
+
+    impl<T> Field<RebootFlags> for T where T: Reboot {
+        const FIELD: RebootFlags = <T as Reboot>::REBOOT;
+        const SHIFT: usize = <T as Reboot>::SHIFT;
+    }
+
+    pub struct RebootNormalMode;
+    pub struct RebootMemory;
+    impl Reboot for RebootNormalMode { const REBOOT: RebootFlags = RebootFlags::NORMAL_MODE; }
+    impl Reboot for RebootMemory { const REBOOT: RebootFlags = RebootFlags::REBOOT; }
+
+
+    bitflags! {
+        pub struct SoftResetFlags: u8 {
+            const NORMAL_MODE = 0b0;
+            const RESET       = 0b1;
+        }
+    }
+
+    pub trait SoftReset {
+        const SOFT_RESET: SoftResetFlags;
+        const SHIFT: usize = 2;
+    }
+
+    impl<T> Field<SoftResetFlags> for T where T: SoftReset {
+        const FIELD: SoftResetFlags = <T as SoftReset>::SOFT_RESET;
+        const SHIFT: usize = <T as SoftReset>::SHIFT;
+    }
+
+    pub struct SoftResetNormalMode;
+    pub struct SoftResetRegisters;
+    impl SoftReset for SoftResetNormalMode { const SOFT_RESET: SoftResetFlags = SoftResetFlags::RESET; }
+    impl SoftReset for SoftResetRegisters { const SOFT_RESET: SoftResetFlags = SoftResetFlags::NORMAL_MODE; }
+}
+
+pub mod ctrl_reg_3 {
+    use std::marker::PhantomData;
+    use bitflags::bitflags;
+    use crate::peripheral::lis3mdl::{Field, WriteableRegister};
+    use crate::peripheral::spi::Device;
+
+    #[derive(Copy, Clone)]
+    pub struct CrtlReg3<LowPower = LowPowerDisable, SpiMode = SpiMode4Wire, OperatingMode = OperatingModePowerDown>(PhantomData<LowPower>, PhantomData<SpiMode>, PhantomData<OperatingMode>);
+
+    impl<LowPower_: LowPower, SpiMode_: SpiMode, OperatingMode_: OperatingMode> CrtlReg3<LowPower_, SpiMode_, OperatingMode_>  {
+        pub const ADDRESS: u8 = 0x22;
+
+        pub fn new() -> Self {
+            Self(Default::default(), Default::default(), Default::default())
+        }
+    }
+
+    impl<LowPower_: LowPower, SpiMode_: SpiMode, OperatingMode_: OperatingMode> WriteableRegister for CrtlReg3<LowPower_, SpiMode_, OperatingMode_>  {
+        fn write(&self, dest: &mut impl Device) {
+            write_fields!(Self::ADDRESS, dest: LowPower_, SpiMode_, OperatingMode_);
+        }
+    }
+
+
+    bitflags! {
+        pub struct LowPowerFlags: u8 {
+            const ENABLE  = 0b1;
+            const DISABLE = 0b0;
+        }
+    }
+
+    pub trait LowPower {
+        const LOW_POWER: LowPowerFlags;
+        const SHIFT: usize = 5;
+    }
+
+    impl<T> Field<LowPowerFlags> for T where T: LowPower {
+        const FIELD: LowPowerFlags = <T as LowPower>::LOW_POWER;
+        const SHIFT: usize = <T as LowPower>::SHIFT;
+    }
+
+    pub struct LowPowerEnable;
+    pub struct LowPowerDisable;
+    impl LowPower for LowPowerEnable { const LOW_POWER: LowPowerFlags = LowPowerFlags::ENABLE; }
+    impl LowPower for LowPowerDisable { const LOW_POWER: LowPowerFlags = LowPowerFlags::DISABLE; }
+
+
+    bitflags! {
+        pub struct SpiModeFlags: u8 {
+            const SPI_4_WIRE = 0b0;
+            const SPI_3_WIRE = 0b1;
+        }
+    }
+
+    pub trait SpiMode {
+        const SPI_MODE: SpiModeFlags;
+        const SHIFT: usize = 2;
+    }
+
+    impl<T> Field<SpiModeFlags> for T where T: SpiMode {
+        const FIELD: SpiModeFlags = <T as SpiMode>::SPI_MODE;
+        const SHIFT: usize = <T as SpiMode>::SHIFT;
+    }
+
+    pub struct SpiMode4Wire;
+    pub struct SpiMode3Wire;
+    impl SpiMode for SpiMode4Wire { const SPI_MODE: SpiModeFlags = SpiModeFlags::SPI_4_WIRE; }
+    impl SpiMode for SpiMode3Wire { const SPI_MODE: SpiModeFlags = SpiModeFlags::SPI_3_WIRE; }
+
+
+    bitflags! {
+        pub struct OperatingModeFlags: u8 {
+            const CONTINUOUS_CONVERSION = 0b00;
+            const SINGLE_CONVERSION     = 0b01;
+            const POWER_DOWN            = 0b11;
+        }
+    }
+
+    pub trait OperatingMode {
+        const OPERATING_MODE: OperatingModeFlags;
+        const SHIFT: usize = 0;
+    }
+
+    impl<T> Field<OperatingModeFlags> for T where T: OperatingMode {
+        const FIELD: OperatingModeFlags = <T as OperatingMode>::OPERATING_MODE;
+        const SHIFT: usize = <T as OperatingMode>::SHIFT;
+    }
+
+    pub struct OperatingModeContinuousConversion;
+    pub struct OperatingModeSingleConversion;
+    pub struct OperatingModePowerDown;
+    impl OperatingMode for OperatingModeContinuousConversion { const OPERATING_MODE: OperatingModeFlags = OperatingModeFlags::CONTINUOUS_CONVERSION; }
+    impl OperatingMode for OperatingModeSingleConversion { const OPERATING_MODE: OperatingModeFlags = OperatingModeFlags::SINGLE_CONVERSION; }
+    impl OperatingMode for OperatingModePowerDown { const OPERATING_MODE: OperatingModeFlags = OperatingModeFlags::POWER_DOWN; }
+}
