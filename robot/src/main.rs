@@ -49,7 +49,7 @@ fn start_depth_sensor() -> anyhow::Result<()> {
                 let start = Instant::now();
 
                 if let Some(depth_frame) = depth_sensor.read_depth() {
-                    robot::ROBOT.depth().store(Some(depth_frame).zome(Some(Instant::now())));
+                    robot::ROBOT.depth().store(Some(depth_frame).zip(Some(Instant::now())));
                 } else {
                     error!("Could not read depth frame");
                 }
@@ -63,7 +63,7 @@ fn start_depth_sensor() -> anyhow::Result<()> {
 
 fn start_imu_sensor_a_g() -> anyhow::Result<()> {
     // TODO make api
-    Spi::new(spi::Bus::Spi0, spi::SlaveSelect::Ss0, 10_000_000, spi::Mode::Mode2).context("Create spi for lsm6dsl")?
+    Spi::new(spi::Bus::Spi0, spi::SlaveSelect::Ss0, 10_000_000, spi::Mode::Mode2).context("Create spi for lsm6dsl")?;
 
     thread::Builder::new()
         .name("IMU Sensor A/G".to_owned())
@@ -73,7 +73,7 @@ fn start_imu_sensor_a_g() -> anyhow::Result<()> {
                 let start = Instant::now();
 
                 let depth_frame = depth_sensor.read_depth()?;
-                robot::ROBOT.depth().store(Some(depth_frame).zome(Some(Instant::now())));
+                robot::ROBOT.depth().store(Some(depth_frame).zip(Some(Instant::now())));
 
                 thread::sleep(Duration::from_millis(50) - start.elapsed());
             }

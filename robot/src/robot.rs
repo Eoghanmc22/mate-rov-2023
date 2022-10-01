@@ -5,7 +5,7 @@ use common::types::{DepthFrame, InertialFrame, MagFrame, Meters, MotorFrame, Mot
 use crate::event::Notify;
 
 lazy_static! {
-    pub static ref ROBOT: Robot = Robot::new();
+    pub static ref ROBOT: Robot = Robot::new([/* TODO */].into());
 }
 
 pub struct Robot {

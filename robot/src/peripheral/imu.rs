@@ -3,6 +3,9 @@ use rppal::spi;
 use rppal::spi::Spi;
 use tracing::trace;
 use common::types::{Degrees, Gauss, GForce, InertialFrame, MagFrame};
+use crate::peripheral::lis3mdl::{LIS3MDL_CTRL_REG1, LIS3MDL_CTRL_REG2, LIS3MDL_CTRL_REG3, LIS3MDL_OUT_BLOCK, LIS3MDL_WHO_AM_I};
+use crate::peripheral::lsm6dsl::{LSM6DSL_CTRL1_XL, LSM6DSL_CTRL2_G, LSM6DSL_CTRL3_C, LSM6DSL_CTRL8_XL, LSM6DSL_OUT_BLOCK, LSM6DSL_WHO_AM_I};
+use crate::peripheral::spi::Device;
 
 // TODO Verify correctness
 // TODO Simplify impl
@@ -11,109 +14,8 @@ use common::types::{Degrees, Gauss, GForce, InertialFrame, MagFrame};
 // TODO Extract spi stuff
 // TODO Make api better lol
 
-const LSM6DSL_ADDRESS: u8          =  0x6A;
-
-const LSM6DSL_WHO_AM_I: u8         =  0x0F;
-const LSM6DSL_RAM_ACCESS: u8       =  0x01;
-const LSM6DSL_CTRL1_XL: u8         =  0x10;
-const LSM6DSL_CTRL8_XL: u8         =  0x17;
-const LSM6DSL_CTRL2_G: u8          =  0x11;
-const LSM6DSL_CTRL10_C: u8         =  0x19;
-const LSM6DSL_TAP_CFG1: u8         =  0x58;
-const LSM6DSL_INT1_CTR: u8         =  0x0D;
-const LSM6DSL_CTRL3_C: u8          =  0x12;
-const LSM6DSL_CTRL4_C: u8          =  0x13;
-
-const LSM6DSL_STEP_COUNTER_L: u8   =  0x4B;
-const LSM6DSL_STEP_COUNTER_H: u8   =  0x4C;
-
-const LSM6DSL_OUT_L_TEMP: u8       =  0x20;
-const LSM6DSL_OUT_H_TEMP: u8       =  0x21;
-
-const LSM6DSL_OUT_BLOCK: u8         =  0x22;
-const LSM6DSL_OUTX_L_G: u8         =  0x22;
-const LSM6DSL_OUTX_H_G: u8         =  0x23;
-const LSM6DSL_OUTY_L_G: u8         =  0x24;
-const LSM6DSL_OUTY_H_G: u8         =  0x25;
-const LSM6DSL_OUTZ_L_G: u8         =  0x26;
-const LSM6DSL_OUTZ_H_G: u8         =  0x27;
-const LSM6DSL_OUTX_L_XL: u8        =  0x28;
-const LSM6DSL_OUTX_H_XL: u8        =  0x29;
-const LSM6DSL_OUTY_L_XL: u8        =  0x2A;
-const LSM6DSL_OUTY_H_XL: u8        =  0x2B;
-const LSM6DSL_OUTZ_L_XL: u8        =  0x2C;
-const LSM6DSL_OUTZ_H_XL: u8        =  0x2D;
-
-const LSM6DSL_TAP_CFG: u8          =  0x58;
-const LSM6DSL_WAKE_UP_SRC: u8      =  0x1B;
-const LSM6DSL_WAKE_UP_DUR: u8      =  0x5C;
-const LSM6DSL_FREE_FALL: u8        =  0x5D;
-const LSM6DSL_MD1_CFG: u8          =  0x5E;
-const LSM6DSL_MD2_CFG: u8          =  0x5F;
-const LSM6DSL_TAP_THS_6D: u8       =  0x59;
-const LSM6DSL_INT_DUR2: u8         =  0x5A;
-const LSM6DSL_WAKE_UP_THS: u8      =  0x5B;
-const LSM6DSL_FUNC_SRC1: u8        =  0x53;
-
-
-const LIS3MDL_ADDRESS: u8     = 0x1C;
-
-const LIS3MDL_WHO_AM_I: u8    = 0x0F;
-
-const LIS3MDL_CTRL_REG1: u8   = 0x20;
-
-const LIS3MDL_CTRL_REG2: u8   = 0x21;
-const LIS3MDL_CTRL_REG3: u8   = 0x22;
-const LIS3MDL_CTRL_REG4: u8   = 0x23;
-const LIS3MDL_CTRL_REG5: u8   = 0x24;
-
-const LIS3MDL_STATUS_REG: u8  = 0x27;
-
-const LIS3MDL_OUT_BLOCK: u8     = 0x28;
-const LIS3MDL_OUT_X_L: u8     = 0x28;
-const LIS3MDL_OUT_X_H: u8     = 0x29;
-const LIS3MDL_OUT_Y_L: u8     = 0x2A;
-const LIS3MDL_OUT_Y_H: u8     = 0x2B;
-const LIS3MDL_OUT_Z_L: u8     = 0x2C;
-const LIS3MDL_OUT_Z_H: u8     = 0x2D;
-
-const LIS3MDL_TEMP_OUT_L: u8  = 0x2E;
-const LIS3MDL_TEMP_OUT_H: u8  = 0x2F;
-
-const LIS3MDL_INT_CFG: u8     = 0x30;
-const LIS3MDL_INT_SRC: u8     = 0x31;
-const LIS3MDL_INT_THS_L: u8   = 0x32;
-const LIS3MDL_INT_THS_H: u8   = 0x33;
-
-pub struct ImuSensor {
-    lsm6dsl: Inertial, // Gyro and accelerometer
-    lis3mdl: Magnetometer, // Magnetometer
-}
-
-impl ImuSensor {
-    /// Blocks until connected
-    #[tracing::instrument]
-    pub fn new() -> anyhow::Result<Self> {
-        trace!("ImuSensor::new()");
-
-        let lsm6dsl = Spi::new(spi::Bus::Spi0, spi::SlaveSelect::Ss0, 10_000_000, spi::Mode::Mode2).context("Create spi for lsm6dsl")?;
-        let lis3mdl = Spi::new(spi::Bus::Spi0, spi::SlaveSelect::Ss1, 10_000_000, spi::Mode::Mode2).context("Create spi for lis3mdl")?;
-
-        Ok(Self {
-            lsm6dsl: Inertial::new(lsm6dsl)?,
-            lis3mdl: Magnetometer::new(lis3mdl)?,
-        })
-    }
-    pub fn inertial(&mut self) -> &Inertial {
-        &mut self.lsm6dsl
-    }
-    pub fn magnetometer(&mut self) -> &Magnetometer {
-        &mut self.lis3mdl
-    }
-}
-
-struct Magnetometer(Spi);
-struct Inertial(Spi);
+pub struct Magnetometer(Spi);
+pub struct Inertial(Spi);
 
 impl Magnetometer {
     const MAGNETIC_SENSITIVITY: f64 = 1.0/3421.0;
@@ -189,34 +91,11 @@ impl Inertial {
     }
 }
 
-trait SpiDevice {
-    fn read_byte(&mut self, address: u8) -> anyhow::Result<u8>;
-    fn read(&mut self, address: u8, buffer: &mut [u8]) -> anyhow::Result<()>;
-    fn write_byte(&mut self, address: u8, byte: u8) -> anyhow::Result<()>;
-    fn write(&mut self, address: u8, buffer: &[u8]) -> anyhow::Result<()>;
-}
-
-impl SpiDevice for Magnetometer {
-    fn read_byte(&mut self, address: u8) -> anyhow::Result<u8> {
-        let address = address & 0b00111111 | 0b10000000; // Read
-        let buffer = &mut [0];
-        self.0.write(&[address])?;
-        self.0.read(buffer)?;
-
-        Ok(buffer[0])
-    }
-
+impl Device for Magnetometer {
     fn read(&mut self, address: u8, buffer: &mut [u8]) -> anyhow::Result<()> {
         let address = address & 0b00111111 | 0b11000000; // Read with address auto increment
         self.0.write(&[address])?;
         self.0.read(buffer)?;
-
-        Ok(())
-    }
-
-    fn write_byte(&mut self, address: u8, byte: u8) -> anyhow::Result<()> {
-        let address = address & 0b00111111 | 0b00000000; // Write
-        self.0.write(&[address, byte])?;
 
         Ok(())
     }
@@ -230,27 +109,11 @@ impl SpiDevice for Magnetometer {
     }
 }
 
-impl SpiDevice for Inertial {
-    fn read_byte(&mut self, address: u8) -> anyhow::Result<u8> {
-        let address = address & 0b01111111 | 0b10000000; // Read
-        let buffer = &mut [0];
-        self.0.write(&[address])?;
-        self.0.read(buffer)?;
-
-        Ok(buffer[0])
-    }
-
+impl Device for Inertial {
     fn read(&mut self, address: u8, buffer: &mut [u8]) -> anyhow::Result<()> {
         let address = address & 0b01111111 | 0b10000000; // Read with address auto increment
         self.0.write(&[address])?;
         self.0.read(buffer)?;
-
-        Ok(())
-    }
-
-    fn write_byte(&mut self, address: u8, byte: u8) -> anyhow::Result<()> {
-        let address = address & 0b01111111 | 0b00000000; // Write
-        self.0.write(&[address, byte])?;
 
         Ok(())
     }

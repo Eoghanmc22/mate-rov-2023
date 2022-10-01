@@ -3,7 +3,7 @@ use crossbeam::atomic::AtomicCell;
 
 pub struct Notify<T> {
     value: AtomicCell<T>,
-    write_callbacks: RwLock<Vec<Box<dyn Fn(T) -> Action<T>>>>
+    write_callbacks: RwLock<Vec<Box<dyn Fn(T) -> Action<T> + Send + Sync>>>
 }
 
 impl<T> Notify<T> {
@@ -20,7 +20,7 @@ impl<T> Notify<T> {
         }
     }
 
-    pub fn append_callback<F: Fn(T) -> Action<T> + 'static>(&self, callback: F) {
+    pub fn append_callback<F: Fn(T) -> Action<T> + Send+ Sync + 'static>(&self, callback: F) {
         self.write_callbacks.write().expect("write transform lock").push(Box::new(callback));
     }
 

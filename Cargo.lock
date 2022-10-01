@@ -422,6 +422,7 @@ name = "robot"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "bitflags",
  "common",
  "crossbeam",
  "lazy_static",

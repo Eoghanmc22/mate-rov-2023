@@ -115,7 +115,7 @@ fn handle_signal_event(server: &mut ServerContext, event: WorkerEvent) -> anyhow
     match event {
         WorkerEvent::Broadcast(packet) => {
             // Only write the buffer once, cant use sent packet
-            let buffer = packet.try_into().context("Could not encode packet")?;
+            let buffer: Vec<u8> = (&packet).try_into().context("Could not encode packet")?;
             for client in server.clients.keys().copied() {
                 match server.handler.network().send(client, &buffer) {
                     SendStatus::Sent => {}
@@ -172,7 +172,7 @@ fn handle_packet(server: &mut ServerContext, client: &mut Connection, packet: ro
 
 #[tracing::instrument]
 pub fn send_packet(client: &Connection, handler: &NetworkController, packet: surface_bound::Packet) -> anyhow::Result<()> {
-    let data = packet.try_into().context("Could not encode packet")?;
+    let data: Vec<u8> = (&packet).try_into().context("Could not encode packet")?;
 
     match handler.send(client.endpoint, &data) {
         SendStatus::Sent => {}
