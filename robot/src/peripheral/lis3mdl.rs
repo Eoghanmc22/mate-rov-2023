@@ -49,27 +49,50 @@ trait Field<T> {
 
 macro_rules! fields_to_byte {
     ($( $field:ty ),+) => {
-        $( (<$field as Field<_>>::FIELD).bits() << <$field as Field<_>>::SHIFT | )* 0
+        $( (<$field as Field<_>>::FIELD as u8) << <$field as Field<_>>::SHIFT | )* 0
     };
 }
 
 //TODO implement useful stuff lol
-pub struct Lis3mdl {
+pub struct Lis3mdl<Temperature, PerformanceXY, OutputDataRate, FastOdr, SelfTest, Scale, Reboot, SoftReset, LowPower, SpiMode, OperatingMode, PerformanceZ, Endianness, FastRead, BlockDataUpdate> {
     // TODO who_am_i
-    ctrl_reg_1: ctrl_reg_1::CtrlReg1,
-    ctrl_reg_2: ctrl_reg_2::CtrlReg2,
-    ctrl_reg_3: ctrl_reg_3::CtrlReg3,
-    ctrl_reg_4: ctrl_reg_4::CtrlReg4,
-    ctrl_reg_5: ctrl_reg_5::CtrlReg5,
+    ctrl_reg_1: ctrl_reg_1::CtrlReg1<Temperature, PerformanceXY, OutputDataRate, FastOdr, SelfTest>,
+    ctrl_reg_2: ctrl_reg_2::CtrlReg2<Scale, Reboot, SoftReset>,
+    ctrl_reg_3: ctrl_reg_3::CtrlReg3<LowPower, SpiMode, OperatingMode>,
+    ctrl_reg_4: ctrl_reg_4::CtrlReg4<PerformanceZ, Endianness>,
+    ctrl_reg_5: ctrl_reg_5::CtrlReg5<FastRead, BlockDataUpdate>,
     // TODO status_reg
 
     // TODO out block
     // TODO interrupts
 }
 
+impl<Temperature, PerformanceXY, OutputDataRate, FastOdr, SelfTest, Scale, Reboot, SoftReset, LowPower, SpiMode, OperatingMode, PerformanceZ, Endianness, FastRead, BlockDataUpdate> Lis3mdl<Temperature, PerformanceXY, OutputDataRate, FastOdr, SelfTest, Scale, Reboot, SoftReset, LowPower, SpiMode, OperatingMode, PerformanceZ, Endianness, FastRead, BlockDataUpdate> where
+    ctrl_reg_1::CtrlReg1<Temperature, PerformanceXY, OutputDataRate, FastOdr, SelfTest>: WriteableRegister,
+    ctrl_reg_2::CtrlReg2<Scale, Reboot, SoftReset>: WriteableRegister,
+    ctrl_reg_3::CtrlReg3<LowPower, SpiMode, OperatingMode>: WriteableRegister,
+    ctrl_reg_4::CtrlReg4<PerformanceZ, Endianness>: WriteableRegister,
+    ctrl_reg_5::CtrlReg5<FastRead, BlockDataUpdate>: WriteableRegister
+{
+    pub fn new(
+        ctrl_reg_1: ctrl_reg_1::CtrlReg1<Temperature, PerformanceXY, OutputDataRate, FastOdr, SelfTest>,
+        ctrl_reg_2: ctrl_reg_2::CtrlReg2<Scale, Reboot, SoftReset>,
+        ctrl_reg_3: ctrl_reg_3::CtrlReg3<LowPower, SpiMode, OperatingMode>,
+        ctrl_reg_4: ctrl_reg_4::CtrlReg4<PerformanceZ, Endianness>,
+        ctrl_reg_5: ctrl_reg_5::CtrlReg5<FastRead, BlockDataUpdate>
+    ) -> Self {
+        Self {
+            ctrl_reg_1,
+            ctrl_reg_2,
+            ctrl_reg_3,
+            ctrl_reg_4,
+            ctrl_reg_5
+        }
+    }
+}
+
 pub mod ctrl_reg_1 {
     use std::marker::PhantomData;
-    use bitflags::bitflags;
     use crate::peripheral::lis3mdl::{Field, WriteableRegister};
 
     #[derive(Copy, Clone, Default)]
@@ -81,36 +104,35 @@ pub mod ctrl_reg_1 {
     }
 
 
-    bitflags! {
-        pub struct TempatureFlags: u8 {
-            const ENABLE  = 0b1;
-            const DISABLE = 0b0;
-        }
+
+    #[repr(u8)]
+    pub enum TemperatureFlags {
+        Enable = 0b1,
+        Disable = 0b0
     }
 
     pub trait Temperature {
-        const TEMPERATURE: TempatureFlags;
+        const TEMPERATURE: TemperatureFlags;
         const SHIFT: usize = 7;
     }
 
-    impl<T> Field<TempatureFlags> for T where T: Temperature {
-        const FIELD: TempatureFlags = <T as Temperature>::TEMPERATURE;
+    impl<T> Field<TemperatureFlags> for T where T: Temperature {
+        const FIELD: TemperatureFlags = <T as Temperature>::TEMPERATURE;
         const SHIFT: usize = <T as Temperature>::SHIFT;
     }
 
     pub struct TemperatureEnable;
     pub struct TemperatureDisable;
-    impl Temperature for TemperatureEnable { const TEMPERATURE: TempatureFlags = TempatureFlags::ENABLE; }
-    impl Temperature for TemperatureDisable { const TEMPERATURE: TempatureFlags = TempatureFlags::DISABLE; }
+    impl Temperature for TemperatureEnable { const TEMPERATURE: TemperatureFlags = TemperatureFlags::Enable; }
+    impl Temperature for TemperatureDisable { const TEMPERATURE: TemperatureFlags = TemperatureFlags::Disable; }
 
 
-    bitflags! {
-        pub struct PerformanceXYFlags: u8 {
-            const LOW_PERFORMANCE        = 0b00;
-            const MEDIUM_PERFORMANCE     = 0b01;
-            const HIGH_PERFORMANCE       = 0b10;
-            const ULTRA_HIGH_PERFORMANCE = 0b11;
-        }
+    #[repr(u8)]
+    pub enum PerformanceXYFlags {
+        LowPerformance = 0b00,
+        MediumPerformance = 0b01,
+        HighPerformance = 0b10,
+        UltraHighPerformance = 0b11,
     }
 
     pub trait PerformanceXY {
@@ -127,23 +149,22 @@ pub mod ctrl_reg_1 {
     pub struct PerformanceMediumXY;
     pub struct PerformanceHighXY;
     pub struct PerformanceUltraHighXY;
-    impl PerformanceXY for PerformanceLowXY { const PERFORMANCE_XY: PerformanceXYFlags = PerformanceXYFlags::LOW_PERFORMANCE; }
-    impl PerformanceXY for PerformanceMediumXY { const PERFORMANCE_XY: PerformanceXYFlags = PerformanceXYFlags::MEDIUM_PERFORMANCE; }
-    impl PerformanceXY for PerformanceHighXY { const PERFORMANCE_XY: PerformanceXYFlags = PerformanceXYFlags::HIGH_PERFORMANCE; }
-    impl PerformanceXY for PerformanceUltraHighXY { const PERFORMANCE_XY: PerformanceXYFlags = PerformanceXYFlags::ULTRA_HIGH_PERFORMANCE; }
+    impl PerformanceXY for PerformanceLowXY { const PERFORMANCE_XY: PerformanceXYFlags = PerformanceXYFlags::LowPerformance; }
+    impl PerformanceXY for PerformanceMediumXY { const PERFORMANCE_XY: PerformanceXYFlags = PerformanceXYFlags::MediumPerformance; }
+    impl PerformanceXY for PerformanceHighXY { const PERFORMANCE_XY: PerformanceXYFlags = PerformanceXYFlags::HighPerformance; }
+    impl PerformanceXY for PerformanceUltraHighXY { const PERFORMANCE_XY: PerformanceXYFlags = PerformanceXYFlags::UltraHighPerformance; }
 
 
-    bitflags! {
-        pub struct OutputDataRateFlags: u8 {
-            const RATE_0_625 = 0b000;
-            const RATE_1_25  = 0b001;
-            const RATE_2_5   = 0b010;
-            const RATE_5_0   = 0b011;
-            const RATE_10_0  = 0b100;
-            const RATE_20_0  = 0b101;
-            const RATE_40_0  = 0b110;
-            const RATE_80_0  = 0b111;
-        }
+    #[repr(u8)]
+    pub enum OutputDataRateFlags {
+        Rate0_625 = 0b000,
+        Rate1_25 = 0b001,
+        Rate2_5 = 0b010,
+        Rate5_0 = 0b011,
+        Rate10_0 = 0b100,
+        Rate20_0 = 0b101,
+        Rate40_0 = 0b110,
+        Rate80_0 = 0b111,
     }
 
     pub trait OutputDataRate {
@@ -164,21 +185,20 @@ pub mod ctrl_reg_1 {
     pub struct OutputDataRate20_0;
     pub struct OutputDataRate40_0;
     pub struct OutputDataRate80_0;
-    impl OutputDataRate for OutputDataRate0_625 { const ODR: OutputDataRateFlags = OutputDataRateFlags::RATE_0_625; }
-    impl OutputDataRate for OutputDataRate1_25 { const ODR: OutputDataRateFlags = OutputDataRateFlags::RATE_0_625; }
-    impl OutputDataRate for OutputDataRate2_5 { const ODR: OutputDataRateFlags = OutputDataRateFlags::RATE_2_5; }
-    impl OutputDataRate for OutputDataRate5_0 { const ODR: OutputDataRateFlags = OutputDataRateFlags::RATE_5_0; }
-    impl OutputDataRate for OutputDataRate10_0 { const ODR: OutputDataRateFlags = OutputDataRateFlags::RATE_10_0; }
-    impl OutputDataRate for OutputDataRate20_0 { const ODR: OutputDataRateFlags = OutputDataRateFlags::RATE_20_0; }
-    impl OutputDataRate for OutputDataRate40_0 { const ODR: OutputDataRateFlags = OutputDataRateFlags::RATE_40_0; }
-    impl OutputDataRate for OutputDataRate80_0 { const ODR: OutputDataRateFlags = OutputDataRateFlags::RATE_80_0; }
+    impl OutputDataRate for OutputDataRate0_625 { const ODR: OutputDataRateFlags = OutputDataRateFlags::Rate0_625; }
+    impl OutputDataRate for OutputDataRate1_25 { const ODR: OutputDataRateFlags = OutputDataRateFlags::Rate0_625; }
+    impl OutputDataRate for OutputDataRate2_5 { const ODR: OutputDataRateFlags = OutputDataRateFlags::Rate2_5; }
+    impl OutputDataRate for OutputDataRate5_0 { const ODR: OutputDataRateFlags = OutputDataRateFlags::Rate5_0; }
+    impl OutputDataRate for OutputDataRate10_0 { const ODR: OutputDataRateFlags = OutputDataRateFlags::Rate10_0; }
+    impl OutputDataRate for OutputDataRate20_0 { const ODR: OutputDataRateFlags = OutputDataRateFlags::Rate20_0; }
+    impl OutputDataRate for OutputDataRate40_0 { const ODR: OutputDataRateFlags = OutputDataRateFlags::Rate40_0; }
+    impl OutputDataRate for OutputDataRate80_0 { const ODR: OutputDataRateFlags = OutputDataRateFlags::Rate80_0; }
 
 
-    bitflags! {
-        pub struct FastOdrFlags: u8 {
-            const ENABLE  = 0b1;
-            const DISABLE = 0b0;
-        }
+    #[repr(u8)]
+    pub enum FastOdrFlags {
+        Enable = 0b1,
+        Disable = 0b0,
     }
 
     pub trait FastOdr {
@@ -193,15 +213,13 @@ pub mod ctrl_reg_1 {
 
     pub struct FastOdrEnable;
     pub struct FastOdrDisable;
-    impl FastOdr for FastOdrEnable { const FAST_ODR: FastOdrFlags = FastOdrFlags::ENABLE; }
-    impl FastOdr for FastOdrDisable { const FAST_ODR: FastOdrFlags = FastOdrFlags::DISABLE; }
+    impl FastOdr for FastOdrEnable { const FAST_ODR: FastOdrFlags = FastOdrFlags::Enable; }
+    impl FastOdr for FastOdrDisable { const FAST_ODR: FastOdrFlags = FastOdrFlags::Disable; }
 
-
-    bitflags! {
-        pub struct SelfTestFlags: u8 {
-            const ENABLE  = 0b1;
-            const DISABLE = 0b0;
-        }
+    #[repr(u8)]
+    pub enum SelfTestFlags {
+        Enable = 0b1,
+        Disable = 0b0,
     }
 
     pub trait SelfTest {
@@ -216,13 +234,12 @@ pub mod ctrl_reg_1 {
 
     pub struct SelfTestEnable;
     pub struct SelfTestDisable;
-    impl SelfTest for SelfTestEnable { const SELF_TEST: SelfTestFlags = SelfTestFlags::ENABLE; }
-    impl SelfTest for SelfTestDisable { const SELF_TEST: SelfTestFlags = SelfTestFlags::DISABLE; }
+    impl SelfTest for SelfTestEnable { const SELF_TEST: SelfTestFlags = SelfTestFlags::Enable; }
+    impl SelfTest for SelfTestDisable { const SELF_TEST: SelfTestFlags = SelfTestFlags::Disable; }
 }
 
 pub mod ctrl_reg_2 {
     use std::marker::PhantomData;
-    use bitflags::bitflags;
     use crate::peripheral::lis3mdl::{Field, WriteableRegister};
 
     #[derive(Copy, Clone, Default)]
@@ -234,13 +251,13 @@ pub mod ctrl_reg_2 {
     }
 
 
-    bitflags! {
-        pub struct ScaleFlags: u8 {
-            const SCALE_4_GAUSS   = 0b00;
-            const SCALE_8_GAUSS   = 0b01;
-            const SCALE_12_GAUSS  = 0b10;
-            const SCALE_16_GAUSS  = 0b11;
-        }
+
+    #[repr(u8)]
+    pub enum ScaleFlags {
+        Scale4Gauss = 0b00,
+        Scale8Gauss = 0b01,
+        Scale12Gauss = 0b10,
+        Scale16Gauss = 0b11
     }
 
     pub trait Scale {
@@ -257,17 +274,16 @@ pub mod ctrl_reg_2 {
     pub struct Scale8Gauss;
     pub struct Scale12Gauss;
     pub struct Scale16Gauss;
-    impl Scale for Scale4Gauss { const SCALE: ScaleFlags = ScaleFlags::SCALE_4_GAUSS; }
-    impl Scale for Scale8Gauss { const SCALE: ScaleFlags = ScaleFlags::SCALE_8_GAUSS; }
-    impl Scale for Scale12Gauss { const SCALE: ScaleFlags = ScaleFlags::SCALE_12_GAUSS; }
-    impl Scale for Scale16Gauss { const SCALE: ScaleFlags = ScaleFlags::SCALE_16_GAUSS; }
+    impl Scale for Scale4Gauss { const SCALE: ScaleFlags = ScaleFlags::Scale4Gauss; }
+    impl Scale for Scale8Gauss { const SCALE: ScaleFlags = ScaleFlags::Scale8Gauss; }
+    impl Scale for Scale12Gauss { const SCALE: ScaleFlags = ScaleFlags::Scale12Gauss; }
+    impl Scale for Scale16Gauss { const SCALE: ScaleFlags = ScaleFlags::Scale16Gauss; }
 
 
-    bitflags! {
-        pub struct RebootFlags: u8 {
-            const NORMAL_MODE = 0b0;
-            const REBOOT      = 0b1;
-        }
+    #[repr(u8)]
+    pub enum RebootFlags {
+        NormalMode = 0b0,
+        Reboot = 0b1
     }
 
     pub trait Reboot {
@@ -282,15 +298,14 @@ pub mod ctrl_reg_2 {
 
     pub struct RebootNormalMode;
     pub struct RebootMemory;
-    impl Reboot for RebootNormalMode { const REBOOT: RebootFlags = RebootFlags::NORMAL_MODE; }
-    impl Reboot for RebootMemory { const REBOOT: RebootFlags = RebootFlags::REBOOT; }
+    impl Reboot for RebootNormalMode { const REBOOT: RebootFlags = RebootFlags::NormalMode; }
+    impl Reboot for RebootMemory { const REBOOT: RebootFlags = RebootFlags::Reboot; }
 
 
-    bitflags! {
-        pub struct SoftResetFlags: u8 {
-            const NORMAL_MODE = 0b0;
-            const RESET       = 0b1;
-        }
+    #[repr(u8)]
+    pub enum SoftResetFlags {
+        NormalMode = 0b0,
+        Reset = 0b1,
     }
 
     pub trait SoftReset {
@@ -305,13 +320,12 @@ pub mod ctrl_reg_2 {
 
     pub struct SoftResetNormalMode;
     pub struct SoftResetRegisters;
-    impl SoftReset for SoftResetNormalMode { const SOFT_RESET: SoftResetFlags = SoftResetFlags::NORMAL_MODE; }
-    impl SoftReset for SoftResetRegisters { const SOFT_RESET: SoftResetFlags = SoftResetFlags::RESET; }
+    impl SoftReset for SoftResetNormalMode { const SOFT_RESET: SoftResetFlags = SoftResetFlags::NormalMode; }
+    impl SoftReset for SoftResetRegisters { const SOFT_RESET: SoftResetFlags = SoftResetFlags::Reset; }
 }
 
 pub mod ctrl_reg_3 {
     use std::marker::PhantomData;
-    use bitflags::bitflags;
     use crate::peripheral::lis3mdl::{Field, WriteableRegister};
 
     #[derive(Copy, Clone, Default)]
@@ -323,11 +337,11 @@ pub mod ctrl_reg_3 {
     }
 
 
-    bitflags! {
-        pub struct LowPowerFlags: u8 {
-            const ENABLE  = 0b1;
-            const DISABLE = 0b0;
-        }
+
+    #[repr(u8)]
+    pub enum LowPowerFlags {
+        Enable = 0b1,
+        Disable = 0b0
     }
 
     pub trait LowPower {
@@ -342,15 +356,14 @@ pub mod ctrl_reg_3 {
 
     pub struct LowPowerEnable;
     pub struct LowPowerDisable;
-    impl LowPower for LowPowerEnable { const LOW_POWER: LowPowerFlags = LowPowerFlags::ENABLE; }
-    impl LowPower for LowPowerDisable { const LOW_POWER: LowPowerFlags = LowPowerFlags::DISABLE; }
+    impl LowPower for LowPowerEnable { const LOW_POWER: LowPowerFlags = LowPowerFlags::Enable; }
+    impl LowPower for LowPowerDisable { const LOW_POWER: LowPowerFlags = LowPowerFlags::Disable; }
 
 
-    bitflags! {
-        pub struct SpiModeFlags: u8 {
-            const SPI_4_WIRE = 0b0;
-            const SPI_3_WIRE = 0b1;
-        }
+    #[repr(u8)]
+    pub enum SpiModeFlags {
+        Spi4Wire = 0b0,
+        Spi3Wire = 0b1
     }
 
     pub trait SpiMode {
@@ -365,16 +378,15 @@ pub mod ctrl_reg_3 {
 
     pub struct SpiMode4Wire;
     pub struct SpiMode3Wire;
-    impl SpiMode for SpiMode4Wire { const SPI_MODE: SpiModeFlags = SpiModeFlags::SPI_4_WIRE; }
-    impl SpiMode for SpiMode3Wire { const SPI_MODE: SpiModeFlags = SpiModeFlags::SPI_3_WIRE; }
+    impl SpiMode for SpiMode4Wire { const SPI_MODE: SpiModeFlags = SpiModeFlags::Spi4Wire; }
+    impl SpiMode for SpiMode3Wire { const SPI_MODE: SpiModeFlags = SpiModeFlags::Spi3Wire; }
 
 
-    bitflags! {
-        pub struct OperatingModeFlags: u8 {
-            const CONTINUOUS_CONVERSION = 0b00;
-            const SINGLE_CONVERSION     = 0b01;
-            const POWER_DOWN            = 0b11;
-        }
+    #[repr(u8)]
+    pub enum OperatingModeFlags {
+        ContinuousConversion = 0b00,
+        SingleConversion = 0b01,
+        PowerDown = 0b11
     }
 
     pub trait OperatingMode {
@@ -390,14 +402,13 @@ pub mod ctrl_reg_3 {
     pub struct OperatingModeContinuousConversion;
     pub struct OperatingModeSingleConversion;
     pub struct OperatingModePowerDown;
-    impl OperatingMode for OperatingModeContinuousConversion { const OPERATING_MODE: OperatingModeFlags = OperatingModeFlags::CONTINUOUS_CONVERSION; }
-    impl OperatingMode for OperatingModeSingleConversion { const OPERATING_MODE: OperatingModeFlags = OperatingModeFlags::SINGLE_CONVERSION; }
-    impl OperatingMode for OperatingModePowerDown { const OPERATING_MODE: OperatingModeFlags = OperatingModeFlags::POWER_DOWN; }
+    impl OperatingMode for OperatingModeContinuousConversion { const OPERATING_MODE: OperatingModeFlags = OperatingModeFlags::ContinuousConversion; }
+    impl OperatingMode for OperatingModeSingleConversion { const OPERATING_MODE: OperatingModeFlags = OperatingModeFlags::SingleConversion; }
+    impl OperatingMode for OperatingModePowerDown { const OPERATING_MODE: OperatingModeFlags = OperatingModeFlags::PowerDown; }
 }
 
 pub mod ctrl_reg_4 {
     use std::marker::PhantomData;
-    use bitflags::bitflags;
     use crate::peripheral::lis3mdl::{Field, WriteableRegister};
 
     #[derive(Copy, Clone, Default)]
@@ -409,13 +420,13 @@ pub mod ctrl_reg_4 {
     }
 
 
-    bitflags! {
-        pub struct PerformanceZFlags: u8 {
-            const LOW_PERFORMANCE        = 0b00;
-            const MEDIUM_PERFORMANCE     = 0b01;
-            const HIGH_PERFORMANCE       = 0b10;
-            const ULTRA_HIGH_PERFORMANCE = 0b11;
-        }
+
+    #[repr(u8)]
+    pub enum PerformanceZFlags {
+        LowPerformance = 0b00,
+        MediumPerformance = 0b01,
+        HighPerformance = 0b10,
+        UltraHighPerformance = 0b11
     }
 
     pub trait PerformanceZ {
@@ -432,17 +443,16 @@ pub mod ctrl_reg_4 {
     pub struct PerformanceMediumZ;
     pub struct PerformanceHighZ;
     pub struct PerformanceUltraHighZ;
-    impl PerformanceZ for PerformanceLowZ { const PERFORMANCE_Z: PerformanceZFlags = PerformanceZFlags::LOW_PERFORMANCE; }
-    impl PerformanceZ for PerformanceMediumZ { const PERFORMANCE_Z: PerformanceZFlags = PerformanceZFlags::MEDIUM_PERFORMANCE; }
-    impl PerformanceZ for PerformanceHighZ { const PERFORMANCE_Z: PerformanceZFlags = PerformanceZFlags::HIGH_PERFORMANCE; }
-    impl PerformanceZ for PerformanceUltraHighZ { const PERFORMANCE_Z: PerformanceZFlags = PerformanceZFlags::ULTRA_HIGH_PERFORMANCE; }
+    impl PerformanceZ for PerformanceLowZ { const PERFORMANCE_Z: PerformanceZFlags = PerformanceZFlags::LowPerformance; }
+    impl PerformanceZ for PerformanceMediumZ { const PERFORMANCE_Z: PerformanceZFlags = PerformanceZFlags::MediumPerformance; }
+    impl PerformanceZ for PerformanceHighZ { const PERFORMANCE_Z: PerformanceZFlags = PerformanceZFlags::HighPerformance; }
+    impl PerformanceZ for PerformanceUltraHighZ { const PERFORMANCE_Z: PerformanceZFlags = PerformanceZFlags::UltraHighPerformance; }
 
 
-    bitflags! {
-        pub struct EndiannessFlags: u8 {
-            const BIG_ENDIAN    = 0b0;
-            const LITTLE_ENDIAN = 0b1;
-        }
+    #[repr(u8)]
+    pub enum EndiannessFlags {
+        BigEndian = 0b0,
+        LittleEndian = 0b1
     }
 
     pub trait Endianness {
@@ -457,13 +467,12 @@ pub mod ctrl_reg_4 {
 
     pub struct EndiannessBig;
     pub struct EndiannessLittle;
-    impl Endianness for EndiannessBig { const ENDIANNESS: EndiannessFlags = EndiannessFlags::BIG_ENDIAN; }
-    impl Endianness for EndiannessLittle { const ENDIANNESS: EndiannessFlags = EndiannessFlags::LITTLE_ENDIAN; }
+    impl Endianness for EndiannessBig { const ENDIANNESS: EndiannessFlags = EndiannessFlags::BigEndian; }
+    impl Endianness for EndiannessLittle { const ENDIANNESS: EndiannessFlags = EndiannessFlags::LittleEndian; }
 }
 
 pub mod ctrl_reg_5 {
     use std::marker::PhantomData;
-    use bitflags::bitflags;
     use crate::peripheral::lis3mdl::{Field, WriteableRegister};
 
     #[derive(Copy, Clone, Default)]
@@ -475,11 +484,11 @@ pub mod ctrl_reg_5 {
     }
 
 
-    bitflags! {
-        pub struct FastReadFlags: u8 {
-            const ENABLE  = 0b1;
-            const DISABLE = 0b0;
-        }
+
+    #[repr(u8)]
+    pub enum FastReadFlags {
+        Enable = 0b1,
+        Disable = 0b0
     }
 
     pub trait FastRead {
@@ -494,15 +503,14 @@ pub mod ctrl_reg_5 {
 
     pub struct FastReadEnable;
     pub struct FastReadDisable;
-    impl FastRead for FastReadEnable { const FAST_READ: FastReadFlags = FastReadFlags::ENABLE; }
-    impl FastRead for FastReadDisable { const FAST_READ: FastReadFlags = FastReadFlags::DISABLE; }
+    impl FastRead for FastReadEnable { const FAST_READ: FastReadFlags = FastReadFlags::Enable; }
+    impl FastRead for FastReadDisable { const FAST_READ: FastReadFlags = FastReadFlags::Disable; }
 
 
-    bitflags! {
-        pub struct BlockDataUpdateFlags: u8 {
-            const ENABLE  = 0b1;
-            const DISABLE = 0b0;
-        }
+    #[repr(u8)]
+    pub enum BlockDataUpdateFlags {
+        Enable = 0b1,
+        Disable = 0b0
     }
 
     pub trait BlockDataUpdate {
@@ -517,8 +525,8 @@ pub mod ctrl_reg_5 {
 
     pub struct BlockDataUpdateEnable;
     pub struct BlockDataUpdateDisable;
-    impl BlockDataUpdate for BlockDataUpdateEnable { const BLOCK_DATA_UPDATE: BlockDataUpdateFlags = BlockDataUpdateFlags::ENABLE; }
-    impl BlockDataUpdate for BlockDataUpdateDisable { const BLOCK_DATA_UPDATE: BlockDataUpdateFlags = BlockDataUpdateFlags::DISABLE; }
+    impl BlockDataUpdate for BlockDataUpdateEnable { const BLOCK_DATA_UPDATE: BlockDataUpdateFlags = BlockDataUpdateFlags::Enable; }
+    impl BlockDataUpdate for BlockDataUpdateDisable { const BLOCK_DATA_UPDATE: BlockDataUpdateFlags = BlockDataUpdateFlags::Disable; }
 }
 
 #[cfg(test)]
