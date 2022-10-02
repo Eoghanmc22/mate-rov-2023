@@ -1,5 +1,3 @@
-use anyhow::Context;
-use rppal::spi;
 use rppal::spi::Spi;
 use tracing::trace;
 use common::types::{Degrees, Gauss, GForce, InertialFrame, MagFrame};

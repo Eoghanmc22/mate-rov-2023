@@ -1,3 +1,4 @@
+use anyhow::Context;
 use crate::peripheral::spi::Device;
 
 // TODO WRITE TESTS
@@ -42,6 +43,16 @@ pub trait WriteableRegister {
     }
 }
 
+pub trait ReadableRegister {
+    const ADDRESS: u8;
+
+    type Data: From<u8>;
+
+    fn read(&self, dest: &mut impl Device) -> anyhow::Result<Self::Data> {
+        Ok(dest.read_byte(Self::ADDRESS)?.into())
+    }
+}
+
 trait Field<T> {
     const FIELD: T;
     const SHIFT: usize;
@@ -49,7 +60,7 @@ trait Field<T> {
 
 macro_rules! fields_to_byte {
     ($( $field:ty ),+) => {
-        $( (<$field as Field<_>>::FIELD as u8) << <$field as Field<_>>::SHIFT | )* 0
+        $( (<$field as Field<_>>::FIELD as u8) << <$field as Field<_>>::SHIFT | )+ 0
     };
 }
 
@@ -64,7 +75,6 @@ pub struct Lis3mdl<Temperature, PerformanceXY, OutputDataRate, FastOdr, SelfTest
     // TODO status_reg
 
     // TODO out block
-    // TODO interrupts
 }
 
 impl<Temperature, PerformanceXY, OutputDataRate, FastOdr, SelfTest, Scale, Reboot, SoftReset, LowPower, SpiMode, OperatingMode, PerformanceZ, Endianness, FastRead, BlockDataUpdate> Lis3mdl<Temperature, PerformanceXY, OutputDataRate, FastOdr, SelfTest, Scale, Reboot, SoftReset, LowPower, SpiMode, OperatingMode, PerformanceZ, Endianness, FastRead, BlockDataUpdate> where
@@ -74,7 +84,7 @@ impl<Temperature, PerformanceXY, OutputDataRate, FastOdr, SelfTest, Scale, Reboo
     ctrl_reg_4::CtrlReg4<PerformanceZ, Endianness>: WriteableRegister,
     ctrl_reg_5::CtrlReg5<FastRead, BlockDataUpdate>: WriteableRegister
 {
-    pub fn new(
+    pub const fn new(
         ctrl_reg_1: ctrl_reg_1::CtrlReg1<Temperature, PerformanceXY, OutputDataRate, FastOdr, SelfTest>,
         ctrl_reg_2: ctrl_reg_2::CtrlReg2<Scale, Reboot, SoftReset>,
         ctrl_reg_3: ctrl_reg_3::CtrlReg3<LowPower, SpiMode, OperatingMode>,
@@ -88,6 +98,16 @@ impl<Temperature, PerformanceXY, OutputDataRate, FastOdr, SelfTest, Scale, Reboo
             ctrl_reg_4,
             ctrl_reg_5
         }
+    }
+}
+
+pub mod who_am_i {
+    use crate::peripheral::lis3mdl::ReadableRegister;
+
+    pub struct WhoAmI;
+    impl ReadableRegister for WhoAmI {
+        const ADDRESS: u8 = 0x0F;
+        type Data = u8;
     }
 }
 
@@ -186,7 +206,7 @@ pub mod ctrl_reg_1 {
     pub struct OutputDataRate40_0;
     pub struct OutputDataRate80_0;
     impl OutputDataRate for OutputDataRate0_625 { const ODR: OutputDataRateFlags = OutputDataRateFlags::Rate0_625; }
-    impl OutputDataRate for OutputDataRate1_25 { const ODR: OutputDataRateFlags = OutputDataRateFlags::Rate0_625; }
+    impl OutputDataRate for OutputDataRate1_25 { const ODR: OutputDataRateFlags = OutputDataRateFlags::Rate1_25; }
     impl OutputDataRate for OutputDataRate2_5 { const ODR: OutputDataRateFlags = OutputDataRateFlags::Rate2_5; }
     impl OutputDataRate for OutputDataRate5_0 { const ODR: OutputDataRateFlags = OutputDataRateFlags::Rate5_0; }
     impl OutputDataRate for OutputDataRate10_0 { const ODR: OutputDataRateFlags = OutputDataRateFlags::Rate10_0; }
@@ -532,7 +552,7 @@ pub mod ctrl_reg_5 {
 #[cfg(test)]
 mod tests {
     use crate::peripheral::lis3mdl::ctrl_reg_1::{CtrlReg1, FastOdrEnable, OutputDataRate2_5, PerformanceMediumXY, SelfTestEnable, TemperatureEnable};
-    use crate::peripheral::lis3mdl::ctrl_reg_2::{CtrlReg2, RebootMemory, Scale, Scale12Gauss, SoftResetRegisters};
+    use crate::peripheral::lis3mdl::ctrl_reg_2::{CtrlReg2, RebootMemory, Scale12Gauss, SoftResetRegisters};
     use crate::peripheral::lis3mdl::ctrl_reg_3::{CtrlReg3, LowPowerEnable, OperatingModeSingleConversion, SpiMode3Wire};
     use crate::peripheral::lis3mdl::ctrl_reg_4::{CtrlReg4, EndiannessLittle, PerformanceHighZ};
     use crate::peripheral::lis3mdl::ctrl_reg_5::{BlockDataUpdateEnable, CtrlReg5, FastReadEnable};

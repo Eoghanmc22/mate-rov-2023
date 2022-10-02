@@ -1,3 +1,17 @@
+//! Robot Code for the MATE Sea Owls Team
+#![warn(
+    meta_variable_misuse,
+    missing_debug_implementations,
+    //missing_docs,
+    //unsafe_code,
+    //unused_results,
+    //unreachable_pub,
+    //clippy::pedantic,
+    //clippy::nursery,
+    //clippy::unwrap_used,
+    //clippy::expect_used
+)]
+
 use std::thread;
 use std::time::{Duration, Instant};
 use anyhow::Context;
@@ -22,7 +36,7 @@ const MOTOR_ENABLE: bool = true;
 const FLUID_DENSITY: f64 = 1029.0;
 
 fn main() {
-    
+
 }
 
 /*fn main() -> anyhow::Result<()> {
