@@ -1,7 +1,6 @@
 use rppal::spi::Spi;
 use tracing::trace;
 use common::types::{Degrees, Gauss, GForce, InertialFrame, MagFrame};
-use crate::peripheral::lis3mdl::{LIS3MDL_CTRL_REG1, LIS3MDL_CTRL_REG2, LIS3MDL_CTRL_REG3, LIS3MDL_OUT_BLOCK, LIS3MDL_WHO_AM_I};
 use crate::peripheral::lsm6dsl::{LSM6DSL_CTRL1_XL, LSM6DSL_CTRL2_G, LSM6DSL_CTRL3_C, LSM6DSL_CTRL8_XL, LSM6DSL_OUT_BLOCK, LSM6DSL_WHO_AM_I};
 use crate::peripheral::spi::Device;
 

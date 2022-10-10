@@ -1,4 +1,5 @@
 //! Robot Code for the MATE Sea Owls Team
+#![feature(slice_as_chunks)]
 #![warn(
     meta_variable_misuse,
     missing_debug_implementations,
