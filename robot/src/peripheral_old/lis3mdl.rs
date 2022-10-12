@@ -1,6 +1,6 @@
 use std::marker::PhantomData;
 use anyhow::Context;
-use crate::peripheral::spi::Device;
+use crate::peripheral_old::spi::Device;
 
 // TODO Write Comments
 
@@ -184,7 +184,7 @@ impl<Temperature, PerformanceXY, OutputDataRate, FastOdr, SelfTest, Scale, Reboo
 }
 
 pub mod who_am_i {
-    use crate::peripheral::lis3mdl::SimpleRegister;
+    use crate::peripheral_old::lis3mdl::SimpleRegister;
 
     pub struct WhoAmI;
     impl SimpleRegister for WhoAmI {
@@ -195,7 +195,7 @@ pub mod who_am_i {
 
 pub mod ctrl_reg_1 {
     use std::marker::PhantomData;
-    use crate::peripheral::lis3mdl::{Field, WriteableRegister};
+    use crate::peripheral_old::lis3mdl::{Field, WriteableRegister};
 
     pub struct CtrlReg1<Temperature = TemperatureDisable, PerformanceXY = PerformanceLowXY, OutputDataRate = OutputDataRate10_0, FastOdr = FastOdrDisable, SelfTest = SelfTestDisable>(PhantomData<(Temperature, PerformanceXY, OutputDataRate, FastOdr, SelfTest)>);
 
@@ -341,7 +341,7 @@ pub mod ctrl_reg_1 {
 
 pub mod ctrl_reg_2 {
     use std::marker::PhantomData;
-    use crate::peripheral::lis3mdl::{Field, WriteableRegister};
+    use crate::peripheral_old::lis3mdl::{Field, WriteableRegister};
 
     pub struct CtrlReg2<Scale = Scale4Gauss, Reboot = RebootNormalMode, SoftReset = SoftResetNormalMode>(PhantomData<(Scale, Reboot, SoftReset)>);
 
@@ -439,7 +439,7 @@ pub mod ctrl_reg_2 {
 
 pub mod ctrl_reg_3 {
     use std::marker::PhantomData;
-    use crate::peripheral::lis3mdl::{Field, WriteableRegister};
+    use crate::peripheral_old::lis3mdl::{Field, WriteableRegister};
 
     pub struct CtrlReg3<LowPower = LowPowerDisable, SpiMode = SpiMode4Wire, OperatingMode = OperatingModePowerDown>(PhantomData<(LowPower, SpiMode, OperatingMode)>);
 
@@ -521,7 +521,7 @@ pub mod ctrl_reg_3 {
 
 pub mod ctrl_reg_4 {
     use std::marker::PhantomData;
-    use crate::peripheral::lis3mdl::{Field, WriteableRegister};
+    use crate::peripheral_old::lis3mdl::{Field, WriteableRegister};
 
     pub struct CtrlReg4<PerformanceZ = PerformanceLowZ, Endianness = EndiannessBig>(PhantomData<(PerformanceZ, Endianness)>);
 
@@ -584,7 +584,7 @@ pub mod ctrl_reg_4 {
 
 pub mod ctrl_reg_5 {
     use std::marker::PhantomData;
-    use crate::peripheral::lis3mdl::{Field, WriteableRegister};
+    use crate::peripheral_old::lis3mdl::{Field, WriteableRegister};
 
     pub struct CtrlReg5<FastRead = FastReadDisable, BlockDataUpdate = BlockDataUpdateDisable>(PhantomData<(FastRead, BlockDataUpdate)>);
 
@@ -641,7 +641,7 @@ pub mod ctrl_reg_5 {
 
 pub mod status_reg {
     use bitflags::bitflags;
-    use crate::peripheral::lis3mdl::SimpleRegister;
+    use crate::peripheral_old::lis3mdl::SimpleRegister;
 
     pub struct StatusReg;
     impl SimpleRegister for StatusReg {
@@ -673,10 +673,10 @@ pub mod out_block {
     use std::marker::PhantomData;
     use anyhow::Context;
     use common::types::{Gauss, MagFrame};
-    use crate::peripheral::lis3mdl::{ReadableRegister, SimpleRegister};
-    use crate::peripheral::lis3mdl::ctrl_reg_2::Scale;
-    use crate::peripheral::lis3mdl::ctrl_reg_4::{Endianness, EndiannessFlags};
-    use crate::peripheral::spi::Device;
+    use crate::peripheral_old::lis3mdl::{ReadableRegister, SimpleRegister};
+    use crate::peripheral_old::lis3mdl::ctrl_reg_2::Scale;
+    use crate::peripheral_old::lis3mdl::ctrl_reg_4::{Endianness, EndiannessFlags};
+    use crate::peripheral_old::spi::Device;
 
     pub struct OutXYZ<Scale, Endianness>(pub(crate) PhantomData<(Scale, Endianness)>);
 
@@ -754,12 +754,12 @@ pub mod out_block {
 #[cfg(test)]
 mod tests {
     use std::mem;
-    use crate::peripheral::lis3mdl::ctrl_reg_1::{CtrlReg1, FastOdrEnable, OutputDataRate2_5, PerformanceMediumXY, SelfTestEnable, TemperatureEnable};
-    use crate::peripheral::lis3mdl::ctrl_reg_2::{CtrlReg2, RebootMemory, Scale12Gauss, SoftResetRegisters};
-    use crate::peripheral::lis3mdl::ctrl_reg_3::{CtrlReg3, LowPowerEnable, OperatingModeSingleConversion, SpiMode3Wire};
-    use crate::peripheral::lis3mdl::ctrl_reg_4::{CtrlReg4, EndiannessLittle, PerformanceHighZ};
-    use crate::peripheral::lis3mdl::ctrl_reg_5::{BlockDataUpdateEnable, CtrlReg5, FastReadEnable};
-    use crate::peripheral::lis3mdl::{Lis3mdl, WriteableRegister};
+    use crate::peripheral_old::lis3mdl::ctrl_reg_1::{CtrlReg1, FastOdrEnable, OutputDataRate2_5, PerformanceMediumXY, SelfTestEnable, TemperatureEnable};
+    use crate::peripheral_old::lis3mdl::ctrl_reg_2::{CtrlReg2, RebootMemory, Scale12Gauss, SoftResetRegisters};
+    use crate::peripheral_old::lis3mdl::ctrl_reg_3::{CtrlReg3, LowPowerEnable, OperatingModeSingleConversion, SpiMode3Wire};
+    use crate::peripheral_old::lis3mdl::ctrl_reg_4::{CtrlReg4, EndiannessLittle, PerformanceHighZ};
+    use crate::peripheral_old::lis3mdl::ctrl_reg_5::{BlockDataUpdateEnable, CtrlReg5, FastReadEnable};
+    use crate::peripheral_old::lis3mdl::{Lis3mdl, WriteableRegister};
 
     #[test]
     fn size() {

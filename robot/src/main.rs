@@ -20,14 +20,13 @@ use rppal::spi;
 use rppal::spi::Spi;
 use tracing::error;
 use crate::network::Server;
-use crate::peripheral::depth::DepthSensor;
-use crate::peripheral::imu::{Inertial, Magnetometer};
 
-pub mod peripheral;
+//pub mod peripheral_old;
 pub mod movement;
 pub mod network;
 pub mod robot;
 pub mod event;
+pub mod peripheral;
 
 const DEPTH_SENSOR: bool = true;
 const INERTIAL_SENSOR: bool = true;
