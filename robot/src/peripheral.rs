@@ -19,7 +19,7 @@ pub trait WriteableRegister {
     const ADDRESS: u8;
     const BYTE: u8;
 
-    fn write(&self, dev: &mut impl Device) -> anyhow::Result<()> {
+    fn write(dev: &mut impl Device) -> anyhow::Result<()> {
         dev.write_byte(Self::ADDRESS, Self::BYTE)
     }
 }
@@ -28,7 +28,7 @@ pub trait ReadableRegister {
     const ADDRESS: u8;
     type Data;
 
-    fn read(&self, dev: &mut impl Device) -> anyhow::Result<Self::Data>;
+    fn read(dev: &mut impl Device) -> anyhow::Result<Self::Data>;
 }
 
 pub trait SimpleRegister {
@@ -40,7 +40,7 @@ impl<T> ReadableRegister for T where T: SimpleRegister {
     const ADDRESS: u8 = <Self as SimpleRegister>::ADDRESS;
     type Data = <Self as SimpleRegister>::Data;
 
-    fn read(&self, dev: &mut impl Device) -> anyhow::Result<Self::Data> {
+    fn read(dev: &mut impl Device) -> anyhow::Result<Self::Data> {
         Ok(dev.read_byte(Self::ADDRESS)?.into())
     }
 }
@@ -62,20 +62,29 @@ macro_rules! define_peripheral {
     ($chip_name:ident: $(reg $register_name:ident, addrs=$register_addrs:literal $(field $field_name:ident, default=$field_default:ident, shift=$field_shift:literal $(const $field_data_name:ident: $field_data_type:ty;)* $(flag $flag_name:ident, $flag_val:literal $(const $flag_data_name:ident: $flag_data_type:ty = $flag_data_expr:expr;)*)+)+)+) => {
         paste::paste! {
             pub mod [<$chip_name:snake:lower>] {
+                // TODO debug impl using stringify!()
                 pub struct $chip_name<$($([<$field_name _>]: [<$register_name:snake:lower>]::$field_name = [<$register_name:snake:lower>]::[<$field_name $field_default>],)+)+>(std::marker::PhantomData<($($([<$field_name _>],)+)+)>);
 
                 impl<$($([<$field_name _>]: [<$register_name:snake:lower>]::$field_name,)+)+> $chip_name<$($([<$field_name _>],)+)+> {
-                    $(
-                        pub const [<$register_name:snake:upper>]: [<$register_name:snake:lower>]::$register_name<$([<$field_name _>],)+> = [<$register_name:snake:lower>]::$register_name(std::marker::PhantomData);
-                    )+
-
                     pub fn setup(dev: &mut impl $crate::peripheral::Device) -> anyhow::Result<()> {
-                        /*$(
-                            $crate::peripheral::WriteableRegister::write(dev)?;
-                        )+*/
+                        $(
+                            <<Self as [<$chip_name Registers>]>::$register_name as $crate::peripheral::WriteableRegister>::write(dev)?;
+                        )+
 
                         Ok(())
                     }
+                }
+
+                pub trait [<$chip_name Registers>] {
+                    $(
+                        type $register_name;
+                    )+
+                }
+
+                impl<$($([<$field_name _>]: [<$register_name:snake:lower>]::$field_name,)+)+> [<$chip_name Registers>] for $chip_name<$($([<$field_name _>],)+)+> {
+                    $(
+                        type $register_name = [<$register_name:snake:lower>]::$register_name<$([<$field_name _>],)+>;
+                    )+
                 }
 
                 $(

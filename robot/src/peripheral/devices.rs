@@ -77,30 +77,31 @@ mod tests {
     use crate::peripheral::devices::lis3mdl::ctrl_reg3::{CtrlReg3, LowPowerEnable, OperatingModeSingleConversion, SpiMode_3Wire};
     use crate::peripheral::devices::lis3mdl::ctrl_reg4::{CtrlReg4, EndiannessLittle, PerformanceZHigh};
     use crate::peripheral::devices::lis3mdl::ctrl_reg5::{BlockDataUpdateEnable, CtrlReg5, FastReadEnable};
-    use crate::peripheral::devices::lis3mdl::Lis3mdl;
+    use crate::peripheral::devices::lis3mdl::{Lis3mdl, Lis3mdlRegisters};
     use crate::peripheral::WriteableRegister;
 
-    /*#[test]
+    #[test]
     fn size() {
-        assert_eq!(mem::size_of::<Lis3mdl<>>());
-    }*/
+        assert_eq!(mem::size_of::<Lis3mdl>(), 0);
+    }
 
     #[test]
     fn default() {
-        assert_eq!(<CtrlReg1>::ADDRESS, 0x20);
-        assert_eq!(<CtrlReg1>::BYTE, 0b0001_0000);
+        type Chip = Lis3mdl;
+        assert_eq!(<Chip as Lis3mdlRegisters>::CtrlReg1::ADDRESS, 0x20);
+        assert_eq!(<Chip as Lis3mdlRegisters>::CtrlReg1::BYTE, 0b0001_0000);
 
-        assert_eq!(<CtrlReg2>::ADDRESS, 0x21);
-        assert_eq!(<CtrlReg2>::BYTE, 0b0000_0000);
+        assert_eq!(<Chip as Lis3mdlRegisters>::CtrlReg2::ADDRESS, 0x21);
+        assert_eq!(<Chip as Lis3mdlRegisters>::CtrlReg2::BYTE, 0b0000_0000);
 
-        assert_eq!(<CtrlReg3>::ADDRESS, 0x22);
-        assert_eq!(<CtrlReg3>::BYTE, 0b0000_0011);
+        assert_eq!(<Chip as Lis3mdlRegisters>::CtrlReg3::ADDRESS, 0x22);
+        assert_eq!(<Chip as Lis3mdlRegisters>::CtrlReg3::BYTE, 0b0000_0011);
 
-        assert_eq!(<CtrlReg4>::ADDRESS, 0x23);
-        assert_eq!(<CtrlReg4>::BYTE, 0b0000_0000);
+        assert_eq!(<Chip as Lis3mdlRegisters>::CtrlReg4::ADDRESS, 0x23);
+        assert_eq!(<Chip as Lis3mdlRegisters>::CtrlReg4::BYTE, 0b0000_0000);
 
-        assert_eq!(<CtrlReg5>::ADDRESS, 0x24);
-        assert_eq!(<CtrlReg5>::BYTE, 0b0000_0000);
+        assert_eq!(<Chip as Lis3mdlRegisters>::CtrlReg5::ADDRESS, 0x24);
+        assert_eq!(<Chip as Lis3mdlRegisters>::CtrlReg5::BYTE, 0b0000_0000);
     }
 
     #[test]
