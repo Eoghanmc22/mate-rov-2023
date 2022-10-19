@@ -2,7 +2,7 @@
 #![feature(slice_as_chunks)]
 #![warn(
     meta_variable_misuse,
-    missing_debug_implementations,
+    //missing_debug_implementations,
     //missing_docs,
     //unsafe_code,
     //unused_results,
