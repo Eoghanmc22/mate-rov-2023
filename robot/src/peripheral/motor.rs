@@ -3,7 +3,7 @@ use std::time::Duration;
 use anyhow::Context;
 use rppal::gpio::{Gpio, OutputPin};
 use tracing::trace;
-use common::types::Speed;
+use common::types::{MotorId, Speed};
 
 // TODO Verify correctness
 // TODO Simplify impl
@@ -95,6 +95,21 @@ pub struct MotorConfig {
     forward: Duration,
     center: Duration,
     period: Duration,
+}
+
+impl From<MotorId> for MotorConfig {
+    fn from(value: MotorId) -> Self {
+        match value {
+            MotorId::UpF => MOTOR_F,
+            MotorId::UpB => MOTOR_B,
+            MotorId::UpL => MOTOR_L,
+            MotorId::UpR => MOTOR_R,
+            MotorId::FrontL => MOTOR_FL,
+            MotorId::FrontR => MOTOR_FR,
+            MotorId::RearL => MOTOR_BL,
+            MotorId::RearR => MOTOR_BR,
+        }
+    }
 }
 
 pub trait PwmDevice: Debug {

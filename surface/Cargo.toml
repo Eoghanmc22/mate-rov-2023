@@ -1,0 +1,28 @@
+[package]
+name = "surface"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+anyhow = "1"
+crossbeam = "0.8"
+message-io = "0.14"
+common = { path = "../common" }
+serde = { version = "1", features = ["derive"]}
+
+tracing = "0.1"
+tracing-subscriber = "0.3"
+
+bevy = "0.8"
+egui = "0.19"
+bevy_egui = "0.16"
+
+# Enable a small amount of optimization in debug mode
+[profile.dev]
+opt-level = 1
+
+# Enable high optimizations for dependencies (incl. Bevy), but not for our code:
+[profile.dev.package."*"]
+opt-level = 3

@@ -1,5 +1,5 @@
-pub mod lis3mdl;
-pub mod lsm6dsl;
+//pub mod lis3mdl;
+//pub mod lsm6dsl;
 pub mod motor;
 
 pub trait Device {

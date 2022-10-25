@@ -1,28 +1,15 @@
-use std::collections::HashMap;
 use std::ops::{Add, Neg, Sub};
-use bitflags::bitflags;
 use glam::Quat;
 use serde::{Serialize, Deserialize};
 
-bitflags! {
-    #[derive(Serialize, Deserialize)]
-    pub struct Filter: u8 {
-        const ORIENTATION_UPDATES  = 0b00000001;
-        const INERTIAL_FRAMES      = 0b00000010;
-        const MAG_FRAMES           = 0b00000100;
-        const DEPTH_FRAMES         = 0b00001000;
-        const LOG_MESSAGES         = 0b00010000;
-        const CAMERA_EVENTS        = 0b00100000;
-    }
-}
-
-#[derive(Debug, Copy, Clone, Serialize, Deserialize)]
+#[derive(Debug, Copy, Clone, Default, Serialize, Deserialize, PartialEq)]
 pub struct Orientation(pub Quat);
 
 /// +X: Right, +Y: Forwards, +Z: Up
 /// +XR: Pitch Up, +YR: Roll Counterclockwise, +ZR: Yaw Clockwise (top view)
-#[derive(Debug, Copy, Clone, Serialize, Deserialize)]
+#[derive(Debug, Copy, Clone, Default, Serialize, Deserialize, PartialEq)]
 pub struct Movement {
+    pub mode: MovementMode,
     pub x: Speed,      // Right
     pub y: Speed,      // Forwards
     pub z: Speed,      // Up
@@ -30,6 +17,13 @@ pub struct Movement {
     pub x_rot: Speed,  // Pitch Up
     pub y_rot: Speed,  // Roll Counterclockwise
     pub z_rot: Speed,  // Yaw Clockwise (top view)
+}
+
+#[derive(Debug, Copy, Clone, Default, Serialize, Deserialize, Eq, PartialEq)]
+pub enum MovementMode {
+    Absolute,
+    #[default]
+    Relative
 }
 
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Hash, Serialize, Deserialize)]
@@ -44,22 +38,16 @@ pub enum MotorId {
     RearR,
 }
 
-#[derive(Debug, Copy, Clone, Eq, PartialEq, Serialize, Deserialize)]
-pub enum Role {
-    Controller,
-    Monitor,
-}
-
 
 // Raw Data Frames
 
-#[derive(Debug, Copy, Clone, Serialize, Deserialize)]
+#[derive(Debug, Copy, Clone, Default, Serialize, Deserialize, PartialEq)]
 pub struct DepthFrame {
     pub depth: Meters,
     pub temperature: Celsius,
 }
 
-#[derive(Debug, Copy, Clone, Serialize, Deserialize)]
+#[derive(Debug, Copy, Clone, Default, Serialize, Deserialize, PartialEq)]
 pub struct InertialFrame {
     pub gyro_x: Degrees,
     pub gyro_y: Degrees,
@@ -70,15 +58,22 @@ pub struct InertialFrame {
     pub accel_z: GForce,
 }
 
-#[derive(Debug, Copy, Clone, Serialize, Deserialize)]
+#[derive(Debug, Copy, Clone, Default, Serialize, Deserialize, PartialEq)]
 pub struct MagFrame {
     pub mag_x: Gauss,
     pub mag_y: Gauss,
     pub mag_z: Gauss,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct MotorFrame(HashMap<MotorId, Speed>);
+#[derive(Debug, Copy, Clone, Default, Serialize, Deserialize, PartialEq)]
+pub struct MotorFrame(pub Speed);
+
+#[derive(Debug, Copy, Clone, Default, Serialize, Deserialize, Eq, PartialEq)]
+pub enum Armed {
+    Armed,
+    #[default]
+    Disarmed
+}
 
 
 // Basic Units

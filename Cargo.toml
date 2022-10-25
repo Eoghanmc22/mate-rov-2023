@@ -1,2 +1,6 @@
 [workspace]
-members = ["robot"]
+resolver = "2"
+members = [
+    "robot",
+    "surface"
+]
