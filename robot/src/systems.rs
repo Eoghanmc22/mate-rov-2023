@@ -32,7 +32,7 @@ impl SystemManager {
 
     pub fn start(self) {
         let mut robot = self.0.write().expect("Lock");
-        robot.set_callback(|update, robot| {
+        robot.set_callback(move |update, robot| {
             for system in &self.1 {
                 system.on_update(update, robot);
             }
