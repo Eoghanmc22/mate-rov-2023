@@ -19,8 +19,9 @@ enum Message {
 }
 
 impl RobotSystem for MotorSystem {
-    fn start(robot: Arc<RwLock<RobotState>>, gpio: Gpio) -> anyhow::Result<Self> {
+    fn start(robot: Arc<RwLock<RobotState>>) -> anyhow::Result<Self> {
         let (tx, rx) = channel::bounded(30);
+        let gpio = Gpio::new().context("Create gpio")?;
         
         thread::spawn(move || {
             span!(Level::INFO, "Motor thread");
@@ -65,6 +66,9 @@ impl RobotSystem for MotorSystem {
 
     fn on_update(&self, update: RobotStateUpdate, robot: &mut RobotState) {
         match update {
+            RobotStateUpdate::Armed(armed) => {
+                todo!();
+            }
             RobotStateUpdate::Motor(id, frame) => {
                 self.0.send(Message::MotorSpeed(id, frame)).expect("Send message");
             },
@@ -72,8 +76,8 @@ impl RobotSystem for MotorSystem {
                 for update in mix_movement(movement, robot.motors().keys()) {
                     robot.update(update);
                 }
-            }
-            _ => {}
+            },
+            _ => {},
         }
     }
 }

@@ -2996,7 +2996,6 @@ dependencies = [
  "bitflags",
  "common",
  "crossbeam",
- "lazy_static",
  "message-io",
  "paste",
  "rppal",

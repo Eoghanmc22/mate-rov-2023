@@ -32,15 +32,16 @@ fn main() -> anyhow::Result<()> {
             MotorId::RearR,
             MotorId::UpR,
             MotorId::UpL
-        ],
-        SystemManager::handle_update
+        ]
     );
     let robot = Arc::new(RwLock::new(robot));
 
-    SystemManager::add_system::<NetworkSystem>(robot.clone())?;
-    SystemManager::add_system::<MotorSystem>(robot.clone())?;
+    let mut systems = SystemManager::new(robot.clone());
 
-    SystemManager::block();
+    systems.add_system::<NetworkSystem>()?;
+    systems.add_system::<MotorSystem>()?;
+
+    systems.start();
 
     Ok(())
 }

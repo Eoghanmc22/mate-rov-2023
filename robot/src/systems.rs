@@ -5,62 +5,59 @@ pub mod motor;
 // TODO mag
 // TODO depth
 // TODO logging
+// TODO perhaps just a single sensor system?
 
 use std::sync::{Arc, Condvar, Mutex, RwLock};
-use anyhow::{bail, Context};
-use lazy_static::lazy_static;
-use rppal::gpio::Gpio;
+use anyhow::Context;
 use common::state::{RobotState, RobotStateUpdate};
 
-lazy_static! {
-    static ref SYSTEMS: Arc<SystemManager> = Arc::new(SystemManager(RwLock::new(Vec::new()), (Mutex::new(false), Condvar::new())));
-}
-
-pub struct SystemManager(RwLock<Vec<Box<dyn RobotSystem + Send + Sync + 'static>>>, (Mutex<bool>, Condvar));
+pub struct SystemManager(Arc<RwLock<RobotState>>, Vec<Box<dyn RobotSystem + Send + Sync + 'static>>, (Mutex<bool>, Condvar));
 
 impl SystemManager {
-    pub fn add_system<S: RobotSystem + Send + Sync + 'static>(robot: Arc<RwLock<RobotState>>) -> anyhow::Result<()> {
-        let gpio = Gpio::new().context("Create gpio")?;
-        let system = S::start(robot, gpio).context("Start system")?;
-
-        match SYSTEMS.0.write() {
-            Ok(mut systems) => {
-                systems.push(Box::new(system));
-            }
-            Err(error) => {
-                bail!("Couldn't add system: {error:?}");
-            }
+    pub fn new(robot: Arc<RwLock<RobotState>>) -> Self {
+        Self {
+            0: robot,
+            1: Vec::new(),
+            2: (Mutex::new(false), Condvar::new())
         }
+    }
+
+    pub fn add_system<S: RobotSystem + Send + Sync + 'static>(&mut self) -> anyhow::Result<()> {
+        let system = S::start(self.0.clone()).context("Start system")?;
+
+        self.1.push(Box::new(system));
 
         Ok(())
     }
 
-    pub fn handle_update(update: RobotStateUpdate, robot: &mut RobotState) {
-        let systems = SYSTEMS.0.read().expect("Lock");
-        for system in &*systems {
-            system.on_update(update, robot);
-        }
-    }
+    pub fn start(self) {
+        let mut robot = self.0.write().expect("Lock");
+        robot.set_callback(|update, robot| {
+            for system in &self.1 {
+                system.on_update(update, robot);
+            }
+        });
 
-    pub fn shutdown() {
-        let (lock, cvar) = &SYSTEMS.1;
-        let mut running = lock.lock().expect("Lock");
+        // TODO Fire events for updates made during setup?
 
-        *running = false;
-        cvar.notify_all();
-    }
-
-    pub fn block() {
-       let (lock, cvar) = &SYSTEMS.1;
+       let (lock, cvar) = &self.2;
         let mut running = lock.lock().expect("Lock");
 
         while *running {
             running = cvar.wait(running).expect("Lock");
         }
     }
+
+    pub fn shutdown(&self) {
+        let (lock, cvar) = &self.2;
+        let mut running = lock.lock().expect("Lock");
+
+        *running = false;
+        cvar.notify_all();
+    }
 }
 
 pub trait RobotSystem {
-    fn start(robot: Arc<RwLock<RobotState>>, gpio: Gpio) -> anyhow::Result<Self> where Self: Sized;
+    fn start(robot: Arc<RwLock<RobotState>>) -> anyhow::Result<Self> where Self: Sized;
     fn on_update(&self, update: RobotStateUpdate, robot: &mut RobotState);
 }

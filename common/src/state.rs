@@ -4,7 +4,6 @@ use std::time::Instant;
 use crate::types::{Armed, DepthFrame, InertialFrame, MagFrame, Meters, MotorFrame, MotorId, Movement, Orientation};
 use serde::{Serialize, Deserialize};
 
-#[derive(Clone)]
 pub struct RobotState {
     armed: Armed,
     orientation: Option<(Orientation, Instant)>,
@@ -15,11 +14,11 @@ pub struct RobotState {
     motors: HashMap<MotorId, (MotorFrame, Instant)>,
     depth_target: Option<(Meters, Instant)>,
 
-    callback: Option<fn(RobotStateUpdate, &mut RobotState)>,
+    callback: Option<Box<dyn Fn(RobotStateUpdate, &mut RobotState) + Send + Sync + 'static>>,
 }
 
 impl RobotState {
-    pub fn new(motor_ids: &[MotorId], callback: fn(RobotStateUpdate, &mut RobotState)) -> Self {
+    pub fn new(motor_ids: &[MotorId]) -> Self {
         let mut motors = HashMap::new();
         for motor in motor_ids {
             motors.insert(*motor, (MotorFrame::default(), Instant::now()));
@@ -34,7 +33,7 @@ impl RobotState {
             mag: None,
             motors,
             depth_target: None,
-            callback: Some(callback),
+            callback: None,
         }
     }
 
@@ -72,6 +71,10 @@ impl RobotState {
 
     pub fn depth_target(&self) -> Option<(Meters, Instant)> {
         self.depth_target
+    }
+
+    pub fn set_callback<F: Fn(RobotStateUpdate, &mut RobotState) + Send + Sync + 'static>(&mut self, callback: F) {
+        self.callback = Some(Box::new(callback));
     }
 
     pub fn update(&mut self, update: RobotStateUpdate) {

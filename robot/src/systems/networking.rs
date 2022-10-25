@@ -1,6 +1,5 @@
 use std::sync::{Arc, RwLock};
 use anyhow::Context;
-use rppal::gpio::Gpio;
 use common::handler::RobotHandler;
 use common::network::Network;
 use common::protocol::Packet;
@@ -12,7 +11,7 @@ const ADDRS: &str = "0.0.0.0:44444";
 pub struct NetworkSystem(Network);
 
 impl RobotSystem for NetworkSystem {
-    fn start(robot: Arc<RwLock<RobotState>>, _gpio: Gpio) -> anyhow::Result<Self> {
+    fn start(robot: Arc<RwLock<RobotState>>) -> anyhow::Result<Self> {
         let handler = ();
         let network = Network::create(RobotHandler::new(robot, handler));
         network.listen(ADDRS).context("Start server")?;
