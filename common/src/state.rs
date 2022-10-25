@@ -1,9 +1,10 @@
 use std::collections::HashMap;
+use std::fmt::{Debug, Formatter};
 use std::time::Instant;
 use crate::types::{Armed, DepthFrame, InertialFrame, MagFrame, Meters, MotorFrame, MotorId, Movement, Orientation};
 use serde::{Serialize, Deserialize};
 
-#[derive(Debug, Clone)]
+#[derive(Clone)]
 pub struct RobotState {
     armed: Armed,
     orientation: Option<(Orientation, Instant)>,
@@ -14,11 +15,11 @@ pub struct RobotState {
     motors: HashMap<MotorId, (MotorFrame, Instant)>,
     depth_target: Option<(Meters, Instant)>,
 
-    callback: fn(RobotStateUpdate),
+    callback: Option<fn(RobotStateUpdate, &mut RobotState)>,
 }
 
 impl RobotState {
-    pub fn new(motor_ids: &[MotorId], callback: fn(RobotStateUpdate)) -> Self {
+    pub fn new(motor_ids: &[MotorId], callback: fn(RobotStateUpdate, &mut RobotState)) -> Self {
         let mut motors = HashMap::new();
         for motor in motor_ids {
             motors.insert(*motor, (MotorFrame::default(), Instant::now()));
@@ -33,7 +34,7 @@ impl RobotState {
             mag: None,
             motors,
             depth_target: None,
-            callback,
+            callback: Some(callback),
         }
     }
 
@@ -140,8 +141,11 @@ impl RobotState {
             },
         };
 
-        if changed {
-            (self.callback)(update)
+        if let Some(callback) = self.callback.take() {
+            if changed {
+                (callback)(update, self);
+            }
+            self.callback = Some(callback);
         }
     }
 
@@ -179,6 +183,21 @@ impl RobotState {
         }
 
         vec
+    }
+}
+
+impl Debug for RobotState {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("RobotState")
+            .field("armed", &self.armed)
+            .field("orientation", &self.orientation)
+            .field("movement", &self.movement)
+            .field("depth", &self.depth)
+            .field("inertial", &self.inertial)
+            .field("mag", &self.mag)
+            .field("motors", &self.motors)
+            .field("depth_target", &self.depth_target)
+            .finish_non_exhaustive()
     }
 }
 

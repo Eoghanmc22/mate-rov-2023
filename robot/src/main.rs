@@ -13,16 +13,15 @@
     //clippy::expect_used
 )]
 
+pub mod peripheral;
+mod systems;
+
 use std::sync::{Arc, RwLock};
 use common::state::RobotState;
 use common::types::MotorId;
 use crate::systems::motor::MotorSystem;
 use crate::systems::networking::NetworkSystem;
 use crate::systems::SystemManager;
-
-pub mod movement;
-pub mod peripheral;
-mod systems;
 
 fn main() -> anyhow::Result<()> {
     let robot = RobotState::new(

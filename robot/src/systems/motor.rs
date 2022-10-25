@@ -8,20 +8,19 @@ use crossbeam::channel::Sender;
 use rppal::gpio::{Gpio, OutputPin};
 use tracing::{error, Level, span};
 use common::state::{RobotState, RobotStateUpdate};
-use common::types::{MotorFrame, MotorId};
+use common::types::{MotorFrame, MotorId, Movement};
 use crate::peripheral::motor::Motor;
 use crate::systems::RobotSystem;
 
 pub struct MotorSystem(Sender<Message>);
 
 enum Message {
-    MotorSpeed(MotorId, MotorFrame)
+    MotorSpeed(MotorId, MotorFrame),
 }
 
 impl RobotSystem for MotorSystem {
-    // TODO handle movement updates
-    fn start(_robot: Arc<RwLock<RobotState>>, gpio: Gpio) -> anyhow::Result<Self> {
-        let (tx, rx) = channel::bounded(10);
+    fn start(robot: Arc<RwLock<RobotState>>, gpio: Gpio) -> anyhow::Result<Self> {
+        let (tx, rx) = channel::bounded(30);
         
         thread::spawn(move || {
             span!(Level::INFO, "Motor thread");
@@ -64,12 +63,40 @@ impl RobotSystem for MotorSystem {
         Ok(MotorSystem(tx))
     }
 
-    fn on_update(&mut self, update: RobotStateUpdate) {
+    fn on_update(&self, update: RobotStateUpdate, robot: &mut RobotState) {
         match update {
             RobotStateUpdate::Motor(id, frame) => {
                 self.0.send(Message::MotorSpeed(id, frame)).expect("Send message");
+            },
+            RobotStateUpdate::Movement(movement) => {
+                for update in mix_movement(movement, robot.motors().keys()) {
+                    robot.update(update);
+                }
             }
             _ => {}
         }
     }
+}
+
+pub fn mix_movement<'a>(movement: Movement, motors: impl IntoIterator<Item = &'a MotorId>) -> Vec<RobotStateUpdate> {
+    // TODO abs/rel
+
+    let mut messages = Vec::new();
+
+    for motor in motors {
+        let speed = match motor {
+            MotorId::UpF => movement.z + movement.x_rot,
+            MotorId::UpB => movement.z - movement.x_rot,
+            MotorId::UpL => movement.z - movement.y_rot,
+            MotorId::UpR => movement.z + movement.y_rot,
+            MotorId::FrontL => movement.y + movement.x + movement.z_rot,
+            MotorId::FrontR => movement.y - movement.x - movement.z_rot,
+            MotorId::RearL => -movement.y + movement.x - movement.z_rot,
+            MotorId::RearR => -movement.y - movement.x + movement.z_rot,
+        };
+
+        messages.push(RobotStateUpdate::Motor(*motor, MotorFrame(speed)));
+    }
+
+    messages
 }

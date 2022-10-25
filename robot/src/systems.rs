@@ -13,17 +13,17 @@ use rppal::gpio::Gpio;
 use common::state::{RobotState, RobotStateUpdate};
 
 lazy_static! {
-    static ref SYSTEMS: Arc<SystemManager> = Arc::new(SystemManager(Mutex::new(Vec::new()), (Mutex::new(false), Condvar::new())));
+    static ref SYSTEMS: Arc<SystemManager> = Arc::new(SystemManager(RwLock::new(Vec::new()), (Mutex::new(false), Condvar::new())));
 }
 
-pub struct SystemManager(Mutex<Vec<Box<dyn RobotSystem + Send + Sync + 'static>>>, (Mutex<bool>, Condvar));
+pub struct SystemManager(RwLock<Vec<Box<dyn RobotSystem + Send + Sync + 'static>>>, (Mutex<bool>, Condvar));
 
 impl SystemManager {
     pub fn add_system<S: RobotSystem + Send + Sync + 'static>(robot: Arc<RwLock<RobotState>>) -> anyhow::Result<()> {
         let gpio = Gpio::new().context("Create gpio")?;
         let system = S::start(robot, gpio).context("Start system")?;
 
-        match SYSTEMS.0.lock() {
+        match SYSTEMS.0.write() {
             Ok(mut systems) => {
                 systems.push(Box::new(system));
             }
@@ -35,10 +35,10 @@ impl SystemManager {
         Ok(())
     }
 
-    pub fn handle_update(update: RobotStateUpdate) {
-        let mut systems = SYSTEMS.0.lock().expect("Lock");
-        for system in &mut *systems {
-            system.on_update(update);
+    pub fn handle_update(update: RobotStateUpdate, robot: &mut RobotState) {
+        let systems = SYSTEMS.0.read().expect("Lock");
+        for system in &*systems {
+            system.on_update(update, robot);
         }
     }
 
@@ -62,5 +62,5 @@ impl SystemManager {
 
 pub trait RobotSystem {
     fn start(robot: Arc<RwLock<RobotState>>, gpio: Gpio) -> anyhow::Result<Self> where Self: Sized;
-    fn on_update(&mut self, update: RobotStateUpdate);
+    fn on_update(&self, update: RobotStateUpdate, robot: &mut RobotState);
 }
