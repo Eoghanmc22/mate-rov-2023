@@ -1,4 +1,5 @@
-pub mod ui;
+pub mod events;
+mod ui;
 
 use bevy::prelude::*;
 use bevy_egui::{EguiContext, EguiPlugin};

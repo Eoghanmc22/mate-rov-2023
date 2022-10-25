@@ -1,6 +1,7 @@
 pub mod networking;
 pub mod motor;
 // TODO indicators
+// TODO cameras
 // TODO inertial
 // TODO mag
 // TODO depth
@@ -15,11 +16,7 @@ pub struct SystemManager(Arc<RwLock<RobotState>>, Vec<Box<dyn RobotSystem + Send
 
 impl SystemManager {
     pub fn new(robot: Arc<RwLock<RobotState>>) -> Self {
-        Self {
-            0: robot,
-            1: Vec::new(),
-            2: (Mutex::new(false), Condvar::new())
-        }
+        Self(robot, Vec::new(), (Mutex::new(false), Condvar::new()))
     }
 
     pub fn add_system<S: RobotSystem + Send + Sync + 'static>(&mut self) -> anyhow::Result<()> {
@@ -34,7 +31,7 @@ impl SystemManager {
         let mut robot = self.0.write().expect("Lock");
         robot.set_callback(move |update, robot| {
             for system in &self.1 {
-                system.on_update(update, robot);
+                system.on_update(&update, robot);
             }
         });
 
@@ -59,5 +56,5 @@ impl SystemManager {
 
 pub trait RobotSystem {
     fn start(robot: Arc<RwLock<RobotState>>) -> anyhow::Result<Self> where Self: Sized;
-    fn on_update(&self, update: RobotStateUpdate, robot: &mut RobotState);
+    fn on_update(&self, update: &RobotStateUpdate, robot: &mut RobotState);
 }

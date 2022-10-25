@@ -1,5 +1,6 @@
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::fmt::{Debug, Formatter};
+use std::net::SocketAddr;
 use std::time::Instant;
 use crate::types::{Armed, DepthFrame, InertialFrame, MagFrame, Meters, MotorFrame, MotorId, Movement, Orientation};
 use serde::{Serialize, Deserialize};
@@ -12,6 +13,7 @@ pub struct RobotState {
     inertial: Option<(InertialFrame, Instant)>,
     mag: Option<(MagFrame, Instant)>,
     motors: HashMap<MotorId, (MotorFrame, Instant)>,
+    cameras: HashSet<SocketAddr>,
     depth_target: Option<(Meters, Instant)>,
 
     callback: Option<Box<dyn Fn(RobotStateUpdate, &mut RobotState) + Send + Sync + 'static>>,
@@ -32,6 +34,7 @@ impl RobotState {
             inertial: None,
             mag: None,
             motors,
+            cameras: HashSet::new(),
             depth_target: None,
             callback: None,
         }
@@ -69,6 +72,10 @@ impl RobotState {
         &self.motors
     }
 
+    pub fn cameras(&self) -> &HashSet<SocketAddr> {
+        &self.cameras
+    }
+
     pub fn depth_target(&self) -> Option<(Meters, Instant)> {
         self.depth_target
     }
@@ -80,66 +87,84 @@ impl RobotState {
     pub fn update(&mut self, update: RobotStateUpdate) {
         let now = Instant::now();
 
-        let changed = match update {
+        let changed = match &update {
             RobotStateUpdate::Armed(armed) => {
-                if self.armed != armed {
-                    self.armed = armed;
+                if self.armed != *armed {
+                    self.armed = *armed;
                     true
                 } else {
                     false
                 }
             },
             RobotStateUpdate::Orientation(orientation) => {
-                if self.orientation.as_ref().map(|it| &it.0) != Some(&orientation) {
-                    self.orientation = Some((orientation, now));
+                if self.orientation.as_ref().map(|it| &it.0) != Some(orientation) {
+                    self.orientation = Some((*orientation, now));
                     true
                 } else {
                     false
                 }
             },
             RobotStateUpdate::Movement(movement) => {
-                if self.movement.as_ref().map(|it| &it.0) != Some(&movement) {
-                    self.movement = Some((movement, now));
+                if self.movement.as_ref().map(|it| &it.0) != Some(movement) {
+                    self.movement = Some((*movement, now));
                     true
                 } else {
                     false
                 }
             },
             RobotStateUpdate::Depth(depth) => {
-                if self.depth.as_ref().map(|it| &it.0) != Some(&depth) {
-                    self.depth = Some((depth, now));
+                if self.depth.as_ref().map(|it| &it.0) != Some(depth) {
+                    self.depth = Some((*depth, now));
                     true
                 } else {
                     false
                 }
             },
             RobotStateUpdate::Inertial(inertial) => {
-                if self.inertial.as_ref().map(|it| &it.0) != Some(&inertial) {
-                    self.inertial = Some((inertial, now));
+                if self.inertial.as_ref().map(|it| &it.0) != Some(inertial) {
+                    self.inertial = Some((*inertial, now));
                     true
                 } else {
                     false
                 }
             },
             RobotStateUpdate::Magnetometer(magnetometer) => {
-                if self.mag.as_ref().map(|it| &it.0) != Some(&magnetometer) {
-                    self.mag = Some((magnetometer, now));
+                if self.mag.as_ref().map(|it| &it.0) != Some(magnetometer) {
+                    self.mag = Some((*magnetometer, now));
                     true
                 } else {
                     false
                 }
             },
             RobotStateUpdate::Motor(motor_id, motor) => {
-                let last = self.motors.insert(motor_id, (motor, now));
+                let last = self.motors.insert(*motor_id, (*motor, now));
 
-                last.as_ref().map(|it| &it.0) != Some(&motor)
+                last.as_ref().map(|it| &it.0) != Some(motor)
             },
             RobotStateUpdate::DepthTarget(depth_target) => {
-                if self.depth_target.as_ref().map(|it| &it.0) != Some(&depth_target) {
-                    self.depth_target = Some((depth_target, now));
+                if self.depth_target.as_ref().map(|it| &it.0) != Some(depth_target) {
+                    self.depth_target = Some((*depth_target, now));
                     true
                 } else {
                     false
+                }
+            },
+            RobotStateUpdate::Camera(action) => {
+                match action {
+                    CameraAction::Add(camera) => {
+                        self.cameras.insert(*camera)
+                    }
+                    CameraAction::Remove(camera) => {
+                        self.cameras.remove(camera)
+                    }
+                    CameraAction::Set(cameras) => {
+                        if &self.cameras != cameras {
+                            self.cameras = cameras.to_owned();
+                            true
+                        } else {
+                            false
+                        }
+                    }
                 }
             },
         };
@@ -181,6 +206,8 @@ impl RobotState {
             vec.push(RobotStateUpdate::Motor(*motor_id, *motor));
         }
 
+        vec.push(RobotStateUpdate::Camera(CameraAction::Set(self.cameras.to_owned())));
+
         if let Some((depth_target, _)) = self.depth_target() {
             vec.push(RobotStateUpdate::DepthTarget(depth_target));
         }
@@ -199,12 +226,13 @@ impl Debug for RobotState {
             .field("inertial", &self.inertial)
             .field("mag", &self.mag)
             .field("motors", &self.motors)
+            .field("cameras", &self.cameras)
             .field("depth_target", &self.depth_target)
             .finish_non_exhaustive()
     }
 }
 
-#[derive(Debug, Copy, Clone, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub enum RobotStateUpdate {
     Armed(Armed),
     Orientation(Orientation),
@@ -213,5 +241,13 @@ pub enum RobotStateUpdate {
     Inertial(InertialFrame),
     Magnetometer(MagFrame),
     Motor(MotorId, MotorFrame),
+    Camera(CameraAction),
     DepthTarget(Meters),
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub enum CameraAction {
+    Add(SocketAddr),
+    Remove(SocketAddr),
+    Set(HashSet<SocketAddr>),
 }

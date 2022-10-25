@@ -19,7 +19,7 @@ impl RobotSystem for NetworkSystem {
         Ok(NetworkSystem(network))
     }
 
-    fn on_update(&self, update: RobotStateUpdate, _robot: &mut RobotState) {
-        self.0.send_packet(Packet::StateUpdate(vec![update]));
+    fn on_update(&self, update: &RobotStateUpdate, _robot: &mut RobotState) {
+        self.0.send_packet(Packet::StateUpdate(vec![update.clone()]));
     }
 }

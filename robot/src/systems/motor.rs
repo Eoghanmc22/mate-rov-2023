@@ -64,16 +64,16 @@ impl RobotSystem for MotorSystem {
         Ok(MotorSystem(tx))
     }
 
-    fn on_update(&self, update: RobotStateUpdate, robot: &mut RobotState) {
+    fn on_update(&self, update: &RobotStateUpdate, robot: &mut RobotState) {
         match update {
             RobotStateUpdate::Armed(armed) => {
                 todo!();
             }
             RobotStateUpdate::Motor(id, frame) => {
-                self.0.send(Message::MotorSpeed(id, frame)).expect("Send message");
+                self.0.send(Message::MotorSpeed(*id, *frame)).expect("Send message");
             },
             RobotStateUpdate::Movement(movement) => {
-                for update in mix_movement(movement, robot.motors().keys()) {
+                for update in mix_movement(*movement, robot.motors().keys()) {
                     robot.update(update);
                 }
             },
