@@ -2,6 +2,7 @@ use std::collections::hash_map::Entry;
 use std::collections::HashMap;
 use std::sync::{Arc, RwLock};
 use std::thread;
+use anyhow::Context;
 use crossbeam::channel;
 use crossbeam::channel::Sender;
 use rppal::gpio::{Gpio, OutputPin};
@@ -19,22 +20,23 @@ enum Message {
 
 impl RobotSystem for MotorSystem {
     // TODO handle movement updates
-    fn start(robot: Arc<RwLock<RobotState>>, gpio: Gpio) -> anyhow::Result<Self> {
+    fn start(_robot: Arc<RwLock<RobotState>>, gpio: Gpio) -> anyhow::Result<Self> {
         let (tx, rx) = channel::bounded(10);
         
-        thread::spawn(|| {
+        thread::spawn(move || {
             span!(Level::INFO, "Motor thread");
             let mut motors: HashMap<MotorId, Motor<OutputPin>> = HashMap::new();
 
             for message in rx.into_iter() {
                 match message {
                     Message::MotorSpeed(motor_id, frame) => {
-                        let motor = match motors.entry(motor_id) {
-                            Entry::Occupied(mut occupied) => {
+                        let mut entry = motors.entry(motor_id);
+                        let motor = match entry {
+                            Entry::Occupied(ref mut occupied) => {
                                 Some(occupied.get_mut())
                             }
                             Entry::Vacant(vacant) => {
-                                let ret = Motor::new(gpio.as_ref(), motor_id.into());
+                                let ret = Motor::new(&gpio, motor_id.into());
                                 match ret {
                                     Ok(motor) => {
                                         Some(vacant.insert(motor))

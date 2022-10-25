@@ -20,7 +20,7 @@ pub trait Register {
     const ADDRESS: u8;
     // TODO: Make Data part of Register
 
-    fn setup(dev: &mut impl Device) -> anyhow::Result<()> {
+    fn setup(_dev: &mut impl Device) -> anyhow::Result<()> {
         Ok(())
     }
 }

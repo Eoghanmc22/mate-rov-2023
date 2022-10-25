@@ -37,9 +37,9 @@ pub struct Motor<PinType: Debug> {
     speed: Speed
 }
 
-impl<P: PwmDevice> Motor<P> {
+impl Motor<OutputPin> {
     #[tracing::instrument]
-    pub fn new(gpio: &Gpio, config: MotorConfig) -> anyhow::Result<Motor<OutputPin>> {
+    pub fn new(gpio: &Gpio, config: MotorConfig) -> anyhow::Result<Self> {
         trace!("Motor::new()");
 
         let mut pin = gpio.get(config.signal_pin).context("Get pin")?.into_output();
@@ -51,7 +51,9 @@ impl<P: PwmDevice> Motor<P> {
             speed: Speed::ZERO,
         })
     }
+}
 
+impl<P: PwmDevice> Motor<P> {
     #[tracing::instrument]
     pub fn set_speed(&mut self, speed: Speed) -> anyhow::Result<()> {
         trace!("Motor::set_speed()");
