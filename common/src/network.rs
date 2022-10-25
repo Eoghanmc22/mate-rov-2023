@@ -28,6 +28,10 @@ pub trait EventHandler: Sized + Debug {
     fn disconnected(&mut self, _endpoint: Endpoint) -> anyhow::Result<()> { Ok(()) }
 }
 
+impl EventHandler for () {
+    fn handle_packet(&mut self, _handler: &NodeHandler<WorkerEvent>, _connection: &Connection, _packet: Packet) -> anyhow::Result<()> { Ok(()) }
+}
+
 impl Network {
     #[tracing::instrument]
     pub fn create<Events: EventHandler + Send + 'static>(events: Events) -> Self {
@@ -66,7 +70,7 @@ impl Network {
     pub fn connect(&self, addrs: impl ToRemoteAddr + Debug) -> anyhow::Result<()> {
         trace!("Connecting to server on {:?}", addrs);
 
-        self.handler.network().connect(Transport::FramedTcp, addrs).context("Bind to port")?;
+        self.handler.network().connect(Transport::FramedTcp, addrs).context("Connect to peer")?;
 
         Ok(())
     }

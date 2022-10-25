@@ -74,7 +74,7 @@ impl RobotSystem for MotorSystem {
             },
             RobotStateUpdate::Movement(movement) => {
                 for update in mix_movement(*movement, robot.motors().keys()) {
-                    robot.update(update);
+                    robot.update(&update);
                 }
             },
             _ => {},

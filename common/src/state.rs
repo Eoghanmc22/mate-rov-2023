@@ -5,6 +5,7 @@ use std::time::Instant;
 use crate::types::{Armed, DepthFrame, InertialFrame, MagFrame, Meters, MotorFrame, MotorId, Movement, Orientation};
 use serde::{Serialize, Deserialize};
 
+#[derive(Default)]
 pub struct RobotState {
     armed: Armed,
     orientation: Option<(Orientation, Instant)>,
@@ -16,7 +17,7 @@ pub struct RobotState {
     cameras: HashSet<SocketAddr>,
     depth_target: Option<(Meters, Instant)>,
 
-    callback: Option<Box<dyn Fn(RobotStateUpdate, &mut RobotState) + Send + Sync + 'static>>,
+    callback: Option<Box<dyn Fn(&RobotStateUpdate, &mut RobotState) + Send + Sync + 'static>>,
 }
 
 impl RobotState {
@@ -27,16 +28,8 @@ impl RobotState {
         }
 
         Self {
-            armed: Armed::Disarmed,
-            orientation: None,
-            movement: None,
-            depth: None,
-            inertial: None,
-            mag: None,
             motors,
-            cameras: HashSet::new(),
-            depth_target: None,
-            callback: None,
+            ..Default::default()
         }
     }
 
@@ -80,14 +73,14 @@ impl RobotState {
         self.depth_target
     }
 
-    pub fn set_callback<F: Fn(RobotStateUpdate, &mut RobotState) + Send + Sync + 'static>(&mut self, callback: F) {
+    pub fn set_callback<F: Fn(&RobotStateUpdate, &mut RobotState) + Send + Sync + 'static>(&mut self, callback: F) {
         self.callback = Some(Box::new(callback));
     }
 
-    pub fn update(&mut self, update: RobotStateUpdate) {
+    pub fn update(&mut self, update: &RobotStateUpdate) {
         let now = Instant::now();
 
-        let changed = match &update {
+        let changed = match update {
             RobotStateUpdate::Armed(armed) => {
                 if self.armed != *armed {
                     self.armed = *armed;

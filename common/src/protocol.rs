@@ -3,6 +3,7 @@ use anyhow::Context;
 use serde::{Serialize, Deserialize};
 use crate::state::RobotStateUpdate;
 
+// TODO use references
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub enum Packet {
     StateUpdate(Vec<RobotStateUpdate>),

@@ -4,4 +4,3 @@ pub mod protocol;
 pub mod types;
 pub mod state;
 pub mod network;
-pub mod handler;
