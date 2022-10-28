@@ -14,7 +14,7 @@ pub struct RobotState {
     inertial: Option<(InertialFrame, Instant)>,
     mag: Option<(MagFrame, Instant)>,
     motors: HashMap<MotorId, (MotorFrame, Instant)>,
-    cameras: HashSet<SocketAddr>,
+    cameras: HashSet<(String, SocketAddr)>,
     depth_target: Option<(Meters, Instant)>,
 
     callback: Option<Box<dyn Fn(&RobotStateUpdate, &mut RobotState) + Send + Sync + 'static>>,
@@ -65,7 +65,7 @@ impl RobotState {
         &self.motors
     }
 
-    pub fn cameras(&self) -> &HashSet<SocketAddr> {
+    pub fn cameras(&self) -> &HashSet<(String, SocketAddr)> {
         &self.cameras
     }
 
@@ -145,7 +145,7 @@ impl RobotState {
             RobotStateUpdate::Camera(action) => {
                 match action {
                     CameraAction::Add(camera) => {
-                        self.cameras.insert(*camera)
+                        self.cameras.insert(camera.to_owned())
                     }
                     CameraAction::Remove(camera) => {
                         self.cameras.remove(camera)
@@ -240,7 +240,7 @@ pub enum RobotStateUpdate {
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub enum CameraAction {
-    Add(SocketAddr),
-    Remove(SocketAddr),
-    Set(HashSet<SocketAddr>),
+    Add((String, SocketAddr)),
+    Remove((String, SocketAddr)),
+    Set(HashSet<(String, SocketAddr)>),
 }

@@ -1,3 +1,4 @@
+use std::fmt::{Display, Formatter};
 use std::ops::{Add, Neg, Sub};
 use glam::Quat;
 use serde::{Serialize, Deserialize};
@@ -49,9 +50,9 @@ pub struct DepthFrame {
 
 #[derive(Debug, Copy, Clone, Default, Serialize, Deserialize, PartialEq)]
 pub struct InertialFrame {
-    pub gyro_x: Degrees,
-    pub gyro_y: Degrees,
-    pub gyro_z: Degrees,
+    pub gyro_x: Dps,
+    pub gyro_y: Dps,
+    pub gyro_z: Dps,
 
     pub accel_x: GForce,
     pub accel_y: GForce,
@@ -81,17 +82,65 @@ pub enum Armed {
 #[derive(Debug, Copy, Clone, Default, Serialize, Deserialize, PartialOrd, PartialEq)]
 pub struct Meters(pub f64);
 
+impl Display for Meters {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        f.pad(&format!("{:.2}M", self.0))
+    }
+}
+
 #[derive(Debug, Copy, Clone, Default, Serialize, Deserialize, PartialOrd, PartialEq)]
 pub struct Celsius(pub f64);
+
+impl Display for Celsius {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        f.pad(&format!("{:.2}°C", self.0))
+    }
+}
 
 #[derive(Debug, Copy, Clone, Default, Serialize, Deserialize, PartialOrd, PartialEq)]
 pub struct GForce(pub f64);
 
+impl Display for GForce {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        f.pad(&format!("{:.2}g", self.0))
+    }
+}
+
+#[derive(Debug, Copy, Clone, Default, Serialize, Deserialize, PartialOrd, PartialEq)]
+pub struct Radians(pub f64);
+
+impl Display for Radians {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        f.pad(&format!("{:.2}rad", self.0))
+    }
+}
+
 #[derive(Debug, Copy, Clone, Default, Serialize, Deserialize, PartialOrd, PartialEq)]
 pub struct Degrees(pub f64);
 
+impl Display for Degrees {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        f.pad(&format!("{:.2}deg", self.0))
+    }
+}
+
+#[derive(Debug, Copy, Clone, Default, Serialize, Deserialize, PartialOrd, PartialEq)]
+pub struct Dps(pub f64);
+
+impl Display for Dps {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        f.pad(&format!("{:.2}dps", self.0))
+    }
+}
+
 #[derive(Debug, Copy, Clone, Default, Serialize, Deserialize, PartialOrd, PartialEq)]
 pub struct Gauss(pub f64);
+
+impl Display for Gauss {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        f.pad(&format!("{:.2}Gs", self.0))
+    }
+}
 
 #[derive(Debug, Copy, Clone, Default, Serialize, Deserialize, PartialOrd, PartialEq)]
 pub struct Speed(f64);
@@ -145,5 +194,11 @@ impl Neg for Speed {
 
     fn neg(self) -> Self::Output {
         Speed(-self.0)
+    }
+}
+
+impl Display for Speed {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        f.pad(&format!("{:.2}%", self.0 * 100.0))
     }
 }

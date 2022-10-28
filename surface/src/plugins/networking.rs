@@ -27,7 +27,6 @@ pub enum NetworkEvent {
     ConnectTo(RemoteAddr),
 }
 
-// TODO better name
 struct NetworkLink(Network, Receiver<RobotEvent>);
 
 fn setup_network(mut commands: Commands) {
@@ -84,7 +83,8 @@ impl EventHandler for NetworkHandler {
         Ok(())
     }
 
-    fn connected(&mut self, endpoint: Endpoint) -> anyhow::Result<()> {
+    fn connected(&mut self, endpoint: Endpoint, handler: &NodeHandler<WorkerEvent>, connection: &Connection) -> anyhow::Result<()> {
+        connection.write_packet(handler, Packet::RequestSync).context("Send packet")?;
         self.0.send(RobotEvent::Connected(endpoint)).context("Send update")
     }
 

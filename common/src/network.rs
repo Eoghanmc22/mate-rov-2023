@@ -1,4 +1,4 @@
-use std::fmt::Debug;
+use std::fmt::{Debug, Formatter};
 use std::net::{ToSocketAddrs};
 use std::time::{Duration, Instant};
 use anyhow::{bail, Context};
@@ -14,16 +14,35 @@ pub struct Network {
     task: NodeTask
 }
 
+impl Debug for Network {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("Network")
+            .field("handler", &"NodeHandler { .. }")
+            .field("task", &"NodeTask { .. }")
+            .finish()
+    }
+}
+
 struct NetworkContext<EventHandler> {
     handler: NodeHandler<WorkerEvent>,
     connection: Option<Connection>,
     events: EventHandler
 }
 
+impl<EventHandler: Debug> Debug for NetworkContext<EventHandler> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("NetworkContext")
+            .field("handler", &"NodeHandler { .. }")
+            .field("connection", &self.connection)
+            .field("events", &self.events)
+            .finish()
+    }
+}
+
 pub trait EventHandler: Sized + Debug {
     fn handle_packet(&mut self, handler: &NodeHandler<WorkerEvent>, connection: &Connection, packet: Packet) -> anyhow::Result<()>;
 
-    fn connected(&mut self, _endpoint: Endpoint) -> anyhow::Result<()> { Ok(()) }
+    fn connected(&mut self, _endpoint: Endpoint, _handler: &NodeHandler<WorkerEvent>, _connection: &Connection) -> anyhow::Result<()> { Ok(()) }
     fn connection_failed(&mut self, _endpoint: Endpoint) -> anyhow::Result<()> { Ok(()) }
     fn disconnected(&mut self, _endpoint: Endpoint) -> anyhow::Result<()> { Ok(()) }
 }
@@ -57,7 +76,7 @@ impl Network {
         }
     }
 
-    #[tracing::instrument(skip(self))]
+    #[tracing::instrument]
     pub fn listen(&self, addrs: impl ToSocketAddrs + Debug) -> anyhow::Result<()> {
         trace!("Starting server on {:?}", addrs);
 
@@ -66,7 +85,7 @@ impl Network {
         Ok(())
     }
 
-    #[tracing::instrument(skip(self))]
+    #[tracing::instrument]
     pub fn connect(&self, addrs: impl ToRemoteAddr + Debug) -> anyhow::Result<()> {
         trace!("Connecting to server on {:?}", addrs);
 
@@ -75,13 +94,13 @@ impl Network {
         Ok(())
     }
 
-    #[tracing::instrument(skip(self))]
+    #[tracing::instrument]
     pub fn stop(&mut self) {
         self.handler.stop();
         self.task.wait();
     }
 
-    #[tracing::instrument(skip(self))]
+    #[tracing::instrument]
     pub fn send_packet(&self, packet: Packet) {
         self.handler.signals().send(WorkerEvent::Broadcast(packet));
     }
@@ -150,26 +169,28 @@ fn handle_network_event<Events: EventHandler>(network: &mut NetworkContext<Event
 
             if let Some(previous) = previous {
                 if previous.last_packet.elapsed() > TIMEOUT {
+                    network.events.connected(endpoint, &network.handler, &new).context("Connected event")?;
                     network.connection = Some(new);
-                    network.events.connected(endpoint).context("Connected event")?;
                 } else {
                     network.connection = Some(previous);
                 }
             } else {
+                network.events.connected(endpoint, &network.handler, &new).context("Connected event")?;
                 network.connection = Some(new);
-                network.events.connected(endpoint).context("Connected event")?;
             }
         }
         NetEvent::Connected(endpoint, success) => {
             if success {
                 info!("Connected to {}", endpoint);
 
-                network.connection = Some(Connection {
+                let connection = Connection {
                     endpoint,
                     last_packet: Instant::now()
-                });
+                };
 
-                network.events.connected(endpoint).context("Connected event")?;
+                network.events.connected(endpoint, &network.handler, &connection).context("Connected event")?;
+
+                network.connection = Some(connection);
             } else {
                 error!("Could not connect to endpoint: {}", endpoint);
                 network.events.connection_failed(endpoint).context("Connection failed event")?;
