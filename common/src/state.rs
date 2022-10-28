@@ -5,6 +5,8 @@ use std::time::Instant;
 use crate::types::{Armed, DepthFrame, InertialFrame, MagFrame, Meters, MotorFrame, MotorId, Movement, Orientation};
 use serde::{Serialize, Deserialize};
 
+/// Encodes all states of the robot
+/// States can only be transitioned between by using `RobotStateUpdate`s
 #[derive(Default)]
 pub struct RobotState {
     armed: Armed,
@@ -21,6 +23,7 @@ pub struct RobotState {
 }
 
 impl RobotState {
+    /// Creates a blank `RobotState` with the specified motors
     pub fn new(motor_ids: &[MotorId]) -> Self {
         let mut motors = HashMap::new();
         for motor in motor_ids {
@@ -77,6 +80,7 @@ impl RobotState {
         self.callback = Some(Box::new(callback));
     }
 
+    /// Updates the robot state with the info provided in the `RobotStateUpdate`
     pub fn update(&mut self, update: &RobotStateUpdate) {
         let now = Instant::now();
 
@@ -170,6 +174,7 @@ impl RobotState {
         }
     }
 
+    /// Generates the `RobotStateUpdate`s necessary to reconstruct the current state from a blank `RobotState`
     pub fn to_updates(&self) -> Vec<RobotStateUpdate> {
         let mut vec = Vec::new();
 
@@ -225,6 +230,7 @@ impl Debug for RobotState {
     }
 }
 
+/// Represents a state transition
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub enum RobotStateUpdate {
     Armed(Armed),

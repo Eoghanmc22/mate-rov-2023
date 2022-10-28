@@ -1,3 +1,5 @@
+///! A wrapper around the message-io crate that allows for more convenient messaging
+
 use std::fmt::{Debug, Formatter};
 use std::net::{ToSocketAddrs};
 use std::time::{Duration, Instant};
@@ -9,6 +11,7 @@ use crate::protocol::Packet;
 
 const TIMEOUT: Duration = Duration::from_secs(10);
 
+/// Representation of network handler
 pub struct Network {
     handler: NodeHandler<WorkerEvent>,
     task: NodeTask
@@ -40,10 +43,14 @@ impl<EventHandler: Debug> Debug for NetworkContext<EventHandler> {
 }
 
 pub trait EventHandler: Sized + Debug {
+    /// Callback for handling received packets
     fn handle_packet(&mut self, handler: &NodeHandler<WorkerEvent>, connection: &Connection, packet: Packet) -> anyhow::Result<()>;
 
+    /// Callback for handling new connections
     fn connected(&mut self, _endpoint: Endpoint, _handler: &NodeHandler<WorkerEvent>, _connection: &Connection) -> anyhow::Result<()> { Ok(()) }
+    /// Callback for handling connections that failed
     fn connection_failed(&mut self, _endpoint: Endpoint) -> anyhow::Result<()> { Ok(()) }
+    /// Callback for handling when a peer disconnects
     fn disconnected(&mut self, _endpoint: Endpoint) -> anyhow::Result<()> { Ok(()) }
 }
 
@@ -52,6 +59,7 @@ impl EventHandler for () {
 }
 
 impl Network {
+    /// Create a network handler
     #[tracing::instrument]
     pub fn create<Events: EventHandler + Send + 'static>(events: Events) -> Self {
         trace!("Create Network");
@@ -76,6 +84,7 @@ impl Network {
         }
     }
 
+    /// Start a server
     #[tracing::instrument]
     pub fn listen(&self, addrs: impl ToSocketAddrs + Debug) -> anyhow::Result<()> {
         trace!("Starting server on {:?}", addrs);
@@ -85,6 +94,7 @@ impl Network {
         Ok(())
     }
 
+    /// Create connect to a peer
     #[tracing::instrument]
     pub fn connect(&self, addrs: impl ToRemoteAddr + Debug) -> anyhow::Result<()> {
         trace!("Connecting to server on {:?}", addrs);
@@ -94,18 +104,21 @@ impl Network {
         Ok(())
     }
 
+    /// Stops the network threads associated with this network handler
     #[tracing::instrument]
     pub fn stop(&mut self) {
         self.handler.stop();
         self.task.wait();
     }
 
+    /// Sends a packet to all peers connected to this network handler
     #[tracing::instrument]
     pub fn send_packet(&self, packet: Packet) {
         self.handler.signals().send(WorkerEvent::Broadcast(packet));
     }
 }
 
+/// Represents a connection with a peer
 #[derive(Debug)]
 pub struct Connection {
     endpoint: Endpoint,
@@ -113,6 +126,7 @@ pub struct Connection {
 }
 
 impl Connection {
+    /// Serializes a packet and sends the packet to the connected peer
     #[tracing::instrument(skip(handler))]
     pub fn write_packet(&self, handler: &NodeHandler<WorkerEvent>, packet: Packet) -> anyhow::Result<()> {
         trace!(?packet);
@@ -132,7 +146,6 @@ impl Connection {
 #[derive(Debug)]
 pub enum WorkerEvent {
     Broadcast(Packet),
-    // TODO
 }
 
 #[tracing::instrument(skip(network))]

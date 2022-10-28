@@ -3,13 +3,19 @@ use anyhow::Context;
 use serde::{Serialize, Deserialize};
 use crate::state::RobotStateUpdate;
 
+/// Representation of all messages that can be communicated between peers
 // TODO use references
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub enum Packet {
+    /// Encodes the updates that should be made to the peer's RobotState
     StateUpdate(Vec<RobotStateUpdate>),
+    /// Requests that the peer sends the contents of its RobotState
     RequestSync,
+    /// Logs a message on the peer's console
     Log(String),
+    /// Asks the peer to reply with a Pong, used to measure communication latency
     Ping(SystemTime),
+    /// Response to a Ping, used to measure communication latency
     Pong(SystemTime, SystemTime),
 }
 
