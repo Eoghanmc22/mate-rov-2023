@@ -22,14 +22,14 @@ fn gamepad_connections(
     for GamepadEvent { gamepad, event_type } in gamepad_evr.iter() {
         match event_type {
             GamepadEventType::Connected => {
-                println!("New gamepad connected with ID: {gamepad:?}");
+                info!("New gamepad connected with ID: {gamepad:?}");
 
                 if current_gamepad.is_none() {
                     commands.insert_resource(CurrentGamepad(*gamepad));
                 }
             }
             GamepadEventType::Disconnected => {
-                println!("Lost gamepad connection with ID: {gamepad:?}");
+                info!("Lost gamepad connection with ID: {gamepad:?}");
 
                 if let Some(CurrentGamepad(gamepad_lost)) = current_gamepad.as_deref() {
                     if gamepad_lost == gamepad {

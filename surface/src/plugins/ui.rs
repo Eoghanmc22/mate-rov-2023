@@ -66,10 +66,10 @@ fn draw_ui(state: Res<Robot>, mut egui_context: ResMut<EguiContext>, mut net: Ev
                 ui.label(format!("X: {}", movement.x));
                 ui.label(format!("Y: {}", movement.y));
                 ui.label(format!("Z: {}", movement.z));
-                ui.add_space(3.0);
-                ui.label(format!("X: {}", movement.x_rot));
-                ui.label(format!("Y: {}", movement.y_rot));
-                ui.label(format!("Z: {}", movement.z_rot));
+                ui.add_space(5.0);
+                ui.label(format!("Yaw: {}", movement.z_rot));
+                ui.label(format!("Pitch: {}", movement.x_rot));
+                ui.label(format!("Roll: {}", movement.y_rot));
                 // TODO visual
             } else {
                 ui.label("No movement data");

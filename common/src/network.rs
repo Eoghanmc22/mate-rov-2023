@@ -87,7 +87,7 @@ impl Network {
     /// Start a server
     #[tracing::instrument]
     pub fn listen(&self, addrs: impl ToSocketAddrs + Debug) -> anyhow::Result<()> {
-        trace!("Starting server on {:?}", addrs);
+        info!("Starting server on {:?}", addrs);
 
         self.handler.network().listen(Transport::FramedTcp, addrs).context("Bind to port")?;
 
@@ -97,7 +97,7 @@ impl Network {
     /// Create connect to a peer
     #[tracing::instrument]
     pub fn connect(&self, addrs: impl ToRemoteAddr + Debug) -> anyhow::Result<()> {
-        trace!("Connecting to server on {:?}", addrs);
+        info!("Connecting to server on {:?}", addrs);
 
         self.handler.network().connect(Transport::FramedTcp, addrs).context("Connect to peer")?;
 
@@ -107,6 +107,7 @@ impl Network {
     /// Stops the network threads associated with this network handler
     #[tracing::instrument]
     pub fn stop(&mut self) {
+        info!("Stopping handler");
         self.handler.stop();
         self.task.wait();
     }
@@ -114,6 +115,7 @@ impl Network {
     /// Sends a packet to all peers connected to this network handler
     #[tracing::instrument]
     pub fn send_packet(&self, packet: Packet) {
+        trace!("Sending packet");
         self.handler.signals().send(WorkerEvent::Broadcast(packet));
     }
 }

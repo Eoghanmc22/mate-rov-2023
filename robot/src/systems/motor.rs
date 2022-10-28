@@ -6,7 +6,7 @@ use anyhow::Context;
 use crossbeam::channel;
 use crossbeam::channel::Sender;
 use rppal::gpio::{Gpio, OutputPin};
-use tracing::{error, Level, span};
+use tracing::{error, info, Level, span};
 use common::state::{RobotState, RobotStateUpdate};
 use common::types::{MotorFrame, MotorId, Movement};
 use crate::peripheral::motor::Motor;
@@ -19,7 +19,9 @@ enum Message {
 }
 
 impl RobotSystem for MotorSystem {
+    #[tracing::instrument]
     fn start(robot: Arc<RwLock<RobotState>>) -> anyhow::Result<Self> {
+        info!("Starting motor system");
         let (tx, rx) = channel::bounded(30);
         let gpio = Gpio::new().context("Create gpio")?;
         
@@ -81,8 +83,6 @@ impl RobotSystem for MotorSystem {
 }
 
 pub fn mix_movement<'a>(movement: Movement, motors: impl IntoIterator<Item = &'a MotorId>) -> Vec<RobotStateUpdate> {
-    // TODO abs/rel
-
     let mut messages = Vec::new();
 
     for motor in motors {

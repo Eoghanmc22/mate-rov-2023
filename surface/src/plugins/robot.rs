@@ -46,7 +46,6 @@ fn update_robot(mut robot: ResMut<Robot>, mut events: EventReader<RobotEvent>) {
 
 fn updates_to_packets(mut updates: EventReader<RobotStateUpdate>, mut net: EventWriter<NetworkEvent>) {
     for update in updates.iter() {
-        // todo this will prob over fill a queue
         net.send(NetworkEvent::SendPacket(Packet::StateUpdate(vec![update.clone()])));
     }
 }

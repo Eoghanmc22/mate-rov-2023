@@ -14,7 +14,9 @@ const ADDRS: &str = "0.0.0.0:44444";
 pub struct NetworkSystem(Network);
 
 impl RobotSystem for NetworkSystem {
+    #[tracing::instrument]
     fn start(robot: Arc<RwLock<RobotState>>) -> anyhow::Result<Self> {
+        info!("Starting networking system");
         let network = Network::create(NetworkHandler(robot));
         network.listen(ADDRS).context("Start server")?;
 
