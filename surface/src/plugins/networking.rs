@@ -6,7 +6,6 @@ use message_io::network::{Endpoint, RemoteAddr};
 use message_io::node::NodeHandler;
 use common::network::{Connection, EventHandler, Network, WorkerEvent};
 use common::protocol::Packet;
-use crate::plugins::error::ErrorEvent;
 use crate::plugins::MateStage;
 use crate::plugins::robot::RobotEvent;
 
@@ -39,7 +38,7 @@ fn updates_to_events(mut events: EventWriter<RobotEvent>, net_link: Res<NetworkL
     events.send_batch(net_link.1.try_iter());
 }
 
-fn events_to_packets(mut events: EventReader<NetworkEvent>, net_link: Res<NetworkLink>, mut errors: EventWriter<ErrorEvent>) {
+fn events_to_packets(mut events: EventReader<NetworkEvent>, net_link: Res<NetworkLink>, mut errors: EventWriter<anyhow::Error>) {
     for event in events.iter() {
         match event.to_owned() {
             NetworkEvent::SendPacket(packet) => {
@@ -47,7 +46,7 @@ fn events_to_packets(mut events: EventReader<NetworkEvent>, net_link: Res<Networ
             }
             NetworkEvent::ConnectTo(peer) => {
                 if let Err(error) = net_link.0.connect(peer) {
-                    errors.send(ErrorEvent(error))
+                    errors.send(error);
                 }
             }
         }

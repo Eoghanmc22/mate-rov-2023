@@ -16,7 +16,7 @@ impl Plugin for UiPlugin {
     }
 }
 
-fn draw_ui(state: Res<Robot>, mut egui_context: ResMut<EguiContext>) {
+fn draw_ui(state: Res<Robot>, mut egui_context: ResMut<EguiContext>, mut errors: EventReader<anyhow::Error>) {
     let ctx = egui_context.ctx_mut();
     let state = state.state();
 
@@ -43,8 +43,6 @@ fn draw_ui(state: Res<Robot>, mut egui_context: ResMut<EguiContext>) {
         });
         ui.collapsing("Movement", |ui| {
             if let Some((movement, _)) = state.movement() {
-                ui.label(format!("Mode: {:?}", movement.mode));
-                ui.add_space(3.0);
                 ui.label(format!("X: {}", movement.x));
                 ui.label(format!("Y: {}", movement.y));
                 ui.label(format!("Z: {}", movement.z));

@@ -1,5 +1,5 @@
 use std::fmt::{Display, Formatter};
-use std::ops::{Add, Neg, Sub};
+use std::ops::{Add, AddAssign, Neg, Sub};
 use glam::Quat;
 use serde::{Serialize, Deserialize};
 
@@ -10,7 +10,6 @@ pub struct Orientation(pub Quat);
 /// +XR: Pitch Up, +YR: Roll Counterclockwise, +ZR: Yaw Clockwise (top view)
 #[derive(Debug, Copy, Clone, Default, Serialize, Deserialize, PartialEq)]
 pub struct Movement {
-    pub mode: MovementMode,
     pub x: Speed,      // Right
     pub y: Speed,      // Forwards
     pub z: Speed,      // Up
@@ -20,11 +19,25 @@ pub struct Movement {
     pub z_rot: Speed,  // Yaw Clockwise (top view)
 }
 
-#[derive(Debug, Copy, Clone, Default, Serialize, Deserialize, Eq, PartialEq)]
-pub enum MovementMode {
-    Absolute,
-    #[default]
-    Relative
+impl Add for Movement {
+    type Output = Movement;
+
+    fn add(self, rhs: Self) -> Self::Output {
+        Movement {
+            x: self.x + rhs.x,
+            y: self.y + rhs.y,
+            z: self.z + rhs.z,
+            x_rot: self.x_rot + rhs.x_rot,
+            y_rot: self.y_rot + rhs.y_rot,
+            z_rot: self.z_rot + rhs.z_rot
+        }
+    }
+}
+
+impl AddAssign for Movement {
+    fn add_assign(&mut self, rhs: Self) {
+        *self = *self + rhs;
+    }
 }
 
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Hash, Serialize, Deserialize)]

@@ -5,6 +5,8 @@ pub mod robot;
 pub mod networking;
 pub mod ui;
 pub mod error;
+pub mod gamepad;
+pub mod movement;
 
 pub struct MatePlugins;
 
@@ -15,7 +17,8 @@ impl PluginGroup for MatePlugins {
         group.add(networking::NetworkPlugin);
         group.add(ui::UiPlugin);
         group.add(error::ErrorPlugin);
-        // TODO gamepad
+        group.add(gamepad::GamepadPlugin);
+        group.add(movement::MovementPlugin);
     }
 }
 
@@ -23,10 +26,11 @@ struct SchedulePlugin;
 
 impl Plugin for SchedulePlugin {
     fn build(&self, app: &mut App) {
-        app.add_stage_after(CoreStage::PreUpdate, MateStage::NetworkRead, SystemStage::single_threaded());
-        app.add_stage_after(MateStage::NetworkRead, MateStage::UpdateState, SystemStage::single_threaded());
-        app.add_stage_after(CoreStage::Update, MateStage::NetworkWrite, SystemStage::single_threaded());
-        app.add_stage_after(CoreStage::PostUpdate, MateStage::ErrorHandling, SystemStage::single_threaded());
+        app.add_stage_before(CoreStage::PreUpdate, MateStage::NetworkRead, SystemStage::single_threaded());
+        app.add_stage_after(MateStage::NetworkRead, MateStage::UpdateStateEarly, SystemStage::single_threaded());
+        app.add_stage_after(CoreStage::PostUpdate, MateStage::UpdateStateLate, SystemStage::single_threaded());
+        app.add_stage_after(MateStage::UpdateStateLate, MateStage::NetworkWrite, SystemStage::single_threaded());
+        app.add_stage_after(MateStage::NetworkWrite, MateStage::ErrorHandling, SystemStage::single_threaded());
     }
 }
 
@@ -34,8 +38,11 @@ impl Plugin for SchedulePlugin {
 #[derive(StageLabel)]
 pub enum MateStage {
     NetworkRead,
-    UpdateState,
+    UpdateStateEarly,
+    // Pre update stage
     // Normal update stage
+    // Post update stage
+    UpdateStateLate,
     NetworkWrite,
     ErrorHandling
 }
