@@ -1,4 +1,4 @@
-/// Implemented based of the sample library. See https://github.com/bluerobotics/BlueRobotics_MS5837_Library/
+//! Implemented based of the sample library. See https://github.com/bluerobotics/BlueRobotics_MS5837_Library/
 /// TODO Cleanup
 
 use std::thread;

@@ -1,6 +1,9 @@
+use anyhow::Context;
 use bevy::prelude::*;
 use bevy_egui::{EguiContext, EguiPlugin, EguiSettings};
+use message_io::network::ToRemoteAddr;
 use common::types::MotorFrame;
+use crate::plugins::networking::NetworkEvent;
 use crate::plugins::robot::Robot;
 
 // todo Display errors
@@ -16,7 +19,11 @@ impl Plugin for UiPlugin {
     }
 }
 
-fn draw_ui(state: Res<Robot>, mut egui_context: ResMut<EguiContext>, mut errors: EventReader<anyhow::Error>) {
+// TODO use components for ui elements
+// TODO display errors
+// TODO split up
+
+fn draw_ui(state: Res<Robot>, mut egui_context: ResMut<EguiContext>, mut net: EventWriter<NetworkEvent>, mut errors: EventWriter<anyhow::Error>) {
     let ctx = egui_context.ctx_mut();
     let state = state.state();
 
@@ -25,6 +32,19 @@ fn draw_ui(state: Res<Robot>, mut egui_context: ResMut<EguiContext>, mut errors:
             egui::menu::menu_button(ui, "File", |ui| {
                 if ui.button("Quit").clicked() {
                     std::process::exit(0);
+                }
+            });
+            egui::menu::menu_button(ui, "Robot", |ui| {
+                if ui.button("Connect").clicked() {
+                    // todo
+                    match ("127.0.0.1", 44444).to_remote_addr().context("Create remote addrs") {
+                        Ok(remote) => {
+                            net.send(NetworkEvent::ConnectTo(remote));
+                        }
+                        Err(error) => {
+                            errors.send(error);
+                        }
+                    }
                 }
             });
         });

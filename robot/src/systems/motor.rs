@@ -42,7 +42,7 @@ impl RobotSystem for MotorSystem {
                                         Some(vacant.insert(motor))
                                     }
                                     Err(error) => {
-                                        error!("Could not create motor: {:?} {:?}", motor_id, error);
+                                        error!("Could not create motor: {motor_id:?} {error:?}");
                                         None
                                     }
                                 }
@@ -51,10 +51,8 @@ impl RobotSystem for MotorSystem {
                         if let Some(motor) = motor {
                             let ret = motor.set_speed(frame.0).context("Set speed");
                             if let Err(error) = ret {
-                                error!("Couldn't set speed: {:?} {:?}", motor_id, error);
+                                error!("Couldn't set speed: {motor_id:?} {error:?}");
                             }
-                        } else {
-                            error!("Couldn't find motor: {:?}", motor_id);
                         }
                     }
                 }

@@ -16,7 +16,7 @@ pub struct SystemManager(Arc<RwLock<RobotState>>, Vec<Box<dyn RobotSystem + Send
 
 impl SystemManager {
     pub fn new(robot: Arc<RwLock<RobotState>>) -> Self {
-        Self(robot, Vec::new(), (Mutex::new(false), Condvar::new()))
+        Self(robot, Vec::new(), (Mutex::new(true), Condvar::new()))
     }
 
     pub fn add_system<S: RobotSystem + Send + Sync + 'static>(&mut self) -> anyhow::Result<()> {
@@ -28,12 +28,14 @@ impl SystemManager {
     }
 
     pub fn start(self) {
-        let mut robot = self.0.write().expect("Lock");
-        robot.set_callback(move |update, robot| {
-            for system in &self.1 {
-                system.on_update(update, robot);
-            }
-        });
+        {
+            let mut robot = self.0.write().expect("Lock");
+            robot.set_callback(move |update, robot| {
+                for system in &self.1 {
+                    system.on_update(update, robot);
+                }
+            });
+        }
 
         // TODO Fire events for updates made during setup?
 
