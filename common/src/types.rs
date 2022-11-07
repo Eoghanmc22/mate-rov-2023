@@ -165,7 +165,9 @@ impl Speed {
 
     /// Creates a new `Speed`. Input should be between -1.0 and 1.0
     pub const fn new(speed: f64) -> Self {
-        assert!(speed.is_normal());
+        if !speed.is_normal() {
+            return Self::ZERO;
+        }
         Self(speed).clamp(Self::MIN_VAL, Self::MAX_VAL)
     }
 
