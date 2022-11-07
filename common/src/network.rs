@@ -215,15 +215,15 @@ fn handle_network_event<Events: EventHandler>(network: &mut NetworkContext<Event
             trace!("Message from endpoint: {}", endpoint);
             let packet = data.try_into().context("Decode packet")?;
 
-            if let Some(connection) = &mut network.connection {
-                trace!(?packet);
+            let Some(connection) = &mut network.connection else {
+                bail!("Got packet from unknown endpoint");
+            };
 
-                connection.last_packet = Instant::now();
+            trace!(?packet);
 
-                network.events.handle_packet(&network.handler, connection, packet).context("Handle packet event")?;
-            } else {
-                error!("Got packet from unknown endpoint");
-            }
+            connection.last_packet = Instant::now();
+
+            network.events.handle_packet(&network.handler, connection, packet).context("Handle packet event")?;
         }
         NetEvent::Disconnected(endpoint) => {
             info!("Endpoint {} disconnected", endpoint);
