@@ -1,7 +1,7 @@
 mod plugins;
 
-use bevy::prelude::*;
 use crate::plugins::MatePlugins;
+use bevy::prelude::*;
 
 fn main() {
     App::new()

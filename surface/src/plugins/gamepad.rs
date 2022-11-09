@@ -5,10 +5,8 @@ pub struct GamepadPlugin;
 
 impl Plugin for GamepadPlugin {
     fn build(&self, app: &mut App) {
-        app
-            .add_system(gamepad_connections)
-            .add_system(gamepad_input)
-        ;
+        app.add_system(gamepad_connections)
+            .add_system(gamepad_input);
     }
 }
 
@@ -19,7 +17,11 @@ fn gamepad_connections(
     current_gamepad: Option<Res<CurrentGamepad>>,
     mut gamepad_evr: EventReader<GamepadEvent>,
 ) {
-    for GamepadEvent { gamepad, event_type } in gamepad_evr.iter() {
+    for GamepadEvent {
+        gamepad,
+        event_type,
+    } in gamepad_evr.iter()
+    {
         match event_type {
             GamepadEventType::Connected => {
                 info!("New gamepad connected with ID: {gamepad:?}");
@@ -46,7 +48,7 @@ fn gamepad_input(
     axes: Res<Axis<GamepadAxis>>,
     buttons: Res<Input<GamepadButton>>,
     current_gamepad: Option<Res<CurrentGamepad>>,
-    mut movements: EventWriter<Movement>
+    mut movements: EventWriter<Movement>,
 ) {
     if let Some(gamepad) = current_gamepad {
         let axis_lx = GamepadAxis::new(gamepad.0, GamepadAxisType::LeftStickX);
@@ -57,20 +59,29 @@ fn gamepad_input(
         let up_button = GamepadButton::new(gamepad.0, GamepadButtonType::RightTrigger);
         let down_button = GamepadButton::new(gamepad.0, GamepadButtonType::LeftTrigger);
 
-        if let (Some(lx), Some(ly), Some(rx), Some(ry)) = (axes.get(axis_lx), axes.get(axis_ly), axes.get(axis_rx), axes.get(axis_ry)) {
+        if let (Some(lx), Some(ly), Some(rx), Some(ry)) = (
+            axes.get(axis_lx),
+            axes.get(axis_ly),
+            axes.get(axis_rx),
+            axes.get(axis_ry),
+        ) {
             let ry = {
                 let up = if buttons.pressed(up_button) { 1.0 } else { 0.0 };
-                let down = if buttons.pressed(down_button) { -1.0 } else { 0.0 };
+                let down = if buttons.pressed(down_button) {
+                    -1.0
+                } else {
+                    0.0
+                };
                 up + down + ry
             };
 
-            let movement =  Movement {
+            let movement = Movement {
                 x: Speed::new(rx as f64),
                 y: Speed::new(ly as f64),
                 z: Speed::new(ry as f64),
                 x_rot: Speed::new(0.0),
                 y_rot: Speed::new(0.0),
-                z_rot: Speed::new(lx as f64)
+                z_rot: Speed::new(lx as f64),
             };
 
             movements.send(movement);

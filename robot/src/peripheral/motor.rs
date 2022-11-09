@@ -1,9 +1,9 @@
+use anyhow::Context;
+use common::types::{MotorId, Speed};
+use rppal::gpio::{Gpio, OutputPin};
 use std::fmt::Debug;
 use std::time::Duration;
-use anyhow::Context;
-use rppal::gpio::{Gpio, OutputPin};
 use tracing::trace;
-use common::types::{MotorId, Speed};
 
 // TODO Verify correctness
 // TODO Simplify impl
@@ -20,21 +20,45 @@ const DEFAULT_MOTOR: MotorConfig = MotorConfig {
 };
 
 //TODO get the actual pins
-pub const MOTOR_FL: MotorConfig = MotorConfig { signal_pin: 255, ..DEFAULT_MOTOR };
-pub const MOTOR_FR: MotorConfig = MotorConfig { signal_pin: 255, ..DEFAULT_MOTOR };
-pub const MOTOR_BL: MotorConfig = MotorConfig { signal_pin: 255, ..DEFAULT_MOTOR };
-pub const MOTOR_BR: MotorConfig = MotorConfig { signal_pin: 255, ..DEFAULT_MOTOR };
+pub const MOTOR_FL: MotorConfig = MotorConfig {
+    signal_pin: 255,
+    ..DEFAULT_MOTOR
+};
+pub const MOTOR_FR: MotorConfig = MotorConfig {
+    signal_pin: 255,
+    ..DEFAULT_MOTOR
+};
+pub const MOTOR_BL: MotorConfig = MotorConfig {
+    signal_pin: 255,
+    ..DEFAULT_MOTOR
+};
+pub const MOTOR_BR: MotorConfig = MotorConfig {
+    signal_pin: 255,
+    ..DEFAULT_MOTOR
+};
 
-pub const MOTOR_F: MotorConfig = MotorConfig { signal_pin: 255, ..DEFAULT_MOTOR };
-pub const MOTOR_B: MotorConfig = MotorConfig { signal_pin: 255, ..DEFAULT_MOTOR };
-pub const MOTOR_R: MotorConfig = MotorConfig { signal_pin: 255, ..DEFAULT_MOTOR };
-pub const MOTOR_L: MotorConfig = MotorConfig { signal_pin: 255, ..DEFAULT_MOTOR };
+pub const MOTOR_F: MotorConfig = MotorConfig {
+    signal_pin: 255,
+    ..DEFAULT_MOTOR
+};
+pub const MOTOR_B: MotorConfig = MotorConfig {
+    signal_pin: 255,
+    ..DEFAULT_MOTOR
+};
+pub const MOTOR_R: MotorConfig = MotorConfig {
+    signal_pin: 255,
+    ..DEFAULT_MOTOR
+};
+pub const MOTOR_L: MotorConfig = MotorConfig {
+    signal_pin: 255,
+    ..DEFAULT_MOTOR
+};
 
 #[derive(Debug)]
 pub struct Motor<PinType: Debug> {
     config: MotorConfig,
     pin: PinType,
-    speed: Speed
+    speed: Speed,
 }
 
 impl Motor<OutputPin> {
@@ -42,8 +66,12 @@ impl Motor<OutputPin> {
     pub fn new(gpio: &Gpio, config: MotorConfig) -> anyhow::Result<Self> {
         trace!("Motor::new()");
 
-        let mut pin = gpio.get(config.signal_pin).context("Get pin")?.into_output();
-        pin.set_pwm(config.period, config.center).context("Set pwm")?;
+        let mut pin = gpio
+            .get(config.signal_pin)
+            .context("Get pin")?
+            .into_output();
+        pin.set_pwm(config.period, config.center)
+            .context("Set pwm")?;
 
         Ok(Motor {
             config,
@@ -72,7 +100,9 @@ impl<P: PwmDevice> Motor<P> {
         let pulse = (upper as i64 * speed as i64 + lower as i64 * (100 - speed as i64)) / 100;
         let pulse = Duration::from_micros(pulse as u64);
 
-        self.pin.set_pwm(self.config.period, pulse).context("Set pwm")?;
+        self.pin
+            .set_pwm(self.config.period, pulse)
+            .context("Set pwm")?;
 
         Ok(())
     }
@@ -84,14 +114,14 @@ impl<P: PwmDevice> Motor<P> {
     }
 }
 
-#[derive(Copy, Clone, PartialEq, Debug,)]
+#[derive(Copy, Clone, PartialEq, Debug)]
 pub struct MotorConfig {
     /// PWM signal pin
     signal_pin: u8,
-    
+
     /// Speed settings, can be negative to reverse direction
     max_speed: Speed,
-    
+
     /// PWM info
     reverse: Duration,
     forward: Duration,
@@ -147,36 +177,45 @@ mod tests {
         let mut motor = Motor {
             config: DEFAULT_MOTOR,
             pin: DummyPwm::default(),
-            speed: Default::default()
+            speed: Default::default(),
         };
 
         motor.set_speed(Speed::MAX_VAL).unwrap();
 
-        let Motor { pin: DummyPwm(period, pulse_width), .. } = motor;
+        let Motor {
+            pin: DummyPwm(period, pulse_width),
+            ..
+        } = motor;
         assert_eq!(period, Duration::from_nanos(1_000_000_000 / 400));
         assert_eq!(pulse_width, Duration::from_micros(1700));
 
         let mut motor = Motor {
             config: DEFAULT_MOTOR,
             pin: DummyPwm::default(),
-            speed: Default::default()
+            speed: Default::default(),
         };
 
         motor.set_speed(Speed::MIN_VAL).unwrap();
 
-        let Motor { pin: DummyPwm(period, pulse_width), .. } = motor;
+        let Motor {
+            pin: DummyPwm(period, pulse_width),
+            ..
+        } = motor;
         assert_eq!(period, Duration::from_nanos(1_000_000_000 / 400));
         assert_eq!(pulse_width, Duration::from_micros(1300));
 
         let mut motor = Motor {
             config: DEFAULT_MOTOR,
             pin: DummyPwm::default(),
-            speed: Default::default()
+            speed: Default::default(),
         };
 
         motor.stop().unwrap();
 
-        let Motor { pin: DummyPwm(period, pulse_width), .. } = motor;
+        let Motor {
+            pin: DummyPwm(period, pulse_width),
+            ..
+        } = motor;
         assert_eq!(period, Duration::from_nanos(1_000_000_000 / 400));
         assert_eq!(pulse_width, Duration::from_micros(1500));
     }

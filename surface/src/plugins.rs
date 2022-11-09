@@ -1,12 +1,12 @@
 use bevy::app::PluginGroupBuilder;
 use bevy::prelude::*;
 
-pub mod robot;
-pub mod networking;
-pub mod ui;
 pub mod error;
 pub mod gamepad;
 pub mod movement;
+pub mod networking;
+pub mod robot;
+pub mod ui;
 
 pub struct MatePlugins;
 
@@ -26,16 +26,35 @@ struct SchedulePlugin;
 
 impl Plugin for SchedulePlugin {
     fn build(&self, app: &mut App) {
-        app.add_stage_before(CoreStage::PreUpdate, MateStage::NetworkRead, SystemStage::single_threaded());
-        app.add_stage_after(MateStage::NetworkRead, MateStage::UpdateStateEarly, SystemStage::single_threaded());
-        app.add_stage_after(CoreStage::PostUpdate, MateStage::UpdateStateLate, SystemStage::single_threaded());
-        app.add_stage_after(MateStage::UpdateStateLate, MateStage::NetworkWrite, SystemStage::single_threaded());
-        app.add_stage_after(MateStage::NetworkWrite, MateStage::ErrorHandling, SystemStage::single_threaded());
+        app.add_stage_before(
+            CoreStage::PreUpdate,
+            MateStage::NetworkRead,
+            SystemStage::single_threaded(),
+        );
+        app.add_stage_after(
+            MateStage::NetworkRead,
+            MateStage::UpdateStateEarly,
+            SystemStage::single_threaded(),
+        );
+        app.add_stage_after(
+            CoreStage::PostUpdate,
+            MateStage::UpdateStateLate,
+            SystemStage::single_threaded(),
+        );
+        app.add_stage_after(
+            MateStage::UpdateStateLate,
+            MateStage::NetworkWrite,
+            SystemStage::single_threaded(),
+        );
+        app.add_stage_after(
+            MateStage::NetworkWrite,
+            MateStage::ErrorHandling,
+            SystemStage::single_threaded(),
+        );
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-#[derive(StageLabel)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, StageLabel)]
 pub enum MateStage {
     NetworkRead,
     UpdateStateEarly,
@@ -44,5 +63,5 @@ pub enum MateStage {
     // Post update stage
     UpdateStateLate,
     NetworkWrite,
-    ErrorHandling
+    ErrorHandling,
 }

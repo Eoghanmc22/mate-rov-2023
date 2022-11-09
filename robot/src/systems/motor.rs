@@ -1,16 +1,16 @@
+use crate::peripheral::motor::Motor;
+use crate::systems::RobotSystem;
+use anyhow::Context;
+use common::state::{RobotState, RobotStateUpdate};
+use common::types::{MotorFrame, MotorId, Movement};
+use crossbeam::channel;
+use crossbeam::channel::Sender;
+use rppal::gpio::{Gpio, OutputPin};
 use std::collections::hash_map::Entry;
 use std::collections::HashMap;
 use std::sync::{Arc, RwLock};
 use std::thread;
-use anyhow::Context;
-use crossbeam::channel;
-use crossbeam::channel::Sender;
-use rppal::gpio::{Gpio, OutputPin};
-use tracing::{error, info, Level, span};
-use common::state::{RobotState, RobotStateUpdate};
-use common::types::{MotorFrame, MotorId, Movement};
-use crate::peripheral::motor::Motor;
-use crate::systems::RobotSystem;
+use tracing::{error, info, span, Level};
 
 pub struct MotorSystem(Sender<Message>);
 
@@ -24,7 +24,7 @@ impl RobotSystem for MotorSystem {
         info!("Starting motor system");
         let (tx, rx) = channel::bounded(30);
         let gpio = Gpio::new().context("Create gpio")?;
-        
+
         thread::spawn(move || {
             span!(Level::INFO, "Motor thread");
             let mut motors: HashMap<MotorId, Motor<OutputPin>> = HashMap::new();
@@ -34,15 +34,11 @@ impl RobotSystem for MotorSystem {
                     Message::MotorSpeed(motor_id, frame) => {
                         let mut entry = motors.entry(motor_id);
                         let motor = match entry {
-                            Entry::Occupied(ref mut occupied) => {
-                                Some(occupied.get_mut())
-                            }
+                            Entry::Occupied(ref mut occupied) => Some(occupied.get_mut()),
                             Entry::Vacant(vacant) => {
                                 let ret = Motor::new(&gpio, motor_id.into());
                                 match ret {
-                                    Ok(motor) => {
-                                        Some(vacant.insert(motor))
-                                    }
+                                    Ok(motor) => Some(vacant.insert(motor)),
                                     Err(error) => {
                                         error!("Could not create motor: {motor_id:?} {error:?}");
                                         None
@@ -70,19 +66,24 @@ impl RobotSystem for MotorSystem {
                 todo!();
             }
             RobotStateUpdate::Motor(id, frame) => {
-                self.0.send(Message::MotorSpeed(*id, *frame)).expect("Send message");
-            },
+                self.0
+                    .send(Message::MotorSpeed(*id, *frame))
+                    .expect("Send message");
+            }
             RobotStateUpdate::Movement(movement) => {
                 for update in mix_movement(*movement, robot.motors().keys()) {
                     robot.update(&update);
                 }
-            },
-            _ => {},
+            }
+            _ => {}
         }
     }
 }
 
-pub fn mix_movement<'a>(movement: Movement, motors: impl IntoIterator<Item = &'a MotorId>) -> Vec<RobotStateUpdate> {
+pub fn mix_movement<'a>(
+    movement: Movement,
+    motors: impl IntoIterator<Item = &'a MotorId>,
+) -> Vec<RobotStateUpdate> {
     let mut messages = Vec::new();
 
     for motor in motors {

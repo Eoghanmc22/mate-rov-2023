@@ -16,30 +16,30 @@
 pub mod peripheral;
 mod systems;
 
-use std::sync::{Arc, RwLock};
-use tracing::{info, Level};
-use common::state::RobotState;
-use common::types::MotorId;
 use crate::systems::networking::NetworkSystem;
 use crate::systems::SystemManager;
+use common::state::RobotState;
+use common::types::MotorId;
+use std::sync::{Arc, RwLock};
+use tracing::{info, Level};
 
 #[cfg(rpi)]
 use crate::systems::motor::MotorSystem;
 
 fn main() -> anyhow::Result<()> {
-    tracing_subscriber::fmt().with_max_level(Level::DEBUG).init();
+    tracing_subscriber::fmt()
+        .with_max_level(Level::DEBUG)
+        .init();
     info!("Starting robot");
 
-    let robot = RobotState::new(
-        &[
-            MotorId::FrontL,
-            MotorId::FrontR,
-            MotorId::RearL,
-            MotorId::RearR,
-            MotorId::UpR,
-            MotorId::UpL
-        ]
-    );
+    let robot = RobotState::new(&[
+        MotorId::FrontL,
+        MotorId::FrontR,
+        MotorId::RearL,
+        MotorId::RearR,
+        MotorId::UpR,
+        MotorId::UpL,
+    ]);
     let robot = Arc::new(RwLock::new(robot));
 
     let mut systems = SystemManager::new(robot.clone());

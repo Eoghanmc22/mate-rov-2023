@@ -1,5 +1,5 @@
-pub mod networking;
 pub mod motor;
+pub mod networking;
 // TODO indicators
 // TODO cameras
 // TODO inertial
@@ -8,11 +8,15 @@ pub mod motor;
 // TODO logging
 // TODO perhaps just a single sensor system?
 
-use std::sync::{Arc, Condvar, Mutex, RwLock};
 use anyhow::Context;
 use common::state::{RobotState, RobotStateUpdate};
+use std::sync::{Arc, Condvar, Mutex, RwLock};
 
-pub struct SystemManager(Arc<RwLock<RobotState>>, Vec<Box<dyn RobotSystem + Send + Sync + 'static>>, (Mutex<bool>, Condvar));
+pub struct SystemManager(
+    Arc<RwLock<RobotState>>,
+    Vec<Box<dyn RobotSystem + Send + Sync + 'static>>,
+    (Mutex<bool>, Condvar),
+);
 
 impl SystemManager {
     pub fn new(robot: Arc<RwLock<RobotState>>) -> Self {
@@ -39,7 +43,7 @@ impl SystemManager {
 
         // TODO Fire events for updates made during setup?
 
-       let (lock, cvar) = &self.2;
+        let (lock, cvar) = &self.2;
         let mut running = lock.lock().expect("Lock");
 
         while *running {
@@ -57,6 +61,8 @@ impl SystemManager {
 }
 
 pub trait RobotSystem {
-    fn start(robot: Arc<RwLock<RobotState>>) -> anyhow::Result<Self> where Self: Sized;
+    fn start(robot: Arc<RwLock<RobotState>>) -> anyhow::Result<Self>
+    where
+        Self: Sized;
     fn on_update(&self, update: &RobotStateUpdate, robot: &mut RobotState);
 }

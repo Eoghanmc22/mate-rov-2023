@@ -12,7 +12,10 @@ impl Plugin for MovementPlugin {
     }
 }
 
-pub fn send_movement(mut movements: EventReader<Movement>, mut updates: EventWriter<RobotStateUpdate>) {
+pub fn send_movement(
+    mut movements: EventReader<Movement>,
+    mut updates: EventWriter<RobotStateUpdate>,
+) {
     let mut total_movement = Movement::default();
 
     for movement in movements.iter() {

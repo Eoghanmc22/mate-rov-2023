@@ -1,7 +1,7 @@
-use std::time::SystemTime;
-use anyhow::Context;
-use serde::{Serialize, Deserialize};
 use crate::state::RobotStateUpdate;
+use anyhow::Context;
+use serde::{Deserialize, Serialize};
+use std::time::SystemTime;
 
 /// Representation of all messages that can be communicated between peers
 // TODO use references

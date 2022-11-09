@@ -1,9 +1,11 @@
+use crate::types::{
+    Armed, DepthFrame, InertialFrame, MagFrame, Meters, MotorFrame, MotorId, Movement, Orientation,
+};
+use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
 use std::fmt::{Debug, Formatter};
 use std::net::SocketAddr;
 use std::time::Instant;
-use crate::types::{Armed, DepthFrame, InertialFrame, MagFrame, Meters, MotorFrame, MotorId, Movement, Orientation};
-use serde::{Serialize, Deserialize};
 
 /// Encodes all states of the robot
 /// States can only be transitioned between by using `RobotStateUpdate`s
@@ -76,7 +78,10 @@ impl RobotState {
         self.depth_target
     }
 
-    pub fn set_callback<F: Fn(&RobotStateUpdate, &mut RobotState) + Send + Sync + 'static>(&mut self, callback: F) {
+    pub fn set_callback<F: Fn(&RobotStateUpdate, &mut RobotState) + Send + Sync + 'static>(
+        &mut self,
+        callback: F,
+    ) {
         self.callback = Some(Box::new(callback));
     }
 
@@ -92,7 +97,7 @@ impl RobotState {
                 } else {
                     false
                 }
-            },
+            }
             RobotStateUpdate::Orientation(orientation) => {
                 if self.orientation.as_ref().map(|it| &it.0) != Some(orientation) {
                     self.orientation = Some((*orientation, now));
@@ -100,7 +105,7 @@ impl RobotState {
                 } else {
                     false
                 }
-            },
+            }
             RobotStateUpdate::Movement(movement) => {
                 if self.movement.as_ref().map(|it| &it.0) != Some(movement) {
                     self.movement = Some((*movement, now));
@@ -108,7 +113,7 @@ impl RobotState {
                 } else {
                     false
                 }
-            },
+            }
             RobotStateUpdate::Depth(depth) => {
                 if self.depth.as_ref().map(|it| &it.0) != Some(depth) {
                     self.depth = Some((*depth, now));
@@ -116,7 +121,7 @@ impl RobotState {
                 } else {
                     false
                 }
-            },
+            }
             RobotStateUpdate::Inertial(inertial) => {
                 if self.inertial.as_ref().map(|it| &it.0) != Some(inertial) {
                     self.inertial = Some((*inertial, now));
@@ -124,7 +129,7 @@ impl RobotState {
                 } else {
                     false
                 }
-            },
+            }
             RobotStateUpdate::Magnetometer(magnetometer) => {
                 if self.mag.as_ref().map(|it| &it.0) != Some(magnetometer) {
                     self.mag = Some((*magnetometer, now));
@@ -132,12 +137,12 @@ impl RobotState {
                 } else {
                     false
                 }
-            },
+            }
             RobotStateUpdate::Motor(motor_id, motor) => {
                 let last = self.motors.insert(*motor_id, (*motor, now));
 
                 last.as_ref().map(|it| &it.0) != Some(motor)
-            },
+            }
             RobotStateUpdate::DepthTarget(depth_target) => {
                 if self.depth_target.as_ref().map(|it| &it.0) != Some(depth_target) {
                     self.depth_target = Some((*depth_target, now));
@@ -145,22 +150,16 @@ impl RobotState {
                 } else {
                     false
                 }
-            },
-            RobotStateUpdate::Camera(action) => {
-                match action {
-                    CameraAction::Add(camera) => {
-                        self.cameras.insert(camera.to_owned())
-                    }
-                    CameraAction::Remove(camera) => {
-                        self.cameras.remove(camera)
-                    }
-                    CameraAction::Set(cameras) => {
-                        if &self.cameras != cameras {
-                            self.cameras = cameras.to_owned();
-                            true
-                        } else {
-                            false
-                        }
+            }
+            RobotStateUpdate::Camera(action) => match action {
+                CameraAction::Add(camera) => self.cameras.insert(camera.to_owned()),
+                CameraAction::Remove(camera) => self.cameras.remove(camera),
+                CameraAction::Set(cameras) => {
+                    if &self.cameras != cameras {
+                        self.cameras = cameras.to_owned();
+                        true
+                    } else {
+                        false
                     }
                 }
             },
@@ -204,7 +203,9 @@ impl RobotState {
             vec.push(RobotStateUpdate::Motor(*motor_id, *motor));
         }
 
-        vec.push(RobotStateUpdate::Camera(CameraAction::Set(self.cameras.to_owned())));
+        vec.push(RobotStateUpdate::Camera(CameraAction::Set(
+            self.cameras.to_owned(),
+        )));
 
         if let Some((depth_target, _)) = self.depth_target() {
             vec.push(RobotStateUpdate::DepthTarget(depth_target));

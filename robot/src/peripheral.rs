@@ -40,7 +40,10 @@ pub trait ReadableRegister: Register {
     fn read(dev: &mut impl Device) -> anyhow::Result<Self::Data>;
 }
 
-pub trait FixedRegister where Self: ReadableRegister<Data=u8> {
+pub trait FixedRegister
+where
+    Self: ReadableRegister<Data = u8>,
+{
     const BYTE: u8;
 
     fn check(dev: &mut impl Device) -> anyhow::Result<bool> {

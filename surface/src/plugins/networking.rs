@@ -1,13 +1,13 @@
-use std::time::SystemTime;
+use crate::plugins::robot::RobotEvent;
+use crate::plugins::MateStage;
 use anyhow::Context;
 use bevy::prelude::*;
+use common::network::{Connection, EventHandler, Network, WorkerEvent};
+use common::protocol::Packet;
 use crossbeam::channel::{bounded, Receiver, Sender};
 use message_io::network::{Endpoint, RemoteAddr};
 use message_io::node::NodeHandler;
-use common::network::{Connection, EventHandler, Network, WorkerEvent};
-use common::protocol::Packet;
-use crate::plugins::MateStage;
-use crate::plugins::robot::RobotEvent;
+use std::time::SystemTime;
 
 pub struct NetworkPlugin;
 
@@ -38,7 +38,11 @@ fn updates_to_events(mut events: EventWriter<RobotEvent>, net_link: Res<NetworkL
     events.send_batch(net_link.1.try_iter());
 }
 
-fn events_to_packets(mut events: EventReader<NetworkEvent>, net_link: Res<NetworkLink>, mut errors: EventWriter<anyhow::Error>) {
+fn events_to_packets(
+    mut events: EventReader<NetworkEvent>,
+    net_link: Res<NetworkLink>,
+    mut errors: EventWriter<anyhow::Error>,
+) {
     for event in events.iter() {
         match event.to_owned() {
             NetworkEvent::SendPacket(packet) => {
@@ -57,41 +61,70 @@ fn events_to_packets(mut events: EventReader<NetworkEvent>, net_link: Res<Networ
 struct NetworkHandler(Sender<RobotEvent>);
 
 impl EventHandler for NetworkHandler {
-    fn handle_packet(&mut self, handler: &NodeHandler<WorkerEvent>, connection: &Connection, packet: Packet) -> anyhow::Result<()> {
+    fn handle_packet(
+        &mut self,
+        handler: &NodeHandler<WorkerEvent>,
+        connection: &Connection,
+        packet: Packet,
+    ) -> anyhow::Result<()> {
         match packet {
             Packet::StateUpdate(updates) => {
                 for update in updates {
-                    self.0.send(RobotEvent::StateChanged(update)).context("Send update")?;
+                    self.0
+                        .send(RobotEvent::StateChanged(update))
+                        .context("Send update")?;
                 }
             }
             Packet::RequestSync => {
-                connection.write_packet(handler, Packet::Log("RequestSync not implemented".to_owned())).context("Send packet")?;
+                connection
+                    .write_packet(
+                        handler,
+                        Packet::Log("RequestSync not implemented".to_owned()),
+                    )
+                    .context("Send packet")?;
             }
             Packet::Log(msg) => {
                 info!("Peer logged: `{msg}`");
             }
             Packet::Ping(ping) => {
                 let response = Packet::Pong(ping, SystemTime::now());
-                connection.write_packet(handler, response).context("Send packet")?;
+                connection
+                    .write_packet(handler, response)
+                    .context("Send packet")?;
             }
             Packet::Pong(ping, pong) => {
-                self.0.send(RobotEvent::Ping(ping, pong)).context("Send pong")?;
+                self.0
+                    .send(RobotEvent::Ping(ping, pong))
+                    .context("Send pong")?;
             }
         }
 
         Ok(())
     }
 
-    fn connected(&mut self, endpoint: Endpoint, handler: &NodeHandler<WorkerEvent>, connection: &Connection) -> anyhow::Result<()> {
-        connection.write_packet(handler, Packet::RequestSync).context("Send packet")?;
-        self.0.send(RobotEvent::Connected(endpoint)).context("Send update")
+    fn connected(
+        &mut self,
+        endpoint: Endpoint,
+        handler: &NodeHandler<WorkerEvent>,
+        connection: &Connection,
+    ) -> anyhow::Result<()> {
+        connection
+            .write_packet(handler, Packet::RequestSync)
+            .context("Send packet")?;
+        self.0
+            .send(RobotEvent::Connected(endpoint))
+            .context("Send update")
     }
 
     fn connection_failed(&mut self, endpoint: Endpoint) -> anyhow::Result<()> {
-        self.0.send(RobotEvent::ConnectionFailed(endpoint)).context("Send update")
+        self.0
+            .send(RobotEvent::ConnectionFailed(endpoint))
+            .context("Send update")
     }
 
     fn disconnected(&mut self, endpoint: Endpoint) -> anyhow::Result<()> {
-        self.0.send(RobotEvent::Disconnected(endpoint)).context("Send update")
+        self.0
+            .send(RobotEvent::Disconnected(endpoint))
+            .context("Send update")
     }
 }

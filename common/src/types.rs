@@ -1,7 +1,7 @@
+use glam::Quat;
+use serde::{Deserialize, Serialize};
 use std::fmt::{Display, Formatter};
 use std::ops::{Add, AddAssign, Neg, Sub};
-use glam::Quat;
-use serde::{Serialize, Deserialize};
 
 #[derive(Debug, Copy, Clone, Default, Serialize, Deserialize, PartialEq)]
 pub struct Orientation(pub Quat);
@@ -10,13 +10,13 @@ pub struct Orientation(pub Quat);
 /// +XR: Pitch Up, +YR: Roll Counterclockwise, +ZR: Yaw Clockwise (top view)
 #[derive(Debug, Copy, Clone, Default, Serialize, Deserialize, PartialEq)]
 pub struct Movement {
-    pub x: Speed,      // Right
-    pub y: Speed,      // Forwards
-    pub z: Speed,      // Up
+    pub x: Speed, // Right
+    pub y: Speed, // Forwards
+    pub z: Speed, // Up
 
-    pub x_rot: Speed,  // Pitch Up
-    pub y_rot: Speed,  // Roll Counterclockwise
-    pub z_rot: Speed,  // Yaw Clockwise (top view)
+    pub x_rot: Speed, // Pitch Up
+    pub y_rot: Speed, // Roll Counterclockwise
+    pub z_rot: Speed, // Yaw Clockwise (top view)
 }
 
 impl Add for Movement {
@@ -29,7 +29,7 @@ impl Add for Movement {
             z: self.z + rhs.z,
             x_rot: self.x_rot + rhs.x_rot,
             y_rot: self.y_rot + rhs.y_rot,
-            z_rot: self.z_rot + rhs.z_rot
+            z_rot: self.z_rot + rhs.z_rot,
         }
     }
 }
@@ -51,7 +51,6 @@ pub enum MotorId {
     RearL,
     RearR,
 }
-
 
 // Raw Data Frames
 
@@ -86,9 +85,8 @@ pub struct MotorFrame(pub Speed);
 pub enum Armed {
     Armed,
     #[default]
-    Disarmed
+    Disarmed,
 }
-
 
 // Basic Units
 

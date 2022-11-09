@@ -1,20 +1,20 @@
-///! A wrapper around the message-io crate that allows for more convenient messaging
+//! A wrapper around the message-io crate that allows for more convenient messaging
 
-use std::fmt::{Debug, Formatter};
-use std::net::{ToSocketAddrs};
-use std::time::{Duration, Instant};
+use crate::protocol::Packet;
 use anyhow::{bail, Context};
 use message_io::network::{Endpoint, NetEvent, SendStatus, ToRemoteAddr, Transport};
 use message_io::node::{NodeEvent, NodeHandler, NodeTask};
-use tracing::{trace, info, error};
-use crate::protocol::Packet;
+use std::fmt::{Debug, Formatter};
+use std::net::ToSocketAddrs;
+use std::time::{Duration, Instant};
+use tracing::{error, info, trace};
 
 const TIMEOUT: Duration = Duration::from_secs(10);
 
 /// Representation of network handler
 pub struct Network {
     handler: NodeHandler<WorkerEvent>,
-    task: NodeTask
+    task: NodeTask,
 }
 
 impl Debug for Network {
@@ -29,7 +29,7 @@ impl Debug for Network {
 struct NetworkContext<EventHandler> {
     handler: NodeHandler<WorkerEvent>,
     connection: Option<Connection>,
-    events: EventHandler
+    events: EventHandler,
 }
 
 impl<EventHandler: Debug> Debug for NetworkContext<EventHandler> {
@@ -44,18 +44,41 @@ impl<EventHandler: Debug> Debug for NetworkContext<EventHandler> {
 
 pub trait EventHandler: Sized + Debug {
     /// Callback for handling received packets
-    fn handle_packet(&mut self, handler: &NodeHandler<WorkerEvent>, connection: &Connection, packet: Packet) -> anyhow::Result<()>;
+    fn handle_packet(
+        &mut self,
+        handler: &NodeHandler<WorkerEvent>,
+        connection: &Connection,
+        packet: Packet,
+    ) -> anyhow::Result<()>;
 
     /// Callback for handling new connections
-    fn connected(&mut self, _endpoint: Endpoint, _handler: &NodeHandler<WorkerEvent>, _connection: &Connection) -> anyhow::Result<()> { Ok(()) }
+    fn connected(
+        &mut self,
+        _endpoint: Endpoint,
+        _handler: &NodeHandler<WorkerEvent>,
+        _connection: &Connection,
+    ) -> anyhow::Result<()> {
+        Ok(())
+    }
     /// Callback for handling connections that failed
-    fn connection_failed(&mut self, _endpoint: Endpoint) -> anyhow::Result<()> { Ok(()) }
+    fn connection_failed(&mut self, _endpoint: Endpoint) -> anyhow::Result<()> {
+        Ok(())
+    }
     /// Callback for handling when a peer disconnects
-    fn disconnected(&mut self, _endpoint: Endpoint) -> anyhow::Result<()> { Ok(()) }
+    fn disconnected(&mut self, _endpoint: Endpoint) -> anyhow::Result<()> {
+        Ok(())
+    }
 }
 
 impl EventHandler for () {
-    fn handle_packet(&mut self, _handler: &NodeHandler<WorkerEvent>, _connection: &Connection, _packet: Packet) -> anyhow::Result<()> { Ok(()) }
+    fn handle_packet(
+        &mut self,
+        _handler: &NodeHandler<WorkerEvent>,
+        _connection: &Connection,
+        _packet: Packet,
+    ) -> anyhow::Result<()> {
+        Ok(())
+    }
 }
 
 impl Network {
@@ -70,7 +93,7 @@ impl Network {
             let mut ctx = NetworkContext {
                 handler: handler.clone(),
                 connection: None,
-                events
+                events,
             };
 
             listener.for_each_async(move |event| {
@@ -78,10 +101,7 @@ impl Network {
             })
         };
 
-        Network {
-            handler,
-            task
-        }
+        Network { handler, task }
     }
 
     /// Start a server
@@ -89,7 +109,10 @@ impl Network {
     pub fn listen(&self, addrs: impl ToSocketAddrs + Debug) -> anyhow::Result<()> {
         info!("Starting server on {:?}", addrs);
 
-        self.handler.network().listen(Transport::FramedTcp, addrs).context("Bind to port")?;
+        self.handler
+            .network()
+            .listen(Transport::FramedTcp, addrs)
+            .context("Bind to port")?;
 
         Ok(())
     }
@@ -99,7 +122,10 @@ impl Network {
     pub fn connect(&self, addrs: impl ToRemoteAddr + Debug) -> anyhow::Result<()> {
         info!("Connecting to server on {:?}", addrs);
 
-        self.handler.network().connect(Transport::FramedTcp, addrs).context("Connect to peer")?;
+        self.handler
+            .network()
+            .connect(Transport::FramedTcp, addrs)
+            .context("Connect to peer")?;
 
         Ok(())
     }
@@ -130,7 +156,11 @@ pub struct Connection {
 impl Connection {
     /// Serializes a packet and sends the packet to the connected peer
     #[tracing::instrument(skip(handler))]
-    pub fn write_packet(&self, handler: &NodeHandler<WorkerEvent>, packet: Packet) -> anyhow::Result<()> {
+    pub fn write_packet(
+        &self,
+        handler: &NodeHandler<WorkerEvent>,
+        packet: Packet,
+    ) -> anyhow::Result<()> {
         trace!(?packet);
 
         let data: Vec<u8> = (&packet).try_into().context("Encode packet")?;
@@ -138,7 +168,7 @@ impl Connection {
         let ret = handler.network().send(self.endpoint, &data);
         match ret {
             SendStatus::Sent => {}
-            err => bail!("Could not send packet: {:?}", err)
+            err => bail!("Could not send packet: {:?}", err),
         }
 
         Ok(())
@@ -151,7 +181,10 @@ pub enum WorkerEvent {
 }
 
 #[tracing::instrument(skip(network))]
-fn handle_event<Events: EventHandler>(network: &mut NetworkContext<Events>, event: NodeEvent<WorkerEvent>) {
+fn handle_event<Events: EventHandler>(
+    network: &mut NetworkContext<Events>,
+    event: NodeEvent<WorkerEvent>,
+) {
     trace!(?event);
     match event {
         NodeEvent::Network(event) => {
@@ -170,7 +203,10 @@ fn handle_event<Events: EventHandler>(network: &mut NetworkContext<Events>, even
 }
 
 #[tracing::instrument(skip(network))]
-fn handle_network_event<Events: EventHandler>(network: &mut NetworkContext<Events>, event: NetEvent) -> anyhow::Result<()> {
+fn handle_network_event<Events: EventHandler>(
+    network: &mut NetworkContext<Events>,
+    event: NetEvent,
+) -> anyhow::Result<()> {
     trace!(?event);
     match event {
         NetEvent::Accepted(endpoint, _resource_id) => {
@@ -178,19 +214,25 @@ fn handle_network_event<Events: EventHandler>(network: &mut NetworkContext<Event
 
             let new = Connection {
                 endpoint,
-                last_packet: Instant::now()
+                last_packet: Instant::now(),
             };
             let previous = network.connection.take();
 
             if let Some(previous) = previous {
                 if previous.last_packet.elapsed() > TIMEOUT {
-                    network.events.connected(endpoint, &network.handler, &new).context("Connected event")?;
+                    network
+                        .events
+                        .connected(endpoint, &network.handler, &new)
+                        .context("Connected event")?;
                     network.connection = Some(new);
                 } else {
                     network.connection = Some(previous);
                 }
             } else {
-                network.events.connected(endpoint, &network.handler, &new).context("Connected event")?;
+                network
+                    .events
+                    .connected(endpoint, &network.handler, &new)
+                    .context("Connected event")?;
                 network.connection = Some(new);
             }
         }
@@ -200,17 +242,23 @@ fn handle_network_event<Events: EventHandler>(network: &mut NetworkContext<Event
 
                 let connection = Connection {
                     endpoint,
-                    last_packet: Instant::now()
+                    last_packet: Instant::now(),
                 };
 
-                network.events.connected(endpoint, &network.handler, &connection).context("Connected event")?;
+                network
+                    .events
+                    .connected(endpoint, &network.handler, &connection)
+                    .context("Connected event")?;
 
                 network.connection = Some(connection);
             } else {
                 error!("Could not connect to endpoint: {}", endpoint);
-                network.events.connection_failed(endpoint).context("Connection failed event")?;
+                network
+                    .events
+                    .connection_failed(endpoint)
+                    .context("Connection failed event")?;
             }
-        },
+        }
         NetEvent::Message(endpoint, data) => {
             trace!("Message from endpoint: {}", endpoint);
             let packet = data.try_into().context("Decode packet")?;
@@ -223,12 +271,18 @@ fn handle_network_event<Events: EventHandler>(network: &mut NetworkContext<Event
 
             connection.last_packet = Instant::now();
 
-            network.events.handle_packet(&network.handler, connection, packet).context("Handle packet event")?;
+            network
+                .events
+                .handle_packet(&network.handler, connection, packet)
+                .context("Handle packet event")?;
         }
         NetEvent::Disconnected(endpoint) => {
             info!("Endpoint {} disconnected", endpoint);
             network.connection = None;
-            network.events.disconnected(endpoint).context("Disconnected event")?;
+            network
+                .events
+                .disconnected(endpoint)
+                .context("Disconnected event")?;
         }
     }
 
@@ -236,12 +290,17 @@ fn handle_network_event<Events: EventHandler>(network: &mut NetworkContext<Event
 }
 
 #[tracing::instrument(skip(network))]
-fn handle_signal_event<Events: EventHandler>(network: &mut NetworkContext<Events>, event: WorkerEvent) -> anyhow::Result<()> {
+fn handle_signal_event<Events: EventHandler>(
+    network: &mut NetworkContext<Events>,
+    event: WorkerEvent,
+) -> anyhow::Result<()> {
     trace!(?event);
     match event {
         WorkerEvent::Broadcast(packet) => {
             if let Some(ref connection) = network.connection {
-                connection.write_packet(&network.handler, packet).context("Send packet")?;
+                connection
+                    .write_packet(&network.handler, packet)
+                    .context("Send packet")?;
             }
         }
     }

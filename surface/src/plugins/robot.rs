@@ -1,10 +1,10 @@
-use std::time::SystemTime;
+use crate::plugins::networking::NetworkEvent;
+use crate::plugins::MateStage;
 use bevy::prelude::*;
-use message_io::network::Endpoint;
 use common::protocol::Packet;
 use common::state::{RobotState, RobotStateUpdate};
-use crate::plugins::MateStage;
-use crate::plugins::networking::NetworkEvent;
+use message_io::network::Endpoint;
+use std::time::SystemTime;
 
 pub struct RobotPlugin;
 
@@ -44,8 +44,13 @@ fn update_robot(mut robot: ResMut<Robot>, mut events: EventReader<RobotEvent>) {
     }
 }
 
-fn updates_to_packets(mut updates: EventReader<RobotStateUpdate>, mut net: EventWriter<NetworkEvent>) {
+fn updates_to_packets(
+    mut updates: EventReader<RobotStateUpdate>,
+    mut net: EventWriter<NetworkEvent>,
+) {
     for update in updates.iter() {
-        net.send(NetworkEvent::SendPacket(Packet::StateUpdate(vec![update.clone()])));
+        net.send(NetworkEvent::SendPacket(Packet::StateUpdate(vec![
+            update.clone()
+        ])));
     }
 }

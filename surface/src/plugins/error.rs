@@ -1,5 +1,5 @@
-use bevy::prelude::*;
 use crate::plugins::MateStage;
+use bevy::prelude::*;
 
 pub struct ErrorPlugin;
 
@@ -15,5 +15,3 @@ fn handle_error(mut errors: EventReader<anyhow::Error>) {
         error!("An error occurred: {:?}", error);
     }
 }
-
-
