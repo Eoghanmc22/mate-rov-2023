@@ -21,7 +21,11 @@ pub struct RobotState {
     cameras: HashSet<(String, SocketAddr)>,
     depth_target: Option<(Meters, Instant)>,
 
-    callback: Option<Box<dyn Fn(&RobotStateUpdate, &mut RobotState) + Send + Sync + 'static>>,
+    callback: Option<
+        Box<
+            dyn Fn(&RobotStateUpdate, &RobotState) -> Vec<RobotStateUpdate> + Send + Sync + 'static,
+        >,
+    >,
 }
 
 impl RobotState {
@@ -78,7 +82,9 @@ impl RobotState {
         self.depth_target
     }
 
-    pub fn set_callback<F: Fn(&RobotStateUpdate, &mut RobotState) + Send + Sync + 'static>(
+    pub fn set_callback<
+        F: Fn(&RobotStateUpdate, &RobotState) -> Vec<RobotStateUpdate> + Send + Sync + 'static,
+    >(
         &mut self,
         callback: F,
     ) {
@@ -165,11 +171,19 @@ impl RobotState {
             },
         };
 
+        let mut updates = None;
+
         if let Some(callback) = self.callback.take() {
             if changed {
-                (callback)(update, self);
+                updates = Some((callback)(update, self));
             }
             self.callback = Some(callback);
+        }
+
+        if let Some(updates) = updates {
+            for update in updates {
+                self.update(&update);
+            }
         }
     }
 

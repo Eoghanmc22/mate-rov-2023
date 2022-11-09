@@ -60,7 +60,7 @@ impl RobotSystem for MotorSystem {
         Ok(MotorSystem(tx))
     }
 
-    fn on_update(&self, update: &RobotStateUpdate, robot: &mut RobotState) {
+    fn on_update(&self, update: &RobotStateUpdate, robot: &RobotState) -> Vec<RobotStateUpdate> {
         match update {
             RobotStateUpdate::Armed(armed) => {
                 todo!();
@@ -71,12 +71,12 @@ impl RobotSystem for MotorSystem {
                     .expect("Send message");
             }
             RobotStateUpdate::Movement(movement) => {
-                for update in mix_movement(*movement, robot.motors().keys()) {
-                    robot.update(&update);
-                }
+                return mix_movement(*movement, robot.motors().keys());
             }
             _ => {}
         }
+
+        Vec::new()
     }
 }
 

@@ -35,9 +35,14 @@ impl SystemManager {
         {
             let mut robot = self.0.write().expect("Lock");
             robot.set_callback(move |update, robot| {
+                let mut updates = Vec::new();
+
                 for system in &self.1 {
-                    system.on_update(update, robot);
+                    let new_updates = system.on_update(update, &robot);
+                    updates.extend_from_slice(&new_updates);
                 }
+
+                updates
             });
         }
 
@@ -64,5 +69,5 @@ pub trait RobotSystem {
     fn start(robot: Arc<RwLock<RobotState>>) -> anyhow::Result<Self>
     where
         Self: Sized;
-    fn on_update(&self, update: &RobotStateUpdate, robot: &mut RobotState);
+    fn on_update(&self, update: &RobotStateUpdate, robot: &RobotState) -> Vec<RobotStateUpdate>;
 }
