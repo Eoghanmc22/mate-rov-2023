@@ -1,0 +1,3 @@
+[target.aarch64-unknown-linux-gnu]
+linker = "./toolchain/bin/aarch64-none-linux-gnu-gcc"
+runner = "runner-rpi"

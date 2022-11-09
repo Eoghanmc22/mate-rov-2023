@@ -2,7 +2,8 @@
 resolver = "2"
 members = [
     "robot",
-    "surface"
+    "surface",
+    "runner-rpi"
 ]
 
 # Enable a small amount of optimization in debug mode
