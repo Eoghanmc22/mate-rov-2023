@@ -7,7 +7,7 @@ use std::{
 use common::{
     kvdata::Value,
     protocol::Packet,
-    state::{RobotState, RobotStateUpdate},
+    state::RobotState,
     types::{Celsius, Component, Cpu, Disk, Memory, Network, Process, SystemInfo},
 };
 use sysinfo::{
@@ -16,23 +16,25 @@ use sysinfo::{
 };
 use tracing::error;
 
-use super::RobotSystem;
+use crate::{event::Event, events::EventHandle};
+
+use super::System as RobotSystem;
 
 pub struct HwStatSystem;
 
 impl RobotSystem for HwStatSystem {
-    fn start(robot: Arc<RwLock<RobotState>>) -> anyhow::Result<Self>
+    fn start(_robot: Arc<RwLock<RobotState>>, mut events: EventHandle) -> anyhow::Result<()>
     where
         Self: Sized,
     {
-        thread::spawn(|| {
+        thread::spawn(move || {
             let mut system = System::new();
             loop {
                 system.refresh_all();
                 match collect_system_state(&system) {
                     Ok(hw_state) => {
                         let packet = Packet::KVUpdate(Value::SystemInfo(hw_state));
-                        todo!("How to send packet?");
+                        events.send(Event::PacketSend(packet));
                     }
                     Err(err) => error!("Could not collect system state: {err:?}"),
                 }
@@ -40,15 +42,7 @@ impl RobotSystem for HwStatSystem {
             }
         });
 
-        Ok(HwStatSystem)
-    }
-
-    fn on_update(
-        &self,
-        _update: &RobotStateUpdate,
-        _robot: &RobotState,
-    ) -> Vec<common::state::RobotStateUpdate> {
-        Vec::new()
+        Ok(())
     }
 }
 

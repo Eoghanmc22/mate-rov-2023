@@ -1,37 +1,52 @@
-use crate::systems::RobotSystem;
+use crate::event::Event;
+use crate::events::EventHandle;
+use crate::systems::System;
 use anyhow::Context;
 use common::network::{Connection, EventHandler, Network, WorkerEvent};
 use common::protocol::Packet;
-use common::state::{RobotState, RobotStateUpdate};
+use common::state::RobotState;
 use message_io::node::NodeHandler;
 use std::fmt::Debug;
 use std::sync::{Arc, RwLock};
+use std::thread;
 use std::time::SystemTime;
-use tracing::{error, info};
+use tracing::{info, span, Level};
 
 const ADDRS: &str = "0.0.0.0:44444";
 
 pub struct NetworkSystem(Network);
 
-impl RobotSystem for NetworkSystem {
+impl System for NetworkSystem {
     #[tracing::instrument]
-    fn start(robot: Arc<RwLock<RobotState>>) -> anyhow::Result<Self> {
+    fn start(robot: Arc<RwLock<RobotState>>, mut events: EventHandle) -> anyhow::Result<()> {
         info!("Starting networking system");
-        let network = Network::create(NetworkHandler(robot));
+
+        let listner = events.take_listner().unwrap();
+
+        let network = Network::create(NetworkHandler(events));
         network.listen(ADDRS).context("Start server")?;
 
-        Ok(NetworkSystem(network))
-    }
+        let handler = network.handler().to_owned();
+        thread::spawn(move || {
+            span!(Level::INFO, "Net forward thread");
+            for event in listner.into_iter() {
+                match &*event {
+                    Event::PacketSend(packet) => {
+                        handler
+                            .signals()
+                            .send(WorkerEvent::Broadcast(packet.clone()));
+                    }
+                    _ => {}
+                }
+            }
+        });
 
-    fn on_update(&self, update: &RobotStateUpdate, _robot: &RobotState) -> Vec<RobotStateUpdate> {
-        self.0.send_packet(Packet::RobotState(vec![update.clone()]));
-
-        Vec::new()
+        Ok(())
     }
 }
 
 #[derive(Debug)]
-struct NetworkHandler(Arc<RwLock<RobotState>>);
+struct NetworkHandler(EventHandle);
 
 impl EventHandler for NetworkHandler {
     #[tracing::instrument(skip(handler))]
@@ -42,30 +57,15 @@ impl EventHandler for NetworkHandler {
         packet: Packet,
     ) -> anyhow::Result<()> {
         match packet.clone() {
-            Packet::RobotState(updates) => match self.0.write() {
-                Ok(mut robot) => {
-                    for update in updates {
-                        robot.update(&update);
-                    }
-                }
-                Err(error) => {
-                    error!("Can't acquire lock: {error:?}");
-                }
-            },
+            Packet::RobotState(updates) => {
+                self.0.send(Event::StateUpdate(updates));
+            }
             Packet::KVUpdate(_) => {
                 // Currently not used on the robot
             }
-            Packet::RequestSync => match self.0.read() {
-                Ok(robot) => {
-                    let response = Packet::RobotState(robot.to_updates());
-                    connection
-                        .write_packet(handler, response)
-                        .context("Send packet")?;
-                }
-                Err(error) => {
-                    error!("Can't acquire lock: {error:?}");
-                }
-            },
+            Packet::RequestSync => {
+                self.0.send(Event::StateRefresh);
+            }
             Packet::Log(msg) => {
                 info!("Peer logged: `{msg}`");
             }

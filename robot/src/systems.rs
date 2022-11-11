@@ -1,6 +1,7 @@
 pub mod hw_stat;
 pub mod motor;
 pub mod networking;
+pub mod robot;
 // TODO indicators
 // TODO cameras
 // TODO inertial
@@ -9,46 +10,33 @@ pub mod networking;
 // TODO logging
 // TODO perhaps just a single sensor system?
 
-use anyhow::Context;
-use common::state::{RobotState, RobotStateUpdate};
+use common::state::RobotState;
 use std::sync::{Arc, Condvar, Mutex, RwLock};
+
+use crate::events::EventHandle;
 
 pub struct SystemManager(
     Arc<RwLock<RobotState>>,
-    Vec<Box<dyn RobotSystem + Send + Sync + 'static>>,
+    Vec<fn(Arc<RwLock<RobotState>>, EventHandle) -> anyhow::Result<()>>,
     (Mutex<bool>, Condvar),
 );
 
 impl SystemManager {
-    pub fn new(robot: Arc<RwLock<RobotState>>) -> Self {
-        Self(robot, Vec::new(), (Mutex::new(true), Condvar::new()))
+    pub fn new(robot: RobotState) -> Self {
+        Self(
+            Arc::new(RwLock::new(robot)),
+            Vec::new(),
+            (Mutex::new(true), Condvar::new()),
+        )
     }
 
-    pub fn add_system<S: RobotSystem + Send + Sync + 'static>(&mut self) -> anyhow::Result<()> {
-        let system = S::start(self.0.clone()).context("Start system")?;
-
-        self.1.push(Box::new(system));
+    pub fn add_system<S: System + Send + Sync + 'static>(&mut self) -> anyhow::Result<()> {
+        self.1.push(S::start);
 
         Ok(())
     }
 
-    pub fn start(self) {
-        {
-            let mut robot = self.0.write().expect("Lock");
-            robot.set_callback(move |update, robot| {
-                let mut updates = Vec::new();
-
-                for system in &self.1 {
-                    let new_updates = system.on_update(update, &robot);
-                    updates.extend_from_slice(&new_updates);
-                }
-
-                updates
-            });
-        }
-
-        // TODO Fire events for updates made during setup?
-
+    pub fn start(&self) {
         let (lock, cvar) = &self.2;
         let mut running = lock.lock().expect("Lock");
 
@@ -66,9 +54,6 @@ impl SystemManager {
     }
 }
 
-pub trait RobotSystem {
-    fn start(robot: Arc<RwLock<RobotState>>) -> anyhow::Result<Self>
-    where
-        Self: Sized;
-    fn on_update(&self, update: &RobotStateUpdate, robot: &RobotState) -> Vec<RobotStateUpdate>;
+pub trait System {
+    fn start(robot: Arc<RwLock<RobotState>>, events: EventHandle) -> anyhow::Result<()>;
 }

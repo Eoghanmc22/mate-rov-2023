@@ -13,14 +13,16 @@
     //clippy::expect_used
 )]
 
+pub mod event;
+pub mod events;
 pub mod peripheral;
 mod systems;
 
+use crate::systems::robot::RobotSystem;
 use crate::systems::SystemManager;
 use crate::systems::{hw_stat::HwStatSystem, networking::NetworkSystem};
 use common::state::RobotState;
 use common::types::MotorId;
-use std::sync::{Arc, RwLock};
 use tracing::{info, Level};
 
 #[cfg(rpi)]
@@ -40,11 +42,11 @@ fn main() -> anyhow::Result<()> {
         MotorId::UpR,
         MotorId::UpL,
     ]);
-    let robot = Arc::new(RwLock::new(robot));
 
-    let mut systems = SystemManager::new(robot.clone());
+    let mut systems = SystemManager::new(robot);
 
     info!("---------- Starting systems ----------");
+    systems.add_system::<RobotSystem>()?;
     systems.add_system::<NetworkSystem>()?;
     systems.add_system::<HwStatSystem>()?;
     #[cfg(rpi)]

@@ -18,12 +18,6 @@ pub struct RobotState {
     mag: Option<(MagFrame, Instant)>,
     motors: HashMap<MotorId, (MotorFrame, Instant)>,
     depth_target: Option<(Meters, Instant)>,
-
-    callback: Option<
-        Box<
-            dyn Fn(&RobotStateUpdate, &RobotState) -> Vec<RobotStateUpdate> + Send + Sync + 'static,
-        >,
-    >,
 }
 
 impl RobotState {
@@ -75,21 +69,12 @@ impl RobotState {
     pub fn depth_target(&self) -> Option<(Meters, Instant)> {
         self.depth_target
     }
-
-    pub fn set_callback<
-        F: Fn(&RobotStateUpdate, &RobotState) -> Vec<RobotStateUpdate> + Send + Sync + 'static,
-    >(
-        &mut self,
-        callback: F,
-    ) {
-        self.callback = Some(Box::new(callback));
-    }
 }
 
 // Updates
 impl RobotState {
     /// Updates the robot state with the info provided in the `RobotStateUpdate`
-    pub fn update(&mut self, update: &RobotStateUpdate) {
+    pub fn update(&mut self, update: &RobotStateUpdate) -> bool {
         let now = Instant::now();
 
         let changed = match update {
@@ -156,20 +141,7 @@ impl RobotState {
             }
         };
 
-        let mut updates = None;
-
-        if let Some(callback) = self.callback.take() {
-            if changed {
-                updates = Some((callback)(update, self));
-            }
-            self.callback = Some(callback);
-        }
-
-        if let Some(updates) = updates {
-            for update in updates {
-                self.update(&update);
-            }
-        }
+        changed
     }
 
     /// Generates the `RobotStateUpdate`s necessary to reconstruct the current state from a blank `RobotState`

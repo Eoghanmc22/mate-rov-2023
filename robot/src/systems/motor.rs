@@ -1,5 +1,7 @@
+use crate::event::Event;
+use crate::events::EventHandle;
 use crate::peripheral::motor::Motor;
-use crate::systems::RobotSystem;
+use crate::systems::System;
 use anyhow::Context;
 use common::state::{RobotState, RobotStateUpdate};
 use common::types::{MotorFrame, MotorId, Movement};
@@ -18,12 +20,13 @@ enum Message {
     MotorSpeed(MotorId, MotorFrame),
 }
 
-impl RobotSystem for MotorSystem {
+impl System for MotorSystem {
     #[tracing::instrument]
-    fn start(robot: Arc<RwLock<RobotState>>) -> anyhow::Result<Self> {
+    fn start(robot: Arc<RwLock<RobotState>>, mut events: EventHandle) -> anyhow::Result<()> {
         info!("Starting motor system");
         let (tx, rx) = channel::bounded(30);
         let gpio = Gpio::new().context("Create gpio")?;
+        let listner = events.take_listner().unwrap();
 
         thread::spawn(move || {
             span!(Level::INFO, "Motor thread");
@@ -57,26 +60,34 @@ impl RobotSystem for MotorSystem {
             }
         });
 
-        Ok(MotorSystem(tx))
-    }
+        thread::spawn(move || {
+            span!(Level::INFO, "Motor forward thread");
+            for event in listner.into_iter() {
+                if let Event::StateUpdate(updates) = &*event {
+                    for update in updates {
+                        match update {
+                            RobotStateUpdate::Armed(armed) => {
+                                todo!();
+                            }
+                            RobotStateUpdate::Motor(id, frame) => {
+                                tx.send(Message::MotorSpeed(*id, *frame))
+                                    .expect("Send message");
+                            }
+                            RobotStateUpdate::Movement(movement) => {
+                                let robot = robot.read().expect("Accquire read");
+                                events.send(Event::StateUpdate(mix_movement(
+                                    *movement,
+                                    robot.motors().keys(),
+                                )));
+                            }
+                            _ => {}
+                        }
+                    }
+                }
+            }
+        });
 
-    fn on_update(&self, update: &RobotStateUpdate, robot: &RobotState) -> Vec<RobotStateUpdate> {
-        match update {
-            RobotStateUpdate::Armed(armed) => {
-                todo!();
-            }
-            RobotStateUpdate::Motor(id, frame) => {
-                self.0
-                    .send(Message::MotorSpeed(*id, *frame))
-                    .expect("Send message");
-            }
-            RobotStateUpdate::Movement(movement) => {
-                return mix_movement(*movement, robot.motors().keys());
-            }
-            _ => {}
-        }
-
-        Vec::new()
+        Ok(())
     }
 }
 

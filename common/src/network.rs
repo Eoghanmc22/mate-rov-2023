@@ -144,6 +144,10 @@ impl Network {
         trace!("Sending packet");
         self.handler.signals().send(WorkerEvent::Broadcast(packet));
     }
+
+    pub fn handler(&self) -> &NodeHandler<WorkerEvent> {
+        &self.handler
+    }
 }
 
 /// Represents a connection with a peer
