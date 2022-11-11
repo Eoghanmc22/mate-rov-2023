@@ -2,6 +2,7 @@ use glam::Quat;
 use serde::{Deserialize, Serialize};
 use std::fmt::{Display, Formatter};
 use std::ops::{Add, AddAssign, Neg, Sub};
+use std::time::Duration;
 
 #[derive(Debug, Copy, Clone, Default, Serialize, Deserialize, PartialEq)]
 pub struct Orientation(pub Quat);
@@ -214,4 +215,79 @@ impl Display for Speed {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         f.pad(&format!("{:.2}%", self.0 * 100.0))
     }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SystemInfo {
+    pub processes: Vec<Process>,
+    /// one min, five min, fifteen min
+    pub load_average: (f64, f64, f64),
+    pub networks: Vec<Network>,
+    pub cpu_total: Cpu,
+    pub cpus: Vec<Cpu>,
+    pub core_count: Option<usize>,
+    pub memory: Memory,
+    pub components: Vec<Component>,
+    pub disks: Vec<Disk>,
+    pub uptime: Duration,
+    pub name: Option<String>,
+    pub kernel_version: Option<String>,
+    pub os_version: Option<String>,
+    pub distro: String,
+    pub host_name: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Process {
+    pub name: String,
+    pub pid: u32,
+    pub memory: u64,
+    pub cpu_usage: f32,
+    pub user: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Cpu {
+    pub frequency: u64,
+    pub usage: f32,
+    pub name: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Memory {
+    pub total_mem: u64,
+    pub used_mem: u64,
+    pub free_mem: u64,
+
+    pub total_swap: u64,
+    pub used_swap: u64,
+    pub free_swap: u64,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Component {
+    pub tempature: Celsius,
+    pub tempature_max: Celsius,
+    pub tempature_critical: Option<Celsius>,
+    pub name: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Disk {
+    pub name: String,
+    pub mount_point: String,
+    pub total_space: u64,
+    pub available_space: u64,
+    pub removable: bool,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Network {
+    pub name: String,
+    pub rx_bytes: u64,
+    pub tx_bytes: u64,
+    pub rx_packets: u64,
+    pub tx_packets: u64,
+    pub rx_errors: u64,
+    pub tx_errors: u64,
 }

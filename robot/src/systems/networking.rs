@@ -24,8 +24,7 @@ impl RobotSystem for NetworkSystem {
     }
 
     fn on_update(&self, update: &RobotStateUpdate, _robot: &RobotState) -> Vec<RobotStateUpdate> {
-        self.0
-            .send_packet(Packet::StateUpdate(vec![update.clone()]));
+        self.0.send_packet(Packet::RobotState(vec![update.clone()]));
 
         Vec::new()
     }
@@ -43,7 +42,7 @@ impl EventHandler for NetworkHandler {
         packet: Packet,
     ) -> anyhow::Result<()> {
         match packet.clone() {
-            Packet::StateUpdate(updates) => match self.0.write() {
+            Packet::RobotState(updates) => match self.0.write() {
                 Ok(mut robot) => {
                     for update in updates {
                         robot.update(&update);
@@ -53,9 +52,12 @@ impl EventHandler for NetworkHandler {
                     error!("Can't acquire lock: {error:?}");
                 }
             },
+            Packet::KVUpdate(_) => {
+                // Currently not used on the robot
+            }
             Packet::RequestSync => match self.0.read() {
                 Ok(robot) => {
-                    let response = Packet::StateUpdate(robot.to_updates());
+                    let response = Packet::RobotState(robot.to_updates());
                     connection
                         .write_packet(handler, response)
                         .context("Send packet")?;
@@ -73,8 +75,8 @@ impl EventHandler for NetworkHandler {
                     .write_packet(handler, response)
                     .context("Send packet")?;
             }
-            Packet::Pong(ping, pong) => {
-                // TODO
+            Packet::Pong(_, _) => {
+                // Currently not used on the robot
             }
         }
 

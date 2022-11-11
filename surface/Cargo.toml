@@ -17,4 +17,5 @@ tracing-subscriber = "0.3"
 
 bevy = { version = "0.8", features = ["wayland"] }
 egui = "0.19"
+egui_extras = "0.19"
 bevy_egui = "0.16"

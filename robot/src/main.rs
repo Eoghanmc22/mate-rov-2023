@@ -16,8 +16,8 @@
 pub mod peripheral;
 mod systems;
 
-use crate::systems::networking::NetworkSystem;
 use crate::systems::SystemManager;
+use crate::systems::{hw_stat::HwStatSystem, networking::NetworkSystem};
 use common::state::RobotState;
 use common::types::MotorId;
 use std::sync::{Arc, RwLock};
@@ -46,6 +46,7 @@ fn main() -> anyhow::Result<()> {
 
     info!("---------- Starting systems ----------");
     systems.add_system::<NetworkSystem>()?;
+    systems.add_system::<HwStatSystem>()?;
     #[cfg(rpi)]
     systems.add_system::<MotorSystem>()?;
     info!("--------------------------------------");

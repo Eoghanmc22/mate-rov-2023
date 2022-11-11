@@ -1,14 +1,16 @@
-use crate::state::RobotStateUpdate;
+use crate::{kvdata::Value, state::RobotStateUpdate};
 use anyhow::Context;
 use serde::{Deserialize, Serialize};
 use std::time::SystemTime;
 
 /// Representation of all messages that can be communicated between peers
 // TODO use references
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum Packet {
     /// Encodes the updates that should be made to the peer's RobotState
-    StateUpdate(Vec<RobotStateUpdate>),
+    RobotState(Vec<RobotStateUpdate>),
+    /// Notification that key value pair has been updated
+    KVUpdate(Value),
     /// Requests that the peer sends the contents of its RobotState
     RequestSync,
     /// Logs a message on the peer's console

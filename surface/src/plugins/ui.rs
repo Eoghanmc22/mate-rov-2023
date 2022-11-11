@@ -2,11 +2,17 @@ use crate::plugins::networking::NetworkEvent;
 use crate::plugins::robot::Robot;
 use anyhow::Context;
 use bevy::prelude::*;
-use bevy_egui::{EguiContext, EguiPlugin, EguiSettings};
-use common::types::MotorFrame;
+use bevy_egui::{EguiContext, EguiPlugin};
+use common::{
+    kvdata::{Key, Value},
+    types::{Celsius, MotorFrame},
+};
+use egui_extras::{Size, TableBuilder};
 use message_io::network::ToRemoteAddr;
 
 // todo Display errors
+
+const TABLE_ROW_HEIGHT: f32 = 20.0;
 
 pub struct UiPlugin;
 
@@ -27,9 +33,10 @@ impl Plugin for UiPlugin {
 #[derive(Default, Component)]
 struct ConnectWindow(String);
 
-fn draw_ui(mut cmd: Commands, state: Res<Robot>, mut egui_context: ResMut<EguiContext>) {
+fn draw_ui(mut cmd: Commands, robot: Res<Robot>, mut egui_context: ResMut<EguiContext>) {
     let ctx = egui_context.ctx_mut();
-    let state = state.state();
+    let state = robot.state();
+    let store = robot.store();
 
     egui::TopBottomPanel::top("top_panel").show(ctx, |ui| {
         egui::menu::bar(ui, |ui| {
@@ -116,17 +123,318 @@ fn draw_ui(mut cmd: Commands, state: Res<Robot>, mut egui_context: ResMut<EguiCo
                 // TODO maybe draw thrust diagram
             });
             ui.collapsing("Cameras", |ui| {
-                for (name, addrs) in state.cameras().iter() {
-                    ui.label(format!("{name}: {addrs}"));
-                    // TODO Maybe show preview
+                if let Some(Value::Cameras(cameras)) = store.get(&Key::Cameras) {
+                    for (name, addrs) in cameras {
+                        ui.label(format!("{name}: {addrs}"));
+                        // TODO Maybe show preview
+                    }
                 }
             });
+            ui.collapsing("System", |ui| {
+                if let Some(Value::SystemInfo(hw_state)) = store.get(&Key::SystemInfo) {
+                    ui.collapsing("CPU", |ui| {
+                        ui.label(format!(
+                            "Load avg: {:.2}, {:.2}, {:.2}",
+                            hw_state.load_average.0,
+                            hw_state.load_average.1,
+                            hw_state.load_average.2,
+                        ));
+                        ui.label(format!(
+                            "Physical core count: {}",
+                            hw_state.core_count.unwrap_or(0)
+                        ));
+                        TableBuilder::new(ui)
+                            .striped(true)
+                            .columns(Size::remainder(), 3)
+                            .header(TABLE_ROW_HEIGHT, |mut row| {
+                                row.col(|ui| {
+                                    ui.label("Name");
+                                });
+                                row.col(|ui| {
+                                    ui.label("Usage");
+                                });
+                                row.col(|ui| {
+                                    ui.label("Freq");
+                                });
+                            })
+                            .body(|mut body| {
+                                body.row(TABLE_ROW_HEIGHT, |mut row| {
+                                    row.col(|ui| {
+                                        ui.label(&hw_state.cpu_total.name);
+                                    });
+                                    row.col(|ui| {
+                                        ui.label(format!("{:.2}%", hw_state.cpu_total.usage));
+                                    });
+                                    row.col(|ui| {
+                                        ui.label(format!("{}MHz", hw_state.cpu_total.frequency));
+                                    });
+                                });
+                                body.rows(TABLE_ROW_HEIGHT, hw_state.cpus.len(), |cpu, mut row| {
+                                    let cpu = &hw_state.cpus[cpu];
+                                    row.col(|ui| {
+                                        ui.label(&cpu.name);
+                                    });
+                                    row.col(|ui| {
+                                        ui.label(format!("{:.2}%", cpu.usage));
+                                    });
+                                    row.col(|ui| {
+                                        ui.label(format!("{}MHz", cpu.frequency));
+                                    });
+                                });
+                            });
+                    });
+                    ui.collapsing("Processes", |ui| {
+                        TableBuilder::new(ui)
+                            .striped(true)
+                            .columns(Size::remainder(), 5)
+                            .header(20.0, |mut row| {
+                                row.col(|ui| {
+                                    ui.label("Name");
+                                });
+                                row.col(|ui| {
+                                    ui.label("PID");
+                                });
+                                row.col(|ui| {
+                                    ui.label("CPU");
+                                });
+                                row.col(|ui| {
+                                    ui.label("MEM");
+                                });
+                                row.col(|ui| {
+                                    ui.label("User");
+                                });
+                            })
+                            .body(|body| {
+                                body.rows(
+                                    TABLE_ROW_HEIGHT,
+                                    hw_state.processes.len(),
+                                    |process, mut row| {
+                                        let process = &hw_state.processes[process];
+                                        row.col(|ui| {
+                                            ui.label(&process.name);
+                                        });
+                                        row.col(|ui| {
+                                            ui.label(format!("{}", process.pid));
+                                        });
+                                        row.col(|ui| {
+                                            ui.label(format!("{:.2}%", process.cpu_usage));
+                                        });
+                                        row.col(|ui| {
+                                            ui.label(format!(
+                                                "{:.2}MB",
+                                                process.memory as f64 / 1048576.0
+                                            ));
+                                        });
+                                        row.col(|ui| {
+                                            ui.label(format!("{:?}", process.user));
+                                        });
+                                    },
+                                );
+                            });
+                    });
+                    ui.collapsing("Networks", |ui| {
+                        TableBuilder::new(ui)
+                            .striped(true)
+                            .columns(Size::remainder(), 7)
+                            .header(20.0, |mut row| {
+                                row.col(|ui| {
+                                    ui.label("Name");
+                                });
+                                row.col(|ui| {
+                                    ui.label("TX Data");
+                                });
+                                row.col(|ui| {
+                                    ui.label("RX Data");
+                                });
+                                row.col(|ui| {
+                                    ui.label("TX Packets");
+                                });
+                                row.col(|ui| {
+                                    ui.label("RX Packets");
+                                });
+                                row.col(|ui| {
+                                    ui.label("TX Errors");
+                                });
+                                row.col(|ui| {
+                                    ui.label("RX Errors");
+                                });
+                            })
+                            .body(|body| {
+                                body.rows(
+                                    TABLE_ROW_HEIGHT,
+                                    hw_state.networks.len(),
+                                    |network, mut row| {
+                                        let network = &hw_state.networks[network];
+                                        row.col(|ui| {
+                                            ui.label(&network.name);
+                                        });
+                                        row.col(|ui| {
+                                            ui.label(format!(
+                                                "{:.2}MB",
+                                                network.tx_bytes as f64 / 1048576.0
+                                            ));
+                                        });
+                                        row.col(|ui| {
+                                            ui.label(format!(
+                                                "{:.2}MB",
+                                                network.rx_bytes as f64 / 1048576.0
+                                            ));
+                                        });
+                                        row.col(|ui| {
+                                            ui.label(format!("{}", network.tx_packets));
+                                        });
+                                        row.col(|ui| {
+                                            ui.label(format!("{}", network.rx_packets));
+                                        });
+                                        row.col(|ui| {
+                                            ui.label(format!("{}", network.tx_errors));
+                                        });
+                                        row.col(|ui| {
+                                            ui.label(format!("{}", network.rx_errors));
+                                        });
+                                    },
+                                );
+                            });
+                    });
+                    ui.collapsing("Memory", |ui| {
+                        let memory = &hw_state.memory;
+                        ui.label(format!(
+                            "Memory: {:.2}MB / {:.2}MB",
+                            memory.used_mem as f64 / 1048576.0,
+                            memory.total_mem as f64 / 1048576.0
+                        ));
+                        ui.label(format!(
+                            "Free Memory: {:.2}MB",
+                            memory.free_mem as f64 / 1048576.0
+                        ));
+                        ui.add_space(3.0);
+
+                        ui.label(format!(
+                            "Swap: {:.2}MB / {:.2}MB",
+                            memory.used_swap as f64 / 1048576.0,
+                            memory.total_swap as f64 / 1048576.0
+                        ));
+                        ui.label(format!(
+                            "Free Swap: {:.2}MB",
+                            memory.free_swap as f64 / 1048576.0
+                        ));
+                    });
+                    ui.collapsing("Thermals", |ui| {
+                        TableBuilder::new(ui)
+                            .striped(true)
+                            .columns(Size::remainder(), 4)
+                            .header(20.0, |mut row| {
+                                row.col(|ui| {
+                                    ui.label("Name");
+                                });
+                                row.col(|ui| {
+                                    ui.label("Temp");
+                                });
+                                row.col(|ui| {
+                                    ui.label("Max Temp");
+                                });
+                                row.col(|ui| {
+                                    ui.label("Critical Temp");
+                                });
+                            })
+                            .body(|body| {
+                                body.rows(
+                                    TABLE_ROW_HEIGHT,
+                                    hw_state.components.len(),
+                                    |component, mut row| {
+                                        let component = &hw_state.components[component];
+                                        row.col(|ui| {
+                                            ui.label(&component.name);
+                                        });
+                                        row.col(|ui| {
+                                            ui.label(format!("{}", component.tempature));
+                                        });
+                                        row.col(|ui| {
+                                            ui.label(format!("{}", component.tempature_max));
+                                        });
+                                        row.col(|ui| {
+                                            ui.label(format!(
+                                                "{}",
+                                                component
+                                                    .tempature_critical
+                                                    .unwrap_or(Celsius(f64::NAN))
+                                            ));
+                                        });
+                                    },
+                                );
+                            });
+                    });
+                    ui.collapsing("Disks", |ui| {
+                        TableBuilder::new(ui)
+                            .striped(true)
+                            .columns(Size::remainder(), 5)
+                            .header(20.0, |mut row| {
+                                row.col(|ui| {
+                                    ui.label("Name");
+                                });
+                                row.col(|ui| {
+                                    ui.label("Mount");
+                                });
+                                row.col(|ui| {
+                                    ui.label("Total");
+                                });
+                                row.col(|ui| {
+                                    ui.label("Free");
+                                });
+                                row.col(|ui| {
+                                    ui.label("Removable");
+                                });
+                            })
+                            .body(|body| {
+                                body.rows(
+                                    TABLE_ROW_HEIGHT,
+                                    hw_state.disks.len(),
+                                    |disk, mut row| {
+                                        let disk = &hw_state.disks[disk];
+                                        row.col(|ui| {
+                                            ui.label(&disk.name);
+                                        });
+                                        row.col(|ui| {
+                                            ui.label(&disk.mount_point);
+                                        });
+                                        row.col(|ui| {
+                                            ui.label(format!(
+                                                "{}MB",
+                                                disk.total_space as f64 / 1048576.0
+                                            ));
+                                        });
+                                        row.col(|ui| {
+                                            ui.label(format!(
+                                                "{}MB",
+                                                disk.available_space as f64 / 1048576.0
+                                            ));
+                                        });
+                                        row.col(|ui| {
+                                            ui.label(format!("{}", disk.removable));
+                                        });
+                                    },
+                                );
+                            });
+                    });
+                    ui.collapsing("General", |ui| {
+                        ui.label(format!("System Name: {:?}", hw_state.name));
+                        ui.label(format!("Kernel Version: {:?}", hw_state.kernel_version));
+                        ui.label(format!("OS Version: {:?}", hw_state.os_version));
+                        ui.label(format!("Distribution: {:?}", hw_state.distro));
+                        ui.label(format!("Host Name: {:?}", hw_state.host_name));
+                    });
+                } else {
+                    ui.label("No system data");
+                }
+            })
         });
     egui::TopBottomPanel::top("Panel Top").show(ctx, |ui| {
         ui.horizontal(|ui| {
-            for (name, addrs) in state.cameras().iter() {
-                if ui.button(name).clicked() {
-                    todo!();
+            if let Some(Value::Cameras(cameras)) = store.get(&Key::Cameras) {
+                for (name, addrs) in cameras {
+                    if ui.button(name).clicked() {
+                        todo!();
+                    }
                 }
             }
         });

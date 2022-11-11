@@ -1,6 +1,7 @@
 use crate::plugins::networking::NetworkEvent;
 use crate::plugins::MateStage;
 use bevy::prelude::*;
+use common::kvdata::{Store, Value};
 use common::protocol::Packet;
 use common::state::{RobotState, RobotStateUpdate};
 use message_io::network::Endpoint;
@@ -19,16 +20,21 @@ impl Plugin for RobotPlugin {
 }
 
 #[derive(Default)]
-pub struct Robot(RobotState);
+pub struct Robot(RobotState, Store);
 impl Robot {
     pub fn state(&self) -> &RobotState {
         &self.0
+    }
+
+    pub fn store(&self) -> &Store {
+        &self.1
     }
 }
 
 #[derive(Debug, Clone)]
 pub enum RobotEvent {
     StateChanged(RobotStateUpdate),
+    KVChanged(Value),
     Ping(SystemTime, SystemTime),
 
     Connected(Endpoint),
@@ -38,8 +44,14 @@ pub enum RobotEvent {
 
 fn update_robot(mut robot: ResMut<Robot>, mut events: EventReader<RobotEvent>) {
     for event in events.iter() {
-        if let RobotEvent::StateChanged(update) = event {
-            robot.0.update(update);
+        match event {
+            RobotEvent::StateChanged(update) => {
+                robot.0.update(update);
+            }
+            RobotEvent::KVChanged(value) => {
+                robot.1.insert(value.to_key(), value.clone());
+            }
+            _ => {}
         }
     }
 }
@@ -49,7 +61,7 @@ fn updates_to_packets(
     mut net: EventWriter<NetworkEvent>,
 ) {
     for update in updates.iter() {
-        net.send(NetworkEvent::SendPacket(Packet::StateUpdate(vec![
+        net.send(NetworkEvent::SendPacket(Packet::RobotState(vec![
             update.clone()
         ])));
     }

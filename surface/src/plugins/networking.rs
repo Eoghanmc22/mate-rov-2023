@@ -68,12 +68,17 @@ impl EventHandler for NetworkHandler {
         packet: Packet,
     ) -> anyhow::Result<()> {
         match packet {
-            Packet::StateUpdate(updates) => {
+            Packet::RobotState(updates) => {
                 for update in updates {
                     self.0
                         .send(RobotEvent::StateChanged(update))
-                        .context("Send update")?;
+                        .context("Send state update")?;
                 }
+            }
+            Packet::KVUpdate(value) => {
+                self.0
+                    .send(RobotEvent::KVChanged(value))
+                    .context("Send kv update")?;
             }
             Packet::RequestSync => {
                 connection
