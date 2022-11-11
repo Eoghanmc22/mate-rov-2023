@@ -33,7 +33,7 @@ impl RobotSystem for HwStatSystem {
                 system.refresh_all();
                 match collect_system_state(&system) {
                     Ok(hw_state) => {
-                        let packet = Packet::KVUpdate(Value::SystemInfo(hw_state));
+                        let packet = Packet::KVUpdate(Value::SystemInfo(Box::new(hw_state)));
                         events.send(Event::PacketSend(packet));
                     }
                     Err(err) => error!("Could not collect system state: {err:?}"),

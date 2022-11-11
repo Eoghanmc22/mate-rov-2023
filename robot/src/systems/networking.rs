@@ -30,13 +30,10 @@ impl System for NetworkSystem {
         thread::spawn(move || {
             span!(Level::INFO, "Net forward thread");
             for event in listner.into_iter() {
-                match &*event {
-                    Event::PacketSend(packet) => {
-                        handler
-                            .signals()
-                            .send(WorkerEvent::Broadcast(packet.clone()));
-                    }
-                    _ => {}
+                if let Event::PacketSend(packet) = &*event {
+                    handler
+                        .signals()
+                        .send(WorkerEvent::Broadcast(packet.clone()));
                 }
             }
         });
@@ -56,7 +53,7 @@ impl EventHandler for NetworkHandler {
         connection: &Connection,
         packet: Packet,
     ) -> anyhow::Result<()> {
-        match packet.clone() {
+        match packet {
             Packet::RobotState(updates) => {
                 self.0.send(Event::StateUpdate(updates));
             }

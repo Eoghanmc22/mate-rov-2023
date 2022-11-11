@@ -18,7 +18,7 @@ pub enum Key {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum Value {
-    SystemInfo(SystemInfo),
+    SystemInfo(Box<SystemInfo>),
     Cameras(Vec<(String, SocketAddr)>),
 }
 impl Value {
