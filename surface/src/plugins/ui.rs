@@ -407,13 +407,13 @@ fn draw_ui(mut cmd: Commands, robot: Res<Robot>, mut egui_context: ResMut<EguiCo
                                         });
                                         row.col(|ui| {
                                             ui.label(format!(
-                                                "{}MB",
+                                                "{:.2}MB",
                                                 disk.total_space as f64 / 1048576.0
                                             ));
                                         });
                                         row.col(|ui| {
                                             ui.label(format!(
-                                                "{}MB",
+                                                "{:.2}MB",
                                                 disk.available_space as f64 / 1048576.0
                                             ));
                                         });

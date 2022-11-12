@@ -33,6 +33,7 @@ impl RobotSystem for HwStatSystem {
             let mut system = System::new();
             loop {
                 system.refresh_all();
+                system.refresh_disks_list();
                 system.refresh_disks();
                 system.refresh_components_list();
                 system.refresh_components();
