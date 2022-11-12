@@ -33,6 +33,13 @@ impl RobotSystem for HwStatSystem {
             let mut system = System::new();
             loop {
                 system.refresh_all();
+                system.refresh_disks();
+                system.refresh_components_list();
+                system.refresh_components();
+                system.refresh_networks_list();
+                system.refresh_networks();
+                system.refresh_users_list();
+
                 match collect_system_state(&system) {
                     Ok(hw_state) => {
                         let packet = Packet::KVUpdate(Value::SystemInfo(Box::new(hw_state)));

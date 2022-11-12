@@ -12,7 +12,7 @@ use message_io::network::ToRemoteAddr;
 
 // todo Display errors
 
-const TABLE_ROW_HEIGHT: f32 = 20.0;
+const TABLE_ROW_HEIGHT: f32 = 15.0;
 
 pub struct UiPlugin;
 
@@ -53,7 +53,6 @@ fn draw_ui(mut cmd: Commands, robot: Res<Robot>, mut egui_context: ResMut<EguiCo
         });
     });
     egui::SidePanel::left("Panel Left")
-        .resizable(false)
         .min_width(200.0)
         .show(ctx, |ui| {
             ui.collapsing("Orientation", |ui| {
@@ -184,9 +183,11 @@ fn draw_ui(mut cmd: Commands, robot: Res<Robot>, mut egui_context: ResMut<EguiCo
                             });
                     });
                     ui.collapsing("Processes", |ui| {
+                        ui.set_max_height(500.0);
                         TableBuilder::new(ui)
                             .striped(true)
-                            .columns(Size::remainder(), 5)
+                            .column(Size::remainder().at_least(100.0))
+                            .columns(Size::exact(60.0), 5)
                             .header(20.0, |mut row| {
                                 row.col(|ui| {
                                     ui.label("Name");
@@ -226,7 +227,14 @@ fn draw_ui(mut cmd: Commands, robot: Res<Robot>, mut egui_context: ResMut<EguiCo
                                             ));
                                         });
                                         row.col(|ui| {
-                                            ui.label(format!("{:?}", process.user));
+                                            ui.label(format!(
+                                                "{}",
+                                                process
+                                                    .user
+                                                    .as_ref()
+                                                    .map(|it| it.as_str())
+                                                    .unwrap_or("None")
+                                            ));
                                         });
                                     },
                                 );
@@ -426,6 +434,7 @@ fn draw_ui(mut cmd: Commands, robot: Res<Robot>, mut egui_context: ResMut<EguiCo
                 } else {
                     ui.label("No system data");
                 }
+                ui.allocate_space(ui.available_size());
             })
         });
     egui::TopBottomPanel::top("Panel Top").show(ctx, |ui| {
