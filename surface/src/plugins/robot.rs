@@ -51,6 +51,9 @@ fn update_robot(mut robot: ResMut<Robot>, mut events: EventReader<RobotEvent>) {
             RobotEvent::KVChanged(value) => {
                 robot.1.insert(value.to_key(), value.clone());
             }
+            RobotEvent::Connected(..) | RobotEvent::Disconnected(..) => {
+                *robot = Default::default();
+            }
             _ => {}
         }
     }
