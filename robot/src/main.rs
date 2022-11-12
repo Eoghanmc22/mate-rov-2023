@@ -45,7 +45,7 @@ fn main() -> anyhow::Result<()> {
 
     let mut systems = SystemManager::new(robot);
 
-    info!("---------- Starting systems ----------");
+    info!("---------- Registering systems ----------");
     systems.add_system::<RobotSystem>()?;
     systems.add_system::<NetworkSystem>()?;
     systems.add_system::<HwStatSystem>()?;

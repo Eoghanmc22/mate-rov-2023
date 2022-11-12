@@ -36,6 +36,9 @@ impl System for NetworkSystem {
                         .send(WorkerEvent::Broadcast(packet.clone()));
                 }
             }
+
+            // Hack to get around network's blocking drop impl
+            let _network = network;
         });
 
         Ok(())

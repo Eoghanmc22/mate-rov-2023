@@ -27,6 +27,8 @@ impl RobotSystem for HwStatSystem {
     where
         Self: Sized,
     {
+        let _ = events.take_listner();
+
         thread::spawn(move || {
             let mut system = System::new();
             loop {

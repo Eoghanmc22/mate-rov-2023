@@ -11,7 +11,11 @@ pub mod robot;
 // TODO perhaps just a single sensor system?
 
 use common::state::RobotState;
-use std::sync::{Arc, Condvar, Mutex, RwLock};
+use std::{
+    any,
+    sync::{Arc, Condvar, Mutex, RwLock},
+};
+use tracing::info;
 
 use crate::events::EventHandle;
 
@@ -30,13 +34,27 @@ impl SystemManager {
         )
     }
 
+    #[tracing::instrument(skip(self))]
     pub fn add_system<S: System + Send + Sync + 'static>(&mut self) -> anyhow::Result<()> {
         self.1.push(S::start);
+        info!("Registered {}", any::type_name::<S>());
 
         Ok(())
     }
 
+    #[tracing::instrument(skip(self))]
     pub fn start(&self) {
+        info!("---------- Starting systems ----------");
+        let system_count = self.1.len();
+        let mut event_handles = EventHandle::create(system_count);
+        for (idx, system) in self.1.iter().enumerate() {
+            info!("Loading system {}/{}", idx + 1, system_count);
+            (system)(self.0.clone(), event_handles.pop().unwrap()).expect("Start system");
+            info!("Loaded system {}/{}", idx + 1, system_count);
+        }
+        assert!(event_handles.is_empty());
+        info!("-------------------------------------");
+
         let (lock, cvar) = &self.2;
         let mut running = lock.lock().expect("Lock");
 
