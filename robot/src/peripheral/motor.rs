@@ -16,7 +16,7 @@ const DEFAULT_MOTOR: MotorConfig = MotorConfig {
     reverse: Duration::from_micros(1100),
     forward: Duration::from_micros(1900),
     center: Duration::from_micros(1500),
-    period: Duration::from_nanos(1_000_000_000 / 400), // 400Hz
+    period: Duration::from_nanos(1_000_000_000 / 200), // 200Hz
 };
 
 //TODO get the actual pins
