@@ -3,7 +3,7 @@ use common::types::{MotorId, Speed};
 use rppal::gpio::{Gpio, OutputPin};
 use std::fmt::Debug;
 use std::time::Duration;
-use tracing::trace;
+use tracing::{info, trace, warn};
 
 // TODO Verify correctness
 // TODO Simplify impl
@@ -57,7 +57,7 @@ pub const MOTOR_L: MotorConfig = MotorConfig {
 #[derive(Debug)]
 pub struct Motor<PinType: Debug> {
     config: MotorConfig,
-    pin: PinType,
+    pin: Option<PinType>,
     speed: Speed,
 }
 
@@ -66,18 +66,28 @@ impl Motor<OutputPin> {
     pub fn new(gpio: &Gpio, config: MotorConfig) -> anyhow::Result<Self> {
         trace!("Motor::new()");
 
-        let mut pin = gpio
-            .get(config.signal_pin)
-            .context("Get pin")?
-            .into_output();
-        pin.set_pwm(config.period, config.center)
-            .context("Set pwm")?;
+        if config.signal_pin != 255 {
+            let mut pin = gpio
+                .get(config.signal_pin)
+                .context("Get pin")?
+                .into_output();
+            pin.set_pwm(config.period, config.center)
+                .context("Set pwm")?;
 
-        Ok(Motor {
-            config,
-            pin,
-            speed: Speed::ZERO,
-        })
+            Ok(Motor {
+                config,
+                pin: Some(pin),
+                speed: Speed::ZERO,
+            })
+        } else {
+            warn!("Skipping motor with pin of 255");
+
+            Ok(Motor {
+                config,
+                pin: None,
+                speed: Speed::ZERO,
+            })
+        }
     }
 }
 
@@ -100,9 +110,9 @@ impl<P: PwmDevice> Motor<P> {
         let pulse = (upper as i64 * speed as i64 + lower as i64 * (100 - speed as i64)) / 100;
         let pulse = Duration::from_micros(pulse as u64);
 
-        self.pin
-            .set_pwm(self.config.period, pulse)
-            .context("Set pwm")?;
+        if let Some(ref mut pin) = self.pin {
+            pin.set_pwm(self.config.period, pulse).context("Set pwm")?;
+        }
 
         Ok(())
     }
