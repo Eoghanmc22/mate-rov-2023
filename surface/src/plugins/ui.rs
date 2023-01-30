@@ -474,7 +474,8 @@ fn draw_connection_window(
                     .to_socket_addrs()
                     .context("Create socket addrs")
                     .and_then(|it| {
-                        it.map(RemoteAddr::Socket)
+                        it.filter(|it| it.is_ipv4())
+                            .map(RemoteAddr::Socket)
                             .next()
                             .ok_or_else(|| anyhow!("No Socket address found"))
                     }) {
