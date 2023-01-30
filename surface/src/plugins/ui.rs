@@ -1,6 +1,6 @@
 use crate::plugins::networking::NetworkEvent;
 use crate::plugins::robot::Robot;
-use anyhow::Context;
+use anyhow::{anyhow, Context};
 use bevy::prelude::*;
 use bevy_egui::{EguiContext, EguiPlugin};
 use common::{
@@ -8,7 +8,10 @@ use common::{
     types::{Celsius, MotorFrame},
 };
 use egui_extras::{Size, TableBuilder};
-use message_io::network::ToRemoteAddr;
+use message_io::network::RemoteAddr;
+use std::net::ToSocketAddrs;
+
+use super::notification::Notification;
 
 // todo Display errors
 
@@ -458,7 +461,7 @@ fn draw_connection_window(
     mut window: Option<ResMut<ConnectWindow>>,
     mut egui_context: ResMut<EguiContext>,
     mut net: EventWriter<NetworkEvent>,
-    mut errors: EventWriter<anyhow::Error>,
+    mut errors: EventWriter<Notification>,
 ) {
     let ctx = egui_context.ctx_mut();
 
@@ -466,16 +469,25 @@ fn draw_connection_window(
         egui::Window::new("Connection").show(ctx, |ui| {
             ui.text_edit_singleline(&mut window.0);
             if ui.button("Connect").clicked() {
+                println!("Hit");
                 match (window.0.as_str(), 44444)
-                    .to_remote_addr()
-                    .context("Create remote addrs")
-                {
+                    .to_socket_addrs()
+                    .context("Create socket addrs")
+                    .and_then(|it| {
+                        it.map(RemoteAddr::Socket)
+                            .next()
+                            .ok_or_else(|| anyhow!("No Socket address found"))
+                    }) {
                     Ok(remote) => {
+                        println!("\"{:?}\"", remote);
                         net.send(NetworkEvent::ConnectTo(remote));
                         cmd.remove_resource::<ConnectWindow>();
                     }
                     Err(error) => {
-                        errors.send(error);
+                        errors.send(Notification::Error(
+                            "Could not resolve address".to_owned(),
+                            error,
+                        ));
                     }
                 }
             }

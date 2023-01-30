@@ -1,10 +1,10 @@
 use bevy::app::PluginGroupBuilder;
 use bevy::prelude::*;
 
-pub mod error;
 pub mod gamepad;
 pub mod movement;
 pub mod networking;
+pub mod notification;
 pub mod robot;
 pub mod ui;
 
@@ -16,7 +16,7 @@ impl PluginGroup for MatePlugins {
         group.add(robot::RobotPlugin);
         group.add(networking::NetworkPlugin);
         group.add(ui::UiPlugin);
-        group.add(error::ErrorPlugin);
+        group.add(notification::NotificationPlugin);
         group.add(gamepad::GamepadPlugin);
         group.add(movement::MovementPlugin);
     }

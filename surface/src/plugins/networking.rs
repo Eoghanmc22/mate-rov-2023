@@ -9,6 +9,8 @@ use message_io::network::{Endpoint, RemoteAddr};
 use message_io::node::NodeHandler;
 use std::time::SystemTime;
 
+use super::notification::Notification;
+
 pub struct NetworkPlugin;
 
 impl Plugin for NetworkPlugin {
@@ -16,6 +18,7 @@ impl Plugin for NetworkPlugin {
         app.add_event::<NetworkEvent>();
         app.add_startup_system(setup_network);
         app.add_system_to_stage(MateStage::NetworkRead, updates_to_events);
+        app.add_system_to_stage(MateStage::NetworkRead, handle_connect_fail);
         app.add_system_to_stage(MateStage::NetworkWrite, events_to_packets);
     }
 }
@@ -41,7 +44,7 @@ fn updates_to_events(mut events: EventWriter<RobotEvent>, net_link: Res<NetworkL
 fn events_to_packets(
     mut events: EventReader<NetworkEvent>,
     net_link: Res<NetworkLink>,
-    mut errors: EventWriter<anyhow::Error>,
+    mut errors: EventWriter<Notification>,
 ) {
     for event in events.iter() {
         match event.to_owned() {
@@ -50,9 +53,23 @@ fn events_to_packets(
             }
             NetworkEvent::ConnectTo(peer) => {
                 if let Err(error) = net_link.0.connect(peer) {
-                    errors.send(error);
+                    errors.send(Notification::Error(
+                        "Could not connect to robot".to_owned(),
+                        error,
+                    ));
                 }
             }
+        }
+    }
+}
+
+fn handle_connect_fail(mut events: EventReader<RobotEvent>, mut notifs: EventWriter<Notification>) {
+    for event in events.iter() {
+        match event {
+            RobotEvent::ConnectionFailed(_) => {
+                notifs.send(Notification::SimpleError("Connection Failed".to_owned()))
+            }
+            _ => {}
         }
     }
 }
