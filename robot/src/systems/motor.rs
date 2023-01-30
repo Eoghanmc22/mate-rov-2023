@@ -10,8 +10,8 @@ use crossbeam::channel::Sender;
 use rppal::gpio::{Gpio, OutputPin};
 use std::collections::hash_map::Entry;
 use std::collections::HashMap;
-use std::sync::{Arc, RwLock};
-use std::thread;
+use std::sync::RwLock;
+use std::thread::Scope;
 use tracing::{error, info, span, Level};
 
 pub struct MotorSystem(Sender<Message>);
@@ -22,13 +22,17 @@ enum Message {
 
 impl System for MotorSystem {
     #[tracing::instrument]
-    fn start(robot: Arc<RwLock<RobotState>>, mut events: EventHandle) -> anyhow::Result<()> {
+    fn start<'scope>(
+        robot: &'scope RwLock<RobotState>,
+        mut events: EventHandle,
+        spawner: &'scope Scope<'scope, '_>,
+    ) -> anyhow::Result<()> {
         info!("Starting motor system");
         let (tx, rx) = channel::bounded(30);
         let gpio = Gpio::new().context("Create gpio")?;
         let listner = events.take_listner().unwrap();
 
-        thread::spawn(move || {
+        spawner.spawn(move || {
             span!(Level::INFO, "Motor thread");
             let mut motors: HashMap<MotorId, Motor<OutputPin>> = HashMap::new();
 
@@ -60,7 +64,7 @@ impl System for MotorSystem {
             }
         });
 
-        thread::spawn(move || {
+        spawner.spawn(move || {
             span!(Level::INFO, "Motor forward thread");
             for event in listner.into_iter() {
                 if let Event::StateUpdate(updates) = &*event {

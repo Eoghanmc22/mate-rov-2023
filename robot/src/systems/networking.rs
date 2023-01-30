@@ -7,8 +7,8 @@ use common::protocol::Packet;
 use common::state::RobotState;
 use message_io::node::NodeHandler;
 use std::fmt::Debug;
-use std::sync::{Arc, RwLock};
-use std::thread;
+use std::sync::RwLock;
+use std::thread::Scope;
 use std::time::SystemTime;
 use tracing::{info, span, Level};
 
@@ -18,7 +18,11 @@ pub struct NetworkSystem(Network);
 
 impl System for NetworkSystem {
     #[tracing::instrument]
-    fn start(robot: Arc<RwLock<RobotState>>, mut events: EventHandle) -> anyhow::Result<()> {
+    fn start(
+        robot: &RwLock<RobotState>,
+        mut events: EventHandle,
+        spawner: &Scope,
+    ) -> anyhow::Result<()> {
         info!("Starting networking system");
 
         let listner = events.take_listner().unwrap();
@@ -26,20 +30,15 @@ impl System for NetworkSystem {
         let network = Network::create(NetworkHandler(events));
         network.listen(ADDRS).context("Start server")?;
 
-        let handler = network.handler().to_owned();
-        thread::spawn(move || {
-            span!(Level::INFO, "Net forward thread");
-            for event in listner.into_iter() {
-                if let Event::PacketSend(packet) = &*event {
-                    handler
-                        .signals()
-                        .send(WorkerEvent::Broadcast(packet.clone()));
-                }
+        span!(Level::INFO, "Net forward thread");
+        for event in listner.into_iter() {
+            if let Event::PacketSend(packet) = &*event {
+                network
+                    .handler()
+                    .signals()
+                    .send(WorkerEvent::Broadcast(packet.clone()));
             }
-
-            // Hack to get around network's blocking drop impl
-            let _network = network;
-        });
+        }
 
         Ok(())
     }

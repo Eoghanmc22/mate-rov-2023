@@ -1,6 +1,6 @@
 use std::{
-    sync::{Arc, RwLock},
-    thread,
+    sync::RwLock,
+    thread::{self, Scope},
     time::Duration,
 };
 
@@ -23,13 +23,17 @@ use super::System as RobotSystem;
 pub struct HwStatSystem;
 
 impl RobotSystem for HwStatSystem {
-    fn start(_robot: Arc<RwLock<RobotState>>, mut events: EventHandle) -> anyhow::Result<()>
+    fn start<'scope>(
+        _robot: &'scope RwLock<RobotState>,
+        mut events: EventHandle,
+        spawner: &'scope Scope<'scope, '_>,
+    ) -> anyhow::Result<()>
     where
         Self: Sized,
     {
         let _ = events.take_listner();
 
-        thread::spawn(move || {
+        spawner.spawn(move || {
             let mut system = System::new();
             loop {
                 system.refresh_all();
