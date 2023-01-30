@@ -18,7 +18,7 @@ impl Plugin for NetworkPlugin {
         app.add_event::<NetworkEvent>();
         app.add_startup_system(setup_network);
         app.add_system_to_stage(MateStage::NetworkRead, updates_to_events);
-        app.add_system_to_stage(MateStage::NetworkRead, handle_connect_fail);
+        app.add_system_to_stage(MateStage::NetworkRead, events_to_notifs);
         app.add_system_to_stage(MateStage::NetworkWrite, events_to_packets);
     }
 }
@@ -63,11 +63,23 @@ fn events_to_packets(
     }
 }
 
-fn handle_connect_fail(mut events: EventReader<RobotEvent>, mut notifs: EventWriter<Notification>) {
+fn events_to_notifs(mut events: EventReader<RobotEvent>, mut notifs: EventWriter<Notification>) {
     for event in events.iter() {
         match event {
             RobotEvent::ConnectionFailed(_) => {
                 notifs.send(Notification::SimpleError("Connection Failed".to_owned()))
+            }
+            RobotEvent::Connected(_) => {
+                notifs.send(Notification::Info(
+                    "Robot Connected".to_owned(),
+                    "".to_owned(),
+                ));
+            }
+            RobotEvent::Disconnected(_) => {
+                notifs.send(Notification::Info(
+                    "Robot Disconnected".to_owned(),
+                    "".to_owned(),
+                ));
             }
             _ => {}
         }
