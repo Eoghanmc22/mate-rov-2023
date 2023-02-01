@@ -1,10 +1,12 @@
 use crate::plugins::networking::NetworkEvent;
 use crate::plugins::MateStage;
 use bevy::prelude::*;
+use common::kvdata::Key::Cameras;
 use common::kvdata::{Store, Value};
 use common::protocol::Packet;
 use common::state::{RobotState, RobotStateUpdate};
 use message_io::network::Endpoint;
+use std::net::{IpAddr, Ipv4Addr, SocketAddr};
 use std::time::SystemTime;
 
 pub struct RobotPlugin;
@@ -14,6 +16,7 @@ impl Plugin for RobotPlugin {
         app.add_event::<RobotEvent>();
         app.add_event::<RobotStateUpdate>();
         app.init_resource::<Robot>();
+        // app.add_startup_system(mock_data);
         app.add_system_to_stage(MateStage::UpdateStateEarly, update_robot);
         app.add_system_to_stage(MateStage::UpdateStateLate, updates_to_packets);
     }
@@ -40,6 +43,30 @@ pub enum RobotEvent {
     Connected(Endpoint),
     ConnectionFailed(Endpoint),
     Disconnected(Endpoint),
+}
+
+fn mock_data(mut robot: ResMut<Robot>) {
+    robot.1.insert(
+        Cameras,
+        Value::Cameras(vec![
+            (
+                "Test A".to_owned(),
+                SocketAddr::new(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)), 4444),
+            ),
+            (
+                "Test B".to_owned(),
+                SocketAddr::new(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)), 4444),
+            ),
+            (
+                "Test C".to_owned(),
+                SocketAddr::new(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)), 4444),
+            ),
+            (
+                "Test D".to_owned(),
+                SocketAddr::new(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)), 4444),
+            ),
+        ]),
+    );
 }
 
 fn update_robot(mut robot: ResMut<Robot>, mut events: EventReader<RobotEvent>) {

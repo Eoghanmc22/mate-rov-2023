@@ -7,6 +7,7 @@ pub mod networking;
 pub mod notification;
 pub mod robot;
 pub mod ui;
+pub mod video;
 
 pub struct MatePlugins;
 
@@ -16,6 +17,7 @@ impl PluginGroup for MatePlugins {
         group.add(robot::RobotPlugin);
         group.add(networking::NetworkPlugin);
         group.add(ui::UiPlugin);
+        group.add(video::VideoPlugin);
         group.add(notification::NotificationPlugin);
         group.add(gamepad::GamepadPlugin);
         group.add(movement::MovementPlugin);
@@ -38,6 +40,11 @@ impl Plugin for SchedulePlugin {
         );
         app.add_stage_after(
             CoreStage::PostUpdate,
+            MateStage::RenderVideo,
+            SystemStage::single_threaded(),
+        );
+        app.add_stage_after(
+            MateStage::RenderVideo,
             MateStage::UpdateStateLate,
             SystemStage::single_threaded(),
         );
@@ -61,6 +68,7 @@ pub enum MateStage {
     // Pre update stage
     // Normal update stage
     // Post update stage
+    RenderVideo,
     UpdateStateLate,
     NetworkWrite,
     ErrorHandling,
