@@ -5,14 +5,15 @@ use common::{
 };
 use egui::Context;
 
-use crate::plugins::video::{Position, Video, VideoPosition, VideoSource};
+use crate::plugins::video::{Position, Video};
 
 use super::{
     widgets::{Cameras, Motors, Movement, Orientation, RawSensorData, RemoteSystem},
-    ConnectWindow,
+    windows::ConnectionWindow,
+    WindowComponent,
 };
 
-pub fn side_bar(ctx: &Context, cmd: &mut Commands, state: &RobotState, store: &Store) {
+pub fn side_bar(ctx: &Context, _cmd: &mut Commands, state: &RobotState, store: &Store) {
     egui::SidePanel::left("Panel Left")
         .min_width(200.0)
         .show(ctx, |ui| {
@@ -38,7 +39,7 @@ pub fn side_bar(ctx: &Context, cmd: &mut Commands, state: &RobotState, store: &S
         });
 }
 
-pub fn menu_bar(ctx: &Context, cmd: &mut Commands, state: &RobotState, store: &Store) {
+pub fn menu_bar(ctx: &Context, cmd: &mut Commands, _state: &RobotState, _store: &Store) {
     egui::TopBottomPanel::top("top_panel").show(ctx, |ui| {
         egui::menu::bar(ui, |ui| {
             egui::menu::menu_button(ui, "File", |ui| {
@@ -48,14 +49,17 @@ pub fn menu_bar(ctx: &Context, cmd: &mut Commands, state: &RobotState, store: &S
             });
             egui::menu::menu_button(ui, "Robot", |ui| {
                 if ui.button("Connect").clicked() {
-                    cmd.init_resource::<ConnectWindow>();
+                    cmd.spawn().insert(WindowComponent::new(
+                        "Connect to robot".to_string(),
+                        ConnectionWindow::default(),
+                    ));
                 }
             });
         });
     });
 }
 
-pub fn top_panel(ctx: &Context, cmd: &mut Commands, state: &RobotState, store: &Store) {
+pub fn top_panel(ctx: &Context, cmd: &mut Commands, _state: &RobotState, store: &Store) {
     egui::TopBottomPanel::top("Panel Top").show(ctx, |ui| {
         ui.horizontal(|ui| {
             if let Some(Value::Cameras(cameras)) = store.get(&Key::Cameras) {

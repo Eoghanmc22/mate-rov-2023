@@ -1,7 +1,4 @@
-use std::{
-    mem,
-    net::{Ipv4Addr, SocketAddr},
-};
+use std::{mem, net::SocketAddr};
 
 use bevy::{prelude::*, utils::HashMap};
 use bevy_egui::EguiContext;
@@ -56,7 +53,6 @@ struct VideoState(HashMap<Position, VideoTree>);
 #[derive(PartialEq, Eq, Hash, Clone, Debug)]
 pub enum Position {
     Center,
-    // Window(String),
 }
 
 #[derive(Debug)]
@@ -118,15 +114,15 @@ impl Default for VideoTree {
     }
 }
 
-fn video_setup(mut cmds: Commands, mut video: ResMut<VideoState>) {
+fn video_setup(mut _cmds: Commands, mut video: ResMut<VideoState>) {
     video.0.insert(Position::Center, VideoTree::Empty);
 }
 
 fn video_add(
     mut video: ResMut<VideoState>,
-    cameras: Query<(Entity, &VideoName, &VideoSource, &VideoPosition), Added<VideoSource>>,
+    cameras: Query<(Entity, &VideoSource, &VideoPosition), Added<VideoSource>>,
 ) {
-    for (entity, name, src, pos) in &cameras {
+    for (entity, _src, pos) in &cameras {
         let tree = video.0.entry(pos.0.clone()).or_default();
         tree.insert(entity);
 

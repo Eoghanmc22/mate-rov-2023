@@ -3,10 +3,7 @@ use std::time::{Duration, Instant};
 use crate::plugins::MateStage;
 use bevy::prelude::*;
 use bevy_egui::EguiContext;
-use egui::{
-    style::{WidgetVisuals, Widgets},
-    Align2, Color32, Frame, Id, Rounding, Stroke, Style, Ui, Vec2, Visuals, Widget,
-};
+use egui::{Align2, Frame, Id, Vec2};
 
 const TIMEOUT: Duration = Duration::from_secs(15);
 const WINDOW_SIZE: Vec2 = Vec2::new(400.0, 50.0);

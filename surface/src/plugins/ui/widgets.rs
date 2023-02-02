@@ -4,7 +4,7 @@ use common::{
     state::RobotState,
     types::{Celsius, MotorFrame},
 };
-use egui::{vec2, Align, Layout, Response, Widget};
+use egui::{vec2, Align, Layout, Widget};
 use egui_extras::{Size, TableBuilder};
 
 const TABLE_ROW_HEIGHT: f32 = 15.0;
