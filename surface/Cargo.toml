@@ -3,13 +3,12 @@ name = "surface"
 version = "0.1.0"
 edition = "2021"
 
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
-
 [dependencies]
 anyhow = "1"
 crossbeam = "0.8"
 message-io = "0.14"
 common = { path = "../common" }
+networking = { path = "../networking" }
 serde = { version = "1", features = ["derive"]}
 
 tracing = "0.1"

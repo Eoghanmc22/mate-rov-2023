@@ -1,0 +1,10 @@
+[package]
+name = "networking"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+mio = { version = "0.8", features = ["os-poll", "net"] }
+crossbeam = "0.8"
+thiserror = "1"
+fxhash = "0.2"
