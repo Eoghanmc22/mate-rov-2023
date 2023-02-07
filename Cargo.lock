@@ -1111,6 +1111,7 @@ dependencies = [
  "bitflags",
  "glam",
  "message-io",
+ "networking",
  "serde",
  "tracing",
 ]
@@ -2501,10 +2502,12 @@ dependencies = [
 name = "networking"
 version = "0.1.0"
 dependencies = [
+ "anyhow",
  "crossbeam",
  "fxhash",
  "mio 0.8.5",
  "thiserror",
+ "tracing",
 ]
 
 [[package]]
