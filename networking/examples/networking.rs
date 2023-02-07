@@ -55,13 +55,10 @@ fn main() -> anyhow::Result<()> {
         };
 
         while !STOP_THE_WORLD.load(Ordering::Relaxed) {
-            println!("loop iter");
             messenger
                 .brodcast_packet(Protocol::Packet("FANCY PAYLOAD EXPLOSION!!!!".to_owned()))
                 .context("brodcast")?;
-            println!("loop iter1");
             thread::sleep(Duration::from_millis(500));
-            println!("loop iter2");
         }
     }
 
