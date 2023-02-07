@@ -1,12 +1,13 @@
 #![feature(split_array)]
 
-pub mod acceptor;
-pub mod buf;
 pub mod error;
-pub mod header;
-pub mod peer;
-pub mod raw;
-pub mod worker;
+
+pub(crate) mod acceptor;
+pub(crate) mod buf;
+pub(crate) mod header;
+pub(crate) mod peer;
+pub(crate) mod raw;
+pub(crate) mod worker;
 
 use crossbeam::channel::{self, Receiver, Sender};
 use mio::{Poll, Token, Waker};
@@ -52,11 +53,12 @@ impl<P: Packet> Networking<P> {
 }
 
 pub trait Packet: Clone {
-    fn expected_size(&self) -> usize;
-    fn write_buf(self, buffer: &mut [u8]) -> &mut [u8];
+    fn expected_size(&self) -> anyhow::Result<u64>;
+    fn write_buf(self, buffer: &mut &mut [u8]) -> anyhow::Result<()>;
     fn read_buf(buffer: &mut &[u8]) -> anyhow::Result<Self>;
 }
 
+#[derive(Debug)]
 pub enum Event<P> {
     Conected(Token, SocketAddr),
     Accepted(Token, SocketAddr),
@@ -66,6 +68,7 @@ pub enum Event<P> {
     Error(Option<Token>, error::NetError),
 }
 
+#[derive(Debug)]
 pub enum Message<P> {
     Connect(SocketAddr),
     Bind(SocketAddr),
@@ -75,6 +78,7 @@ pub enum Message<P> {
     Shutdown,
 }
 
+#[derive(Debug)]
 pub struct Messenger<P> {
     waker: Arc<Waker>,
     sender: Sender<Message<P>>,
@@ -118,7 +122,9 @@ impl<P> Messenger<P> {
     }
 
     fn send_message(&self, message: Message<P>) -> Result<(), error::MessageError> {
-        self.sender.send(message).map_err(|_| error::MessageError)?;
+        self.sender
+            .try_send(message)
+            .map_err(|_| error::MessageError)?;
         self.waker.wake().map_err(|_| error::MessageError)
     }
 }

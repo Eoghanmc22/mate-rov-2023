@@ -17,6 +17,8 @@ pub enum NetError {
     Message(#[from] MessageError),
     #[error("Tried to send packet to unknown peer: {0:?}")]
     UnknownPeer(Token),
+    #[error("Could not write packet: {0}")]
+    WritingError(anyhow::Error),
     #[error("Could not parse packet: {0}")]
     ParsingError(anyhow::Error),
     #[error("Error {0}: Caused by: ({1})")]

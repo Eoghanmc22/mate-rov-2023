@@ -175,7 +175,7 @@ pub fn start_worker<P: Packet>(
                 // Peers don't connect isntantly
                 // Set up the socket if the peer just connected
                 // else ignore events for unconected peers
-                if !peer.conected {
+                if !peer.conected && !event.is_error() {
                     if event.is_writable() {
                         match peer.socket.peer_addr() {
                             Ok(addr) => {

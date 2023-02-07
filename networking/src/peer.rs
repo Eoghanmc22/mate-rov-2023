@@ -50,20 +50,26 @@ where
 
         // Write the packet to the buffer
         {
-            let expected_size = header::HEADER_SIZE + packet.expected_size();
+            let expected_size = header::HEADER_SIZE
+                + packet
+                    .expected_size()
+                    .map_err(|err| NetError::WritingError(err))? as usize;
             let mut buffer = temp.get_unwritten(expected_size);
 
             let header = header::Header::new(&mut buffer);
 
             let available = buffer.len();
-            let remaining = packet.write_buf(buffer);
-            let packet_size = available - remaining.len();
+            packet
+                .write_buf(&mut buffer)
+                .map_err(|err| NetError::WritingError(err))?;
+            let remaining = buffer.len();
 
+            let packet_size = available - remaining;
             header
                 .write(packet_size)
                 .map_err(|_| NetError::OversizedPacket(packet_size))?;
 
-            let total_written = expected_size - remaining.len();
+            let total_written = expected_size - remaining;
 
             // Safety: We wrote something
             unsafe {
@@ -73,8 +79,10 @@ where
 
         // Write the buffer to the socket
         {
-            let writeable = raw::raw_write(&mut self.socket, temp)?;
-            self.writeable = writeable;
+            if self.conected && self.writeable {
+                let writeable = raw::raw_write(&mut self.socket, temp)?;
+                self.writeable = writeable;
+            }
 
             // Store any data not written to the socket untill the next writeable event
             self.write_buffer.copy_from(temp.get_written());
@@ -116,6 +124,7 @@ impl<S: Read> Peer<S> {
                     if available >= len {
                         // There is a packet available
                         // Read it
+                        temp.advance_read(header::HEADER_SIZE);
                         let mut complete_packet_buf = temp.advance_read(len);
                         let packet = P::read_buf(&mut complete_packet_buf)
                             .map_err(|err| NetError::ParsingError(err))?;
