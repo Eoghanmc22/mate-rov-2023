@@ -121,7 +121,7 @@ impl<P> Messenger<P> {
         self.send_message(message)
     }
 
-    fn send_message(&self, message: Message<P>) -> Result<(), error::MessageError> {
+    pub fn send_message(&self, message: Message<P>) -> Result<(), error::MessageError> {
         self.sender
             .try_send(message)
             .map_err(|_| error::MessageError)?;
