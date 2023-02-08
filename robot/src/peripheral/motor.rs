@@ -3,7 +3,7 @@ use common::types::{MotorId, Speed};
 use rppal::gpio::{Gpio, OutputPin};
 use std::fmt::Debug;
 use std::time::Duration;
-use tracing::{info, trace, warn};
+use tracing::{trace, warn};
 
 // TODO Verify correctness
 // TODO Simplify impl
@@ -20,36 +20,35 @@ const DEFAULT_MOTOR: MotorConfig = MotorConfig {
 };
 
 //TODO get the actual pins
-pub const MOTOR_FL: MotorConfig = MotorConfig {
+pub const MOTOR_FLB: MotorConfig = MotorConfig {
     signal_pin: 255,
     ..DEFAULT_MOTOR
 };
-pub const MOTOR_FR: MotorConfig = MotorConfig {
+pub const MOTOR_FLT: MotorConfig = MotorConfig {
     signal_pin: 255,
     ..DEFAULT_MOTOR
 };
-pub const MOTOR_BL: MotorConfig = MotorConfig {
+pub const MOTOR_FRB: MotorConfig = MotorConfig {
     signal_pin: 255,
     ..DEFAULT_MOTOR
 };
-pub const MOTOR_BR: MotorConfig = MotorConfig {
+pub const MOTOR_FRT: MotorConfig = MotorConfig {
     signal_pin: 255,
     ..DEFAULT_MOTOR
 };
-
-pub const MOTOR_F: MotorConfig = MotorConfig {
+pub const MOTOR_BLB: MotorConfig = MotorConfig {
     signal_pin: 255,
     ..DEFAULT_MOTOR
 };
-pub const MOTOR_B: MotorConfig = MotorConfig {
+pub const MOTOR_BLT: MotorConfig = MotorConfig {
     signal_pin: 255,
     ..DEFAULT_MOTOR
 };
-pub const MOTOR_R: MotorConfig = MotorConfig {
+pub const MOTOR_BRB: MotorConfig = MotorConfig {
     signal_pin: 255,
     ..DEFAULT_MOTOR
 };
-pub const MOTOR_L: MotorConfig = MotorConfig {
+pub const MOTOR_BRT: MotorConfig = MotorConfig {
     signal_pin: 255,
     ..DEFAULT_MOTOR
 };
@@ -140,16 +139,17 @@ pub struct MotorConfig {
 }
 
 impl From<MotorId> for MotorConfig {
+    #[rustfmt::skip]
     fn from(value: MotorId) -> Self {
         match value {
-            MotorId::UpF => MOTOR_F,
-            MotorId::UpB => MOTOR_B,
-            MotorId::UpL => MOTOR_L,
-            MotorId::UpR => MOTOR_R,
-            MotorId::FrontL => MOTOR_FL,
-            MotorId::FrontR => MOTOR_FR,
-            MotorId::RearL => MOTOR_BL,
-            MotorId::RearR => MOTOR_BR,
+            MotorId::FrontLeftBottom =>   MOTOR_FLB,
+            MotorId::FrontLeftTop =>      MOTOR_FLT,
+            MotorId::FrontRightBottom =>  MOTOR_FRB,
+            MotorId::FrontRightTop =>     MOTOR_FRT,
+            MotorId::BackLeftBottom =>    MOTOR_BLB,
+            MotorId::BaclLeftTop =>       MOTOR_BLT,
+            MotorId::BackRightBottom =>   MOTOR_BRB,
+            MotorId::RearRightTop =>      MOTOR_BRT,
         }
     }
 }

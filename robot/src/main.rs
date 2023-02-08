@@ -35,12 +35,14 @@ fn main() -> anyhow::Result<()> {
     info!("Starting robot");
 
     let robot = RobotState::new(&[
-        MotorId::FrontL,
-        MotorId::FrontR,
-        MotorId::RearL,
-        MotorId::RearR,
-        MotorId::UpR,
-        MotorId::UpL,
+        MotorId::FrontLeftBottom,
+        MotorId::FrontLeftTop,
+        MotorId::FrontRightBottom,
+        MotorId::FrontRightTop,
+        MotorId::BackLeftBottom,
+        MotorId::BaclLeftTop,
+        MotorId::BackRightBottom,
+        MotorId::RearRightTop,
     ]);
 
     let mut systems = SystemManager::new(robot);

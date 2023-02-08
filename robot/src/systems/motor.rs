@@ -96,21 +96,22 @@ impl System for MotorSystem {
 }
 
 pub fn mix_movement<'a>(
-    movement: Movement,
+    mov: Movement,
     motors: impl IntoIterator<Item = &'a MotorId>,
 ) -> Vec<RobotStateUpdate> {
     let mut messages = Vec::new();
 
     for motor in motors {
+        #[rustfmt::skip]
         let speed = match motor {
-            MotorId::UpF => movement.z + movement.x_rot,
-            MotorId::UpB => movement.z - movement.x_rot,
-            MotorId::UpL => movement.z - movement.y_rot,
-            MotorId::UpR => movement.z + movement.y_rot,
-            MotorId::FrontL => movement.y + movement.x + movement.z_rot,
-            MotorId::FrontR => movement.y - movement.x - movement.z_rot,
-            MotorId::RearL => -movement.y + movement.x - movement.z_rot,
-            MotorId::RearR => -movement.y - movement.x + movement.z_rot,
+            MotorId::FrontLeftBottom =>    mov.x + mov.y - mov.z - mov.x_rot - mov.y_rot + mov.z_rot,
+            MotorId::FrontLeftTop =>       mov.x + mov.y + mov.z + mov.x_rot + mov.y_rot + mov.z_rot,
+            MotorId::FrontRightBottom =>  -mov.x + mov.y - mov.z - mov.x_rot + mov.y_rot - mov.z_rot,
+            MotorId::FrontRightTop =>     -mov.x + mov.y + mov.z + mov.x_rot - mov.y_rot - mov.z_rot,
+            MotorId::BackLeftBottom =>     mov.x - mov.y - mov.z + mov.x_rot - mov.y_rot - mov.z_rot,
+            MotorId::BaclLeftTop =>        mov.x - mov.y + mov.z - mov.x_rot + mov.y_rot - mov.z_rot,
+            MotorId::BackRightBottom =>   -mov.x - mov.y - mov.z + mov.x_rot + mov.y_rot + mov.z_rot,
+            MotorId::RearRightTop =>      -mov.x - mov.y + mov.z - mov.x_rot - mov.y_rot + mov.z_rot,
         };
 
         messages.push(RobotStateUpdate::Motor(*motor, MotorFrame(speed)));

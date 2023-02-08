@@ -8,7 +8,7 @@ use std::time::Duration;
 pub struct Orientation(pub Quat);
 
 /// +X: Right, +Y: Forwards, +Z: Up
-/// +XR: Pitch Up, +YR: Roll Counterclockwise, +ZR: Yaw Clockwise (top view)
+/// +XR: Pitch Up, +YR: Roll Clockwise, +ZR: Yaw Clockwise (top view)
 #[derive(Debug, Copy, Clone, Default, Serialize, Deserialize, PartialEq)]
 pub struct Movement {
     pub x: Speed, // Right
@@ -16,7 +16,7 @@ pub struct Movement {
     pub z: Speed, // Up
 
     pub x_rot: Speed, // Pitch Up
-    pub y_rot: Speed, // Roll Counterclockwise
+    pub y_rot: Speed, // Roll Clockwise
     pub z_rot: Speed, // Yaw Clockwise (top view)
 }
 
@@ -43,14 +43,14 @@ impl AddAssign for Movement {
 
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Hash, Serialize, Deserialize)]
 pub enum MotorId {
-    UpF,
-    UpB,
-    UpL,
-    UpR,
-    FrontL,
-    FrontR,
-    RearL,
-    RearR,
+    FrontLeftBottom,
+    FrontLeftTop,
+    FrontRightBottom,
+    FrontRightTop,
+    BackLeftBottom,
+    BaclLeftTop,
+    BackRightBottom,
+    RearRightTop,
 }
 
 // Raw Data Frames
