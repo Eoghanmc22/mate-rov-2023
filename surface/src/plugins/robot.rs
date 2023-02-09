@@ -3,9 +3,8 @@ use crate::plugins::MateStage;
 use bevy::prelude::*;
 use common::kvdata::Key::Cameras;
 use common::kvdata::{Store, Value};
-use common::protocol::Packet;
+use common::protocol::Protocol;
 use common::state::{RobotState, RobotStateUpdate};
-use message_io::network::Endpoint;
 use std::net::{IpAddr, Ipv4Addr, SocketAddr};
 use std::time::SystemTime;
 
@@ -40,9 +39,8 @@ pub enum RobotEvent {
     KVChanged(Value),
     Ping(SystemTime, SystemTime),
 
-    Connected(Endpoint),
-    ConnectionFailed(Endpoint),
-    Disconnected(Endpoint),
+    Connected(SocketAddr),
+    Disconnected(SocketAddr),
 }
 
 fn mock_data(mut robot: ResMut<Robot>) {
@@ -91,7 +89,7 @@ fn updates_to_packets(
     mut net: EventWriter<NetworkEvent>,
 ) {
     for update in updates.iter() {
-        net.send(NetworkEvent::SendPacket(Packet::RobotState(vec![
+        net.send(NetworkEvent::SendPacket(Protocol::RobotState(vec![
             update.clone()
         ])));
     }

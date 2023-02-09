@@ -1,3 +1,4 @@
+pub mod error;
 pub mod hw_stat;
 pub mod motor;
 pub mod networking;

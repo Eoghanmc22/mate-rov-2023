@@ -18,6 +18,7 @@ pub mod events;
 pub mod peripheral;
 mod systems;
 
+use crate::systems::error::ErrorSystem;
 use crate::systems::robot::RobotSystem;
 use crate::systems::SystemManager;
 use crate::systems::{hw_stat::HwStatSystem, networking::NetworkSystem};
@@ -48,6 +49,7 @@ fn main() -> anyhow::Result<()> {
     let mut systems = SystemManager::new(robot);
 
     info!("---------- Registering systems ----------");
+    systems.add_system::<ErrorSystem>()?;
     systems.add_system::<RobotSystem>()?;
     systems.add_system::<NetworkSystem>()?;
     systems.add_system::<HwStatSystem>()?;

@@ -6,7 +6,6 @@ edition = "2021"
 [dependencies]
 anyhow = "1"
 rppal = "0.13"
-message-io = "0.14"
 serde = { version = "1", features = ["derive"]}
 tracing = "0.1"
 tracing-subscriber = "0.3"

@@ -6,7 +6,7 @@ use std::{
 
 use common::{
     kvdata::Value,
-    protocol::Packet,
+    protocol::Protocol,
     state::RobotState,
     types::{Celsius, Component, Cpu, Disk, Memory, Network, Process, SystemInfo},
 };
@@ -14,7 +14,6 @@ use sysinfo::{
     ComponentExt, CpuExt, DiskExt, NetworkExt, NetworksExt, PidExt, ProcessExt, System, SystemExt,
     UserExt,
 };
-use tracing::error;
 
 use crate::{event::Event, events::EventHandle};
 
@@ -47,10 +46,12 @@ impl RobotSystem for HwStatSystem {
 
                 match collect_system_state(&system) {
                     Ok(hw_state) => {
-                        let packet = Packet::KVUpdate(Value::SystemInfo(Box::new(hw_state)));
+                        let packet = Protocol::KVUpdate(Value::SystemInfo(Box::new(hw_state)));
                         events.send(Event::PacketSend(packet));
                     }
-                    Err(err) => error!("Could not collect system state: {err:?}"),
+                    Err(err) => {
+                        events.send(Event::Error(err.context("Could not collect system state")));
+                    }
                 }
                 thread::sleep(Duration::from_secs(1));
             }

@@ -1,82 +1,103 @@
-use crate::event::Event;
+use crate::event::Event as RobotEvent;
 use crate::events::EventHandle;
 use crate::systems::System;
 use anyhow::Context;
-use common::network::{Connection, EventHandler, Network, WorkerEvent};
-use common::protocol::Packet;
+use common::protocol::Protocol;
 use common::state::RobotState;
-use message_io::node::NodeHandler;
-use std::fmt::Debug;
-use std::sync::RwLock;
-use std::thread::Scope;
+use common::LogLevel;
+use networking::{Event as NetEvent, Networking};
+use std::net::ToSocketAddrs;
 use std::time::SystemTime;
-use tracing::{info, span, Level};
+use std::{sync::RwLock, thread::Scope};
+use tracing::{debug, error, info, span, warn, Level};
 
-const ADDRS: &str = "0.0.0.0:44444";
+const ADDRS: &str = "localhost:44444";
 
-pub struct NetworkSystem(Network);
+pub struct NetworkSystem;
 
 impl System for NetworkSystem {
-    #[tracing::instrument]
-    fn start(
-        robot: &RwLock<RobotState>,
+    fn start<'scope>(
+        _robot: &'scope RwLock<RobotState>,
         mut events: EventHandle,
-        spawner: &Scope,
+        spawner: &'scope Scope<'scope, '_>,
     ) -> anyhow::Result<()> {
-        info!("Starting networking system");
-
         let listner = events.take_listner().unwrap();
 
-        let network = Network::create(NetworkHandler(events));
-        network.listen(ADDRS).context("Start server")?;
+        let net = Networking::<Protocol>::new().context("Create Networking")?;
+        let messenger = net.messenger();
 
-        span!(Level::INFO, "Net forward thread");
-        for event in listner.into_iter() {
-            if let Event::PacketSend(packet) = &*event {
-                network
-                    .handler()
-                    .signals()
-                    .send(WorkerEvent::Broadcast(packet.clone()));
-            }
+        let addresses = ADDRS.to_socket_addrs().context("Resolve bind")?;
+        for address in addresses {
+            info!("Binding at {}", address);
+            messenger.bind_at(address).context("Bind address")?;
         }
 
-        Ok(())
-    }
-}
+        {
+            let mut events = events.clone();
 
-#[derive(Debug)]
-struct NetworkHandler(EventHandle);
+            spawner.spawn(move || {
+                let messenger = net.messenger();
+                net.start(|event| match event {
+                    NetEvent::Accepted(_token, addrs) => {
+                        info!("Accepted peer at {addrs}");
+                    }
+                    NetEvent::Data(token, packet) => {
+                        match packet {
+                            Protocol::RobotState(updates) => {
+                                events.send(RobotEvent::StateUpdate(updates));
+                            }
+                            Protocol::KVUpdate(_) => {
+                                // Currently not used on the robot
+                            }
+                            Protocol::RequestSync => {
+                                events.send(RobotEvent::StateRefresh);
+                            }
+                            Protocol::Log(level, msg) => match level {
+                                LogLevel::Debug => debug!("Peer logged: `{msg}`"),
+                                LogLevel::Info => info!("Peer logged: `{msg}`"),
+                                LogLevel::Warn => warn!("Peer logged: `{msg}`"),
+                                LogLevel::Error => error!("Peer logged: `{msg}`"),
+                            },
+                            Protocol::Ping(ping) => {
+                                let response = Protocol::Pong(ping, SystemTime::now());
+                                let res = messenger
+                                    .send_packet(token, response)
+                                    .context("Send packet");
+                                if let Err(err) = res {
+                                    events.send(RobotEvent::Error(err));
+                                }
+                            }
+                            Protocol::Pong(_, _) => {
+                                // Currently not used on the robot
+                            }
+                        }
+                    }
+                    NetEvent::Error(_token, err) => {
+                        // TODO filter some errors
+                        events.send(RobotEvent::Error(
+                            anyhow::Error::new(err).context("Networking error"),
+                        ));
+                    }
+                    _ => unreachable!(),
+                })
+            });
+        }
 
-impl EventHandler for NetworkHandler {
-    #[tracing::instrument(skip(handler))]
-    fn handle_packet(
-        &mut self,
-        handler: &NodeHandler<WorkerEvent>,
-        connection: &Connection,
-        packet: Packet,
-    ) -> anyhow::Result<()> {
-        match packet {
-            Packet::RobotState(updates) => {
-                self.0.send(Event::StateUpdate(updates));
-            }
-            Packet::KVUpdate(_) => {
-                // Currently not used on the robot
-            }
-            Packet::RequestSync => {
-                self.0.send(Event::StateRefresh);
-            }
-            Packet::Log(msg) => {
-                info!("Peer logged: `{msg}`");
-            }
-            Packet::Ping(ping) => {
-                let response = Packet::Pong(ping, SystemTime::now());
-                connection
-                    .write_packet(handler, response)
-                    .context("Send packet")?;
-            }
-            Packet::Pong(_, _) => {
-                // Currently not used on the robot
-            }
+        {
+            let mut events = events.clone();
+            spawner.spawn(move || {
+                span!(Level::INFO, "Net forward thread");
+                for event in listner.into_iter() {
+                    if let RobotEvent::PacketSend(packet) = &*event {
+                        let res = messenger
+                            .brodcast_packet(packet.clone())
+                            .context("Brodcast Packet");
+                        if let Err(err) = res {
+                            events.send(RobotEvent::Error(err));
+                        }
+                    }
+                }
+            });
         }
 
         Ok(())

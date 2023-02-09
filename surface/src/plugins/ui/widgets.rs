@@ -21,9 +21,10 @@ impl<'a> RemoteSystem<'a> {
 
 impl Widget for &mut RemoteSystem<'_> {
     fn ui(self, ui: &mut egui::Ui) -> egui::Response {
-        ui.allocate_ui(vec2(200.0, 0.0), |ui| {
+        ui.allocate_ui(vec2(ui.available_width(), 0.0), |ui| {
             if let Some(Value::SystemInfo(hw_state)) = self.data.get(&Key::SystemInfo) {
                 ui.collapsing("CPU", |ui| {
+                    ui.set_max_height(500.0);
                     ui.label(format!(
                         "Load avg: {:.2}, {:.2}, {:.2}",
                         hw_state.load_average.0, hw_state.load_average.1, hw_state.load_average.2,
@@ -76,9 +77,9 @@ impl Widget for &mut RemoteSystem<'_> {
                     ui.set_max_height(500.0);
                     TableBuilder::new(ui)
                         .striped(true)
-                        .column(Size::remainder().at_least(100.0))
-                        .columns(Size::exact(60.0), 5)
-                        .header(20.0, |mut row| {
+                        .column(Size::remainder())
+                        .columns(Size::exact(60.0), 4)
+                        .header(TABLE_ROW_HEIGHT, |mut row| {
                             row.col(|ui| {
                                 ui.label("Name");
                             });
@@ -131,6 +132,7 @@ impl Widget for &mut RemoteSystem<'_> {
                         });
                 });
                 ui.collapsing("Networks", |ui| {
+                    ui.set_max_height(500.0);
                     TableBuilder::new(ui)
                         .striped(true)
                         .columns(Size::remainder(), 7)
@@ -218,6 +220,7 @@ impl Widget for &mut RemoteSystem<'_> {
                     ));
                 });
                 ui.collapsing("Thermals", |ui| {
+                    ui.set_max_height(500.0);
                     TableBuilder::new(ui)
                         .striped(true)
                         .columns(Size::remainder(), 4)
@@ -263,6 +266,7 @@ impl Widget for &mut RemoteSystem<'_> {
                         });
                 });
                 ui.collapsing("Disks", |ui| {
+                    ui.set_max_height(500.0);
                     TableBuilder::new(ui)
                         .striped(true)
                         .columns(Size::remainder(), 5)
