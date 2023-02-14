@@ -1,4 +1,4 @@
-use crate::{kvdata::Value, state::RobotStateUpdate, LogLevel};
+use crate::LogLevel;
 use anyhow::Context;
 use bincode::{DefaultOptions, Options};
 use serde::{Deserialize, Serialize};
@@ -8,10 +8,8 @@ use std::time::SystemTime;
 // TODO use references
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum Protocol {
-    /// Encodes the updates that should be made to the peer's RobotState
-    RobotState(Vec<RobotStateUpdate>),
-    /// Notification that key value pair has been updated
-    KVUpdate(Value),
+    /// Update peers data store
+    Store(String, Option<Vec<u8>>),
     /// Requests that the peer sends the contents of its RobotState
     RequestSync,
     /// Logs a message on the peer's console

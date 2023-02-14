@@ -1,6 +1,7 @@
 use glam::Quat;
 use serde::{Deserialize, Serialize};
 use std::fmt::{Display, Formatter};
+use std::net::SocketAddr;
 use std::ops::{Add, AddAssign, Neg, Sub};
 use std::time::Duration;
 
@@ -290,4 +291,10 @@ pub struct Network {
     pub tx_packets: u64,
     pub rx_errors: u64,
     pub tx_errors: u64,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Camera {
+    name: String,
+    location: SocketAddr,
 }

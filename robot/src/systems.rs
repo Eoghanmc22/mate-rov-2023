@@ -11,7 +11,6 @@ pub mod robot;
 // TODO logging
 // TODO perhaps just a single sensor system?
 
-use common::state::RobotState;
 use std::{
     any,
     sync::RwLock,
@@ -21,19 +20,16 @@ use tracing::info;
 
 use crate::events::EventHandle;
 
-pub struct SystemManager(
-    RobotState,
-    Vec<for<'a> fn(&'a RwLock<RobotState>, EventHandle, &'a Scope<'a, '_>) -> anyhow::Result<()>>,
-);
+pub struct SystemManager(Vec<for<'a> fn(EventHandle, &'a Scope<'a, '_>) -> anyhow::Result<()>>);
 
 impl SystemManager {
-    pub fn new(robot: RobotState) -> Self {
-        Self(robot, Vec::new())
+    pub fn new() -> Self {
+        Self(Vec::new())
     }
 
     #[tracing::instrument(skip(self))]
     pub fn add_system<S: System>(&mut self) -> anyhow::Result<()> {
-        self.1.push(S::start);
+        self.0.push(S::start);
         info!("Registered {}", any::type_name::<S>());
 
         Ok(())
@@ -41,8 +37,7 @@ impl SystemManager {
 
     #[tracing::instrument(skip(self))]
     pub fn start(self) {
-        let SystemManager(robot, systems) = self;
-        let robot = RwLock::new(robot);
+        let SystemManager(systems) = self;
 
         info!("---------- Starting systems ----------");
 
@@ -58,7 +53,7 @@ impl SystemManager {
                 let handle = event_handles.pop().unwrap();
 
                 spawner.spawn(|| {
-                    (system)(&robot, handle, spawner).expect("Start system");
+                    (system)(handle, spawner).expect("Start system");
                 });
 
                 info!("Loaded system {}/{}", idx + 1, system_count);
@@ -74,9 +69,6 @@ impl SystemManager {
 }
 
 pub trait System {
-    fn start<'scope>(
-        robot: &'scope RwLock<RobotState>,
-        events: EventHandle,
-        spawner: &'scope Scope<'scope, '_>,
-    ) -> anyhow::Result<()>;
+    fn start<'scope>(events: EventHandle, spawner: &'scope Scope<'scope, '_>)
+        -> anyhow::Result<()>;
 }

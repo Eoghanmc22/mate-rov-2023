@@ -1,13 +1,10 @@
 use std::{
-    sync::RwLock,
     thread::{self, Scope},
     time::Duration,
 };
 
 use common::{
-    kvdata::Value,
-    protocol::Protocol,
-    state::RobotState,
+    store::{tokens, Store},
     types::{Celsius, Component, Cpu, Disk, Memory, Network, Process, SystemInfo},
 };
 use sysinfo::{
@@ -23,7 +20,6 @@ pub struct HwStatSystem;
 
 impl RobotSystem for HwStatSystem {
     fn start<'scope>(
-        _robot: &'scope RwLock<RobotState>,
         mut events: EventHandle,
         spawner: &'scope Scope<'scope, '_>,
     ) -> anyhow::Result<()>
@@ -33,6 +29,10 @@ impl RobotSystem for HwStatSystem {
         let _ = events.take_listner();
 
         spawner.spawn(move || {
+            let mut store = Store::new(|update| {
+                events.send(Event::Store(update));
+            });
+
             let mut system = System::new();
             loop {
                 system.refresh_all();
@@ -46,8 +46,7 @@ impl RobotSystem for HwStatSystem {
 
                 match collect_system_state(&system) {
                     Ok(hw_state) => {
-                        let packet = Protocol::KVUpdate(Value::SystemInfo(Box::new(hw_state)));
-                        events.send(Event::PacketSend(packet));
+                        store.insert(&tokens::SYSTEM_INFO, hw_state);
                     }
                     Err(err) => {
                         events.send(Event::Error(err.context("Could not collect system state")));

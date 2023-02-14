@@ -19,10 +19,9 @@ pub mod peripheral;
 mod systems;
 
 use crate::systems::error::ErrorSystem;
-use crate::systems::robot::RobotSystem;
+use crate::systems::robot::StoreSystem;
 use crate::systems::SystemManager;
 use crate::systems::{hw_stat::HwStatSystem, networking::NetworkSystem};
-use common::state::RobotState;
 use common::types::MotorId;
 use tracing::{info, Level};
 
@@ -35,6 +34,7 @@ fn main() -> anyhow::Result<()> {
         .init();
     info!("Starting robot");
 
+    // TODO move into RobotSystem or a seperate init system
     let robot = RobotState::new(&[
         MotorId::FrontLeftBottom,
         MotorId::FrontLeftTop,
@@ -50,7 +50,7 @@ fn main() -> anyhow::Result<()> {
 
     info!("---------- Registering systems ----------");
     systems.add_system::<ErrorSystem>()?;
-    systems.add_system::<RobotSystem>()?;
+    systems.add_system::<StoreSystem>()?;
     systems.add_system::<NetworkSystem>()?;
     systems.add_system::<HwStatSystem>()?;
     #[cfg(rpi)]

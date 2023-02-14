@@ -3,12 +3,11 @@ use crate::events::EventHandle;
 use crate::systems::System;
 use anyhow::Context;
 use common::protocol::Protocol;
-use common::state::RobotState;
 use common::LogLevel;
 use networking::{Event as NetEvent, Networking};
 use std::net::ToSocketAddrs;
+use std::thread::Scope;
 use std::time::SystemTime;
-use std::{sync::RwLock, thread::Scope};
 use tracing::{debug, error, info, span, warn, Level};
 
 const ADDRS: &str = "localhost:44444";
@@ -17,7 +16,6 @@ pub struct NetworkSystem;
 
 impl System for NetworkSystem {
     fn start<'scope>(
-        _robot: &'scope RwLock<RobotState>,
         mut events: EventHandle,
         spawner: &'scope Scope<'scope, '_>,
     ) -> anyhow::Result<()> {
@@ -41,37 +39,29 @@ impl System for NetworkSystem {
                     NetEvent::Accepted(_token, addrs) => {
                         info!("Accepted peer at {addrs}");
                     }
-                    NetEvent::Data(token, packet) => {
-                        match packet {
-                            Protocol::RobotState(updates) => {
-                                events.send(RobotEvent::StateUpdate(updates));
-                            }
-                            Protocol::KVUpdate(_) => {
-                                // Currently not used on the robot
-                            }
-                            Protocol::RequestSync => {
-                                events.send(RobotEvent::StateRefresh);
-                            }
-                            Protocol::Log(level, msg) => match level {
-                                LogLevel::Debug => debug!("Peer logged: `{msg}`"),
-                                LogLevel::Info => info!("Peer logged: `{msg}`"),
-                                LogLevel::Warn => warn!("Peer logged: `{msg}`"),
-                                LogLevel::Error => error!("Peer logged: `{msg}`"),
-                            },
-                            Protocol::Ping(ping) => {
-                                let response = Protocol::Pong(ping, SystemTime::now());
-                                let res = messenger
-                                    .send_packet(token, response)
-                                    .context("Send packet");
-                                if let Err(err) = res {
-                                    events.send(RobotEvent::Error(err));
-                                }
-                            }
-                            Protocol::Pong(_, _) => {
-                                // Currently not used on the robot
+                    NetEvent::Data(token, packet) => match packet {
+                        Protocol::Log(level, msg) => match level {
+                            LogLevel::Debug => debug!("Peer logged: `{msg}`"),
+                            LogLevel::Info => info!("Peer logged: `{msg}`"),
+                            LogLevel::Warn => warn!("Peer logged: `{msg}`"),
+                            LogLevel::Error => error!("Peer logged: `{msg}`"),
+                        },
+                        Protocol::Ping(ping) => {
+                            let response = Protocol::Pong(ping, SystemTime::now());
+                            let res = messenger
+                                .send_packet(token, response)
+                                .context("Send packet");
+                            if let Err(err) = res {
+                                events.send(RobotEvent::Error(err));
                             }
                         }
-                    }
+                        Protocol::RequestSync => {
+                            events.send(RobotEvent::SyncStore);
+                        }
+                        packet => {
+                            events.send(RobotEvent::PacketRx(packet));
+                        }
+                    },
                     NetEvent::Error(_token, err) => {
                         // TODO filter some errors
                         events.send(RobotEvent::Error(
@@ -88,7 +78,7 @@ impl System for NetworkSystem {
             spawner.spawn(move || {
                 span!(Level::INFO, "Net forward thread");
                 for event in listner.into_iter() {
-                    if let RobotEvent::PacketSend(packet) = &*event {
+                    if let RobotEvent::PacketTx(packet) = &*event {
                         let res = messenger
                             .brodcast_packet(packet.clone())
                             .context("Brodcast Packet");

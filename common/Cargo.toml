@@ -9,7 +9,7 @@ bincode = "1"
 anyhow = "1"
 glam = { version = "0.21", features = ["serde"] }
 bitflags = "1"
-message-io = "0.14"
 tracing = "0.1"
 networking = { path = "../networking" }
+fxhash = "0.2"
 

@@ -1,11 +1,12 @@
-use common::{protocol::Protocol, state::RobotStateUpdate};
+use common::{protocol::Protocol, store::Update};
 
 #[derive(Debug)]
 pub enum Event {
-    PacketSend(Protocol),
+    PacketTx(Protocol),
+    PacketRx(Protocol),
 
-    StateUpdate(Vec<RobotStateUpdate>),
-    StateRefresh,
+    Store(Update),
+    SyncStore,
 
     Error(anyhow::Error),
 }

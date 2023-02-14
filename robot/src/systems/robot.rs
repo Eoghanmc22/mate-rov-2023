@@ -1,17 +1,16 @@
-use std::{sync::RwLock, thread::Scope};
+use std::thread::Scope;
 
-use common::{protocol::Protocol, state::RobotState};
+use common::{protocol::Protocol, store::tokens};
 use tracing::{span, Level};
 
 use crate::{event::Event, events::EventHandle};
 
 use super::System;
 
-pub struct RobotSystem;
+pub struct StoreSystem;
 
-impl System for RobotSystem {
+impl System for StoreSystem {
     fn start<'scope>(
-        robot: &'scope RwLock<RobotState>,
         mut events: EventHandle,
         spawner: &'scope Scope<'scope, '_>,
     ) -> anyhow::Result<()> {
@@ -19,25 +18,50 @@ impl System for RobotSystem {
 
         spawner.spawn(move || {
             span!(Level::INFO, "Robot update thread");
+
+            let adapters = tokens::generate_adaptors();
+
             for event in listner.into_iter() {
                 match &*event {
-                    Event::StateUpdate(updates) => {
-                        let mut packets = Vec::new();
-                        {
-                            let mut robot = robot.write().expect("Accquire write");
-                            for update in updates {
-                                if robot.update(&update) {
-                                    packets.push(update.to_owned())
+                    Event::PacketRx(Protocol::Store(key, data)) => {
+                        let adapter = adapters.get(key.as_str());
+
+                        if let Some(adapter) = adapter {
+                            match data {
+                                Some(data) => {
+                                    let data = adapter.deserialize(data);
+
+                                    if let Some(data) = data {
+                                        events.send(Event::Store((key, Some(data.into()))));
+                                    }
+                                }
+                                None => events.send(Event::Store((key, None))),
+                            }
+                        }
+                    }
+                    Event::Store((key, data)) => {
+                        let adapter = adapters.get(key);
+
+                        if let Some(adapter) = adapter {
+                            match data {
+                                Some(data) => {
+                                    let data = adapter.serialize(data);
+
+                                    if let Some(data) = data {
+                                        events.send(Event::PacketTx(Protocol::Store(
+                                            key.to_string(),
+                                            Some(data),
+                                        )));
+                                    }
+                                }
+                                None => {
+                                    events.send(Event::PacketTx(Protocol::Store(
+                                        key.to_string(),
+                                        None,
+                                    )));
                                 }
                             }
                         }
-
-                        events.send(Event::PacketSend(Protocol::RobotState(packets)));
-                    }
-                    Event::StateRefresh => {
-                        let robot = robot.read().expect("Accquire read");
-                        let updates = robot.to_updates();
-                        events.send(Event::PacketSend(Protocol::RobotState(updates)));
                     }
                     _ => {}
                 }

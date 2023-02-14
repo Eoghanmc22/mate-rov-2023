@@ -3,9 +3,8 @@
 
 use serde::{Deserialize, Serialize};
 
-pub mod kvdata;
 pub mod protocol;
-pub mod state;
+pub mod store;
 pub mod types;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

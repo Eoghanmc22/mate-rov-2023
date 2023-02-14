@@ -14,5 +14,6 @@ common = { path = "../common" }
 networking = { path = "../networking" }
 bitflags = "1"
 paste = "1.0"
+fxhash = "0.2"
 
 sysinfo = { version = "0.26", default-features = false }
