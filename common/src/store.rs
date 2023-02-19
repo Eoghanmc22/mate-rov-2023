@@ -79,7 +79,7 @@ impl<C> Store<C> {
         self.owned.contains_key(key)
     }
 
-    pub fn handle_update(&mut self, update: &Update) {
+    pub fn handle_update_shared(&mut self, update: &Update) {
         if self.owned.contains_key(&update.0) {
             return;
         }
@@ -88,6 +88,18 @@ impl<C> Store<C> {
             self.shared.insert(update.0.clone(), data.clone());
         } else {
             self.shared.remove(&update.0);
+        }
+    }
+
+    pub fn handle_update_owned(&mut self, update: &Update) {
+        if self.shared.contains_key(&update.0) {
+            return;
+        }
+
+        if let Some(ref data) = update.1 {
+            self.owned.insert(update.0.clone(), data.clone());
+        } else {
+            self.owned.remove(&update.0);
         }
     }
 }

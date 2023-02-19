@@ -100,7 +100,7 @@ fn update_robot(mut robot: ResMut<Robot>, mut events: EventReader<RobotEvent>) {
     for event in events.iter() {
         match event {
             RobotEvent::Store(update) => {
-                robot.0.handle_update(update);
+                robot.0.handle_update_shared(update);
             }
             RobotEvent::Connected(..) | RobotEvent::Disconnected(..) => {
                 *robot = Default::default();
@@ -112,10 +112,16 @@ fn update_robot(mut robot: ResMut<Robot>, mut events: EventReader<RobotEvent>) {
 
 fn updates_to_packets(
     adapters: Res<Adapters>,
-    robot: Res<Robot>,
+    mut robot: ResMut<Robot>,
     mut net: EventWriter<NetworkEvent>,
 ) {
-    for (key, data) in robot.2.try_iter() {
+    // Bypass rust ownership issue
+    let robot = &mut *robot;
+
+    for update in robot.2.try_iter() {
+        robot.0.handle_update_owned(&update);
+
+        let (key, data) = update;
         let adapter = adapters.0.get(&key);
 
         if let Some(adapter) = adapter {
