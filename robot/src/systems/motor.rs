@@ -135,7 +135,7 @@ impl System for MotorSystem {
                             store.refresh();
                         }
                         Event::Store(update) => {
-                            store.handle_update(update);
+                            store.handle_update_shared(update);
 
                             // Need to recalculate motor speeds
                             if listening.contains(&update.0) {
