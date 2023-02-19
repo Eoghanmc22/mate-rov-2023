@@ -16,7 +16,7 @@ const DEFAULT_MOTOR: MotorConfig = MotorConfig {
     reverse: Duration::from_micros(1100),
     forward: Duration::from_micros(1900),
     center: Duration::from_micros(1500),
-    period: Duration::from_nanos(1_000_000_000 / 200), // 200Hz
+    period: Duration::from_nanos(1_000_000_000 / 100), // 100Hz
 };
 
 //TODO get the actual pins
@@ -186,47 +186,53 @@ mod tests {
 
         let mut motor = Motor {
             config: DEFAULT_MOTOR,
-            pin: DummyPwm::default(),
+            pin: Some(DummyPwm::default()),
             speed: Default::default(),
         };
 
         motor.set_speed(Speed::MAX_VAL).unwrap();
 
         let Motor {
-            pin: DummyPwm(period, pulse_width),
+            pin: Some(DummyPwm(period, pulse_width)),
             ..
-        } = motor;
-        assert_eq!(period, Duration::from_nanos(1_000_000_000 / 400));
+        } = motor else {
+            panic!("Pattern match fail")
+        };
+        assert_eq!(period, Duration::from_nanos(1_000_000_000 / 100));
         assert_eq!(pulse_width, Duration::from_micros(1700));
 
         let mut motor = Motor {
             config: DEFAULT_MOTOR,
-            pin: DummyPwm::default(),
+            pin: Some(DummyPwm::default()),
             speed: Default::default(),
         };
 
         motor.set_speed(Speed::MIN_VAL).unwrap();
 
         let Motor {
-            pin: DummyPwm(period, pulse_width),
+            pin: Some(DummyPwm(period, pulse_width)),
             ..
-        } = motor;
-        assert_eq!(period, Duration::from_nanos(1_000_000_000 / 400));
+        } = motor else {
+            panic!("Pattern match fail")
+        };
+        assert_eq!(period, Duration::from_nanos(1_000_000_000 / 100));
         assert_eq!(pulse_width, Duration::from_micros(1300));
 
         let mut motor = Motor {
             config: DEFAULT_MOTOR,
-            pin: DummyPwm::default(),
+            pin: Some(DummyPwm::default()),
             speed: Default::default(),
         };
 
         motor.stop().unwrap();
 
         let Motor {
-            pin: DummyPwm(period, pulse_width),
+            pin: Some(DummyPwm(period, pulse_width)),
             ..
-        } = motor;
-        assert_eq!(period, Duration::from_nanos(1_000_000_000 / 400));
+        } = motor else {
+            panic!("Pattern match fail")
+        };
+        assert_eq!(period, Duration::from_nanos(1_000_000_000 / 100));
         assert_eq!(pulse_width, Duration::from_micros(1500));
     }
 }
