@@ -4,7 +4,7 @@ use crate::peripheral::motor::Motor;
 use crate::systems::System;
 use anyhow::{anyhow, Context};
 use common::{
-    store::{tokens, Store},
+    store::{tokens, KeyImpl, Store},
     types::{Armed, MotorFrame, MotorId, Movement, Speed},
 };
 use crossbeam::channel;
@@ -74,7 +74,7 @@ impl System for MotorSystem {
                         Message::CheckDeadlines => {
                             for (motor_id, deadline) in &deadlines {
                                 if Instant::now() - *deadline > MAX_UPDATE_AGE {
-                                    if let Some(motor) = motors.get(motor_id) {
+                                    if let Some(motor) = motors.get_mut(motor_id) {
                                         let ret = motor.set_speed(Speed::ZERO).context("Set speed");
                                         if let Err(error) = ret {
                                             events.send(Event::Error(error.context(format!(
@@ -92,12 +92,16 @@ impl System for MotorSystem {
 
         {
             let mut events = events.clone();
+            let tx = tx.clone();
             spawner.spawn(move || {
                 span!(Level::INFO, "Motor forward thread");
 
-                let store = Store::new(|update| {
-                    events.send(Event::Store(update));
-                });
+                let mut store = {
+                    let mut events = events.clone();
+                    Store::new(move |update| {
+                        events.send(Event::Store(update));
+                    })
+                };
 
                 let motor_ids = [
                     MotorId::FrontLeftBottom,
@@ -116,11 +120,11 @@ impl System for MotorSystem {
 
                 store.insert(&tokens::MOTOR_SPEED, (motors, Instant::now()));
 
-                let listening: HashSet<&str> = vec![
-                    tokens::ARMED.0,
-                    tokens::MOVEMENT_JOYSTICK.0,
-                    tokens::MOVEMENT_OPENCV.0,
-                    tokens::MOVEMENT_DEPTH.0,
+                let listening: HashSet<KeyImpl> = vec![
+                    tokens::ARMED.0.clone(),
+                    tokens::MOVEMENT_JOYSTICK.0.clone(),
+                    tokens::MOVEMENT_OPENCV.0.clone(),
+                    tokens::MOVEMENT_DEPTH.0.clone(),
                 ]
                 .into_iter()
                 .collect();
@@ -134,7 +138,7 @@ impl System for MotorSystem {
                             store.handle_update(update);
 
                             // Need to recalculate motor speeds
-                            if listening.contains(update.0) {
+                            if listening.contains(&update.0) {
                                 let now = Instant::now();
                                 let mut movement = Movement::default();
 
@@ -174,7 +178,7 @@ impl System for MotorSystem {
                                     for (motor, speed) in &new_speeds {
                                         let ret =
                                             tx.send(Message::MotorSpeed(*motor, *speed, deadline));
-                                        if let Err(error) = ret {
+                                        if let Err(_) = ret {
                                             events.send(Event::Error(anyhow!(
                                                 "Couldn't update new speed"
                                             )));
@@ -192,11 +196,12 @@ impl System for MotorSystem {
         }
 
         {
+            let tx = tx.clone();
             spawner.spawn(move || {
                 span!(Level::INFO, "Motor deadline check thread");
 
                 loop {
-                    tx.send(Message::CheckDeadlines);
+                    let _ = tx.send(Message::CheckDeadlines);
 
                     thread::sleep(Duration::from_millis(20));
                 }

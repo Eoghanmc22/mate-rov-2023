@@ -4,7 +4,7 @@ use std::{
 };
 
 use common::{
-    store::{tokens, Store},
+    store::{self, tokens},
     types::{Celsius, Component, Cpu, Disk, Memory, Network, Process, SystemInfo},
 };
 use sysinfo::{
@@ -29,10 +29,6 @@ impl RobotSystem for HwStatSystem {
         let _ = events.take_listner();
 
         spawner.spawn(move || {
-            let mut store = Store::new(|update| {
-                events.send(Event::Store(update));
-            });
-
             let mut system = System::new();
             loop {
                 system.refresh_all();
@@ -46,7 +42,8 @@ impl RobotSystem for HwStatSystem {
 
                 match collect_system_state(&system) {
                     Ok(hw_state) => {
-                        store.insert(&tokens::SYSTEM_INFO, hw_state);
+                        let update = store::create_update(&tokens::SYSTEM_INFO, hw_state);
+                        events.send(Event::Store(update));
                     }
                     Err(err) => {
                         events.send(Event::Error(err.context("Could not collect system state")));

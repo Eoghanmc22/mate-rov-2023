@@ -5,40 +5,36 @@ use std::{any::Any, marker::PhantomData, sync::Arc};
 
 use fxhash::FxHashMap as HashMap;
 
-pub type Key = &'static str;
+pub type Key = KeyImpl;
 pub type Value = Arc<dyn Any + Send + Sync>;
 pub type Update = (Key, Option<Value>);
 
 #[derive(Debug, PartialEq, Eq, Hash)]
-pub struct Token<V>(pub Key, PhantomData<V>);
+pub struct Token<V>(pub KeyImpl, PhantomData<V>);
 
 impl<V> Token<V> {
-    pub const fn new(key: Key) -> Self {
-        Self(key, PhantomData)
+    pub fn new(key: impl Into<KeyImpl>) -> Self {
+        Self(key.into(), PhantomData)
+    }
+
+    pub const fn new_const(key: &'static str) -> Self {
+        Self(KeyImpl::Static(key), PhantomData)
     }
 }
 
-pub struct Store {
+pub struct Store<C> {
     owned: HashMap<Key, Value>,
     shared: HashMap<Key, Value>,
-    callback: Box<dyn FnMut(Update)>,
+    callback: C,
 }
 
-impl Store {
-    pub fn new<F: FnMut(Update) + 'static>(update_callback: F) -> Self {
+impl<C: UpdateCallback> Store<C> {
+    pub fn new(update_callback: C) -> Self {
         Self {
             owned: Default::default(),
             shared: Default::default(),
-            callback: Box::new(update_callback),
+            callback: update_callback,
         }
-    }
-
-    pub fn get<V: Any + Send + Sync>(&self, key: &Token<V>) -> Option<Arc<V>> {
-        self.owned
-            .get(&key.0)
-            .or_else(|| self.shared.get(&key.0))
-            .map(|it| it.clone())
-            .and_then(|it| it.downcast::<V>().ok())
     }
 
     pub fn insert<V: Any + Send + Sync>(&mut self, key: &Token<V>, value: V) {
@@ -46,7 +42,7 @@ impl Store {
 
         let value = Arc::new(value);
 
-        (self.callback)((key.0.clone(), Some(value.clone())));
+        self.callback.call((key.0.clone(), Some(value.clone())));
         self.owned.insert(key.0.clone(), value);
     }
 
@@ -56,6 +52,24 @@ impl Store {
     //     (self.callback)((key.0.clone(), None));
     //     self.owned.remove(key.0.clone());
     // }
+
+    pub fn refresh(&mut self) {
+        for (key, data) in &self.owned {
+            self.callback.call((key.clone(), Some(data.clone())))
+        }
+    }
+
+    // TODO: Implement `get_mut`
+}
+
+impl<C> Store<C> {
+    pub fn get<V: Any + Send + Sync>(&self, key: &Token<V>) -> Option<Arc<V>> {
+        self.owned
+            .get(&key.0)
+            .or_else(|| self.shared.get(&key.0))
+            .map(|it| it.clone())
+            .and_then(|it| it.downcast::<V>().ok())
+    }
 
     pub fn is_owned<V: Any>(&self, key: &Token<V>) -> bool {
         self.is_owned_key(&key.0)
@@ -76,17 +90,67 @@ impl Store {
             self.shared.remove(&update.0);
         }
     }
-
-    pub fn refresh(&mut self) {
-        for (key, data) in &self.owned {
-            (self.callback)((key.clone(), Some(data.clone())))
-        }
-    }
-
-    // TODO: Implement `get_mut`
 }
 
-pub struct MutableEntry {}
+pub trait UpdateCallback {
+    fn call(&mut self, update: Update);
+}
+
+impl<F> UpdateCallback for F
+where
+    F: FnMut(Update),
+{
+    fn call(&mut self, update: Update) {
+        (self)(update)
+    }
+}
+
+impl UpdateCallback for () {
+    fn call(&mut self, _: Update) {}
+}
+
+#[derive(Hash, PartialEq, Eq, Debug, Clone)]
+pub enum KeyImpl {
+    Owned(String),
+    Static(&'static str),
+}
+
+impl KeyImpl {
+    pub fn owned(self) -> Self {
+        Self::Owned(self.into())
+    }
+}
+
+impl From<String> for KeyImpl {
+    fn from(value: String) -> Self {
+        Self::Owned(value)
+    }
+}
+
+impl From<&'static str> for KeyImpl {
+    fn from(value: &'static str) -> Self {
+        Self::Static(value)
+    }
+}
+
+impl From<KeyImpl> for String {
+    fn from(value: KeyImpl) -> Self {
+        match value {
+            KeyImpl::Owned(value) => value,
+            KeyImpl::Static(value) => value.to_owned(),
+        }
+    }
+}
+
+impl ToString for KeyImpl {
+    fn to_string(&self) -> String {
+        self.to_owned().into()
+    }
+}
+
+pub fn create_update<V: Any + Send + Sync>(key: &Token<V>, value: V) -> Update {
+    (key.0.clone(), Some(Arc::new(value)))
+}
 
 #[cfg(test)]
 mod tests {
@@ -103,10 +167,10 @@ mod tests {
         let b = 5;
 
         let mut counter = 1;
-        let mut store = Store::new(move |update| {
+        let mut store = Store::new(move |update: Update| {
             match counter {
-                1 => assert_eq!(update.0, "a"),
-                2 => assert_eq!(update.0, "b"),
+                1 => assert_eq!(update.0, "a".into()),
+                2 => assert_eq!(update.0, "b".into()),
                 _ => unreachable!(),
             }
 

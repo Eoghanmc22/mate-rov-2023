@@ -22,7 +22,6 @@ use crate::systems::error::ErrorSystem;
 use crate::systems::robot::StoreSystem;
 use crate::systems::SystemManager;
 use crate::systems::{hw_stat::HwStatSystem, networking::NetworkSystem};
-use common::types::MotorId;
 use tracing::{info, Level};
 
 #[cfg(rpi)]
@@ -34,19 +33,7 @@ fn main() -> anyhow::Result<()> {
         .init();
     info!("Starting robot");
 
-    // TODO move into RobotSystem or a seperate init system
-    let robot = RobotState::new(&[
-        MotorId::FrontLeftBottom,
-        MotorId::FrontLeftTop,
-        MotorId::FrontRightBottom,
-        MotorId::FrontRightTop,
-        MotorId::BackLeftBottom,
-        MotorId::BaclLeftTop,
-        MotorId::BackRightBottom,
-        MotorId::RearRightTop,
-    ]);
-
-    let mut systems = SystemManager::new(robot);
+    let mut systems = SystemManager::new();
 
     info!("---------- Registering systems ----------");
     systems.add_system::<ErrorSystem>()?;

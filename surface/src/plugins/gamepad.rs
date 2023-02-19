@@ -1,5 +1,12 @@
+use std::time::Instant;
+
 use bevy::prelude::*;
-use common::types::{Movement, Speed};
+use common::{
+    store::tokens,
+    types::{Movement, Speed},
+};
+
+use super::robot::Updater;
 
 pub struct GamepadPlugin;
 
@@ -48,7 +55,7 @@ fn gamepad_input(
     axes: Res<Axis<GamepadAxis>>,
     buttons: Res<Input<GamepadButton>>,
     current_gamepad: Option<Res<CurrentGamepad>>,
-    mut movements: EventWriter<Movement>,
+    updater: Local<Updater>,
 ) {
     if let Some(gamepad) = current_gamepad {
         let axis_lx = GamepadAxis::new(gamepad.0, GamepadAxisType::LeftStickX);
@@ -84,7 +91,7 @@ fn gamepad_input(
                 z_rot: Speed::new(lx as f64),
             };
 
-            movements.send(movement);
+            updater.emit_update(&tokens::MOVEMENT_JOYSTICK, (movement, Instant::now()));
         }
     }
 }

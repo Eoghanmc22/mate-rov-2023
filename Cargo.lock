@@ -3140,6 +3140,7 @@ dependencies = [
  "crossbeam",
  "egui",
  "egui_extras",
+ "fxhash",
  "networking",
  "serde",
  "tracing",

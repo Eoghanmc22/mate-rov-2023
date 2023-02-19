@@ -34,12 +34,11 @@ pub trait Renderable {
 
 fn draw_ui(mut cmds: Commands, robot: Res<Robot>, mut egui_context: ResMut<EguiContext>) {
     let ctx = egui_context.ctx_mut();
-    let state = robot.state();
     let store = robot.store();
 
-    elements::menu_bar(ctx, &mut cmds, state, store);
-    elements::side_bar(ctx, &mut cmds, state, store);
-    elements::top_panel(ctx, &mut cmds, state, store);
+    elements::menu_bar(ctx, &mut cmds, store);
+    elements::side_bar(ctx, &mut cmds, store);
+    elements::top_panel(ctx, &mut cmds, store);
 }
 
 fn draw_windows(

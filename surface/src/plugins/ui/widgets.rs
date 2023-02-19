@@ -1,28 +1,27 @@
 use bevy::prelude::EulerRot;
 use common::{
-    kvdata::{Key, Store, Value},
-    state::RobotState,
-    types::{Celsius, MotorFrame},
+    store::{tokens, Store},
+    types::{Camera, Celsius, MotorFrame},
 };
 use egui::{vec2, Align, Layout, Widget};
 use egui_extras::{Size, TableBuilder};
 
 const TABLE_ROW_HEIGHT: f32 = 15.0;
 
-pub struct RemoteSystem<'a> {
-    data: &'a Store,
+pub struct RemoteSystem<'a, C> {
+    data: &'a Store<C>,
 }
 
-impl<'a> RemoteSystem<'a> {
-    pub fn new(data: &'a Store) -> Self {
+impl<'a, C> RemoteSystem<'a, C> {
+    pub fn new(data: &'a Store<C>) -> Self {
         Self { data }
     }
 }
 
-impl Widget for &mut RemoteSystem<'_> {
+impl<C> Widget for &mut RemoteSystem<'_, C> {
     fn ui(self, ui: &mut egui::Ui) -> egui::Response {
         ui.allocate_ui(vec2(ui.available_width(), 0.0), |ui| {
-            if let Some(Value::SystemInfo(hw_state)) = self.data.get(&Key::SystemInfo) {
+            if let Some(hw_state) = self.data.get(&tokens::SYSTEM_INFO) {
                 ui.collapsing("CPU", |ui| {
                     ui.set_max_height(500.0);
                     ui.label(format!(
@@ -329,20 +328,22 @@ impl Widget for &mut RemoteSystem<'_> {
     }
 }
 
-pub struct Orientation<'a> {
-    data: &'a RobotState,
+pub struct Orientation<'a, C> {
+    data: &'a Store<C>,
 }
 
-impl<'a> Orientation<'a> {
-    pub fn new(data: &'a RobotState) -> Self {
+impl<'a, C> Orientation<'a, C> {
+    pub fn new(data: &'a Store<C>) -> Self {
         Self { data }
     }
 }
 
-impl Widget for &mut Orientation<'_> {
+impl<C> Widget for &mut Orientation<'_, C> {
     fn ui(self, ui: &mut egui::Ui) -> egui::Response {
         ui.allocate_ui(vec2(200.0, 0.0), |ui| {
-            if let Some((orientation, _)) = self.data.orientation() {
+            if let Some(data) = self.data.get(&tokens::ORIENTATION) {
+                let (orientation, _) = &*data;
+
                 let (yaw, pitch, roll) = orientation.0.to_euler(EulerRot::YXZ);
                 ui.label(format!("Yaw: {yaw}"));
                 ui.label(format!("Pitch: {pitch}"));
@@ -356,20 +357,22 @@ impl Widget for &mut Orientation<'_> {
     }
 }
 
-pub struct Movement<'a> {
-    data: &'a RobotState,
+pub struct Movement<'a, C> {
+    data: &'a Store<C>,
 }
 
-impl<'a> Movement<'a> {
-    pub fn new(data: &'a RobotState) -> Self {
+impl<'a, C> Movement<'a, C> {
+    pub fn new(data: &'a Store<C>) -> Self {
         Self { data }
     }
 }
 
-impl Widget for &mut Movement<'_> {
+impl<C> Widget for &mut Movement<'_, C> {
     fn ui(self, ui: &mut egui::Ui) -> egui::Response {
         ui.allocate_ui(vec2(200.0, 0.0), |ui| {
-            if let Some((movement, _)) = self.data.movement() {
+            if let Some(data) = self.data.get(&tokens::MOVEMENT_CALCULATED) {
+                let (movement, _) = &*data;
+
                 ui.label(format!("X: {}", movement.x));
                 ui.label(format!("Y: {}", movement.y));
                 ui.label(format!("Z: {}", movement.z));
@@ -381,26 +384,70 @@ impl Widget for &mut Movement<'_> {
             } else {
                 ui.label("No movement data");
             }
+            if let Some(data) = self.data.get(&tokens::MOVEMENT_JOYSTICK) {
+                let (movement, _) = &*data;
+
+                ui.collapsing("Joystick", |ui| {
+                    ui.label(format!("X: {}", movement.x));
+                    ui.label(format!("Y: {}", movement.y));
+                    ui.label(format!("Z: {}", movement.z));
+                    ui.add_space(5.0);
+                    ui.label(format!("Yaw: {}", movement.z_rot));
+                    ui.label(format!("Pitch: {}", movement.x_rot));
+                    ui.label(format!("Roll: {}", movement.y_rot));
+                    // TODO visual
+                });
+            }
+            if let Some(data) = self.data.get(&tokens::MOVEMENT_OPENCV) {
+                let (movement, _) = &*data;
+
+                ui.collapsing("Open CV", |ui| {
+                    ui.label(format!("X: {}", movement.x));
+                    ui.label(format!("Y: {}", movement.y));
+                    ui.label(format!("Z: {}", movement.z));
+                    ui.add_space(5.0);
+                    ui.label(format!("Yaw: {}", movement.z_rot));
+                    ui.label(format!("Pitch: {}", movement.x_rot));
+                    ui.label(format!("Roll: {}", movement.y_rot));
+                    // TODO visual
+                });
+            }
+            if let Some(data) = self.data.get(&tokens::MOVEMENT_DEPTH) {
+                let (movement, _) = &*data;
+
+                ui.collapsing("Depth Correction", |ui| {
+                    ui.label(format!("X: {}", movement.x));
+                    ui.label(format!("Y: {}", movement.y));
+                    ui.label(format!("Z: {}", movement.z));
+                    ui.add_space(5.0);
+                    ui.label(format!("Yaw: {}", movement.z_rot));
+                    ui.label(format!("Pitch: {}", movement.x_rot));
+                    ui.label(format!("Roll: {}", movement.y_rot));
+                    // TODO visual
+                });
+            }
         })
         .response
     }
 }
 
-pub struct RawSensorData<'a> {
-    data: &'a RobotState,
+pub struct RawSensorData<'a, C> {
+    data: &'a Store<C>,
 }
 
-impl<'a> RawSensorData<'a> {
-    pub fn new(data: &'a RobotState) -> Self {
+impl<'a, C> RawSensorData<'a, C> {
+    pub fn new(data: &'a Store<C>) -> Self {
         Self { data }
     }
 }
 
-impl Widget for &mut RawSensorData<'_> {
+impl<C> Widget for &mut RawSensorData<'_, C> {
     fn ui(self, ui: &mut egui::Ui) -> egui::Response {
         ui.allocate_ui(vec2(200.0, 0.0), |ui| {
             ui.collapsing("Accelerometer", |ui| {
-                if let Some((inertial, _)) = self.data.inertial() {
+                if let Some(data) = self.data.get(&tokens::RAW_INERTIAL) {
+                    let (inertial, _) = &*data;
+
                     ui.label(format!("X: {}", inertial.accel_x));
                     ui.label(format!("Y: {}", inertial.accel_y));
                     ui.label(format!("Z: {}", inertial.accel_z));
@@ -410,7 +457,9 @@ impl Widget for &mut RawSensorData<'_> {
                 }
             });
             ui.collapsing("Gyro", |ui| {
-                if let Some((inertial, _)) = self.data.inertial() {
+                if let Some(data) = self.data.get(&tokens::RAW_INERTIAL) {
+                    let (inertial, _) = &*data;
+
                     ui.label(format!("X: {}", inertial.gyro_x));
                     ui.label(format!("Y: {}", inertial.gyro_y));
                     ui.label(format!("Z: {}", inertial.gyro_z));
@@ -420,13 +469,17 @@ impl Widget for &mut RawSensorData<'_> {
                 }
             });
             ui.collapsing("Depth", |ui| {
-                if let Some((depth, _)) = self.data.depth() {
+                if let Some(data) = self.data.get(&tokens::RAW_DEPTH) {
+                    let (depth, _) = &*data;
+
                     ui.label(format!("Depth: {}", depth.depth));
                     ui.label(format!("Temp: {}", depth.temperature));
                 } else {
                     ui.label("No depth data");
                 }
-                if let Some((target, _)) = self.data.depth_target() {
+                if let Some(data) = self.data.get(&tokens::DEPTH_TARGET) {
+                    let (target, _) = &*data;
+
                     ui.label(format!("Depth Target: {target}"));
                 } else {
                     ui.label("Depth Target: None");
@@ -437,21 +490,25 @@ impl Widget for &mut RawSensorData<'_> {
     }
 }
 
-pub struct Motors<'a> {
-    data: &'a RobotState,
+pub struct Motors<'a, C> {
+    data: &'a Store<C>,
 }
 
-impl<'a> Motors<'a> {
-    pub fn new(data: &'a RobotState) -> Self {
+impl<'a, C> Motors<'a, C> {
+    pub fn new(data: &'a Store<C>) -> Self {
         Self { data }
     }
 }
 
-impl Widget for &mut Motors<'_> {
+impl<C> Widget for &mut Motors<'_, C> {
     fn ui(self, ui: &mut egui::Ui) -> egui::Response {
         ui.allocate_ui(vec2(200.0, 0.0), |ui| {
-            for (motor, (MotorFrame(speed), _)) in self.data.motors().iter() {
-                ui.label(format!("{motor:?}: {speed}"));
+            if let Some(data) = self.data.get(&tokens::MOTOR_SPEED) {
+                let (speeds, _) = &*data;
+
+                for (motor, MotorFrame(speed)) in speeds.iter() {
+                    ui.label(format!("{motor:?}: {speed}"));
+                }
             }
             // TODO maybe draw thrust diagram
         })
@@ -459,22 +516,22 @@ impl Widget for &mut Motors<'_> {
     }
 }
 
-pub struct Cameras<'a> {
-    data: &'a Store,
+pub struct Cameras<'a, C> {
+    data: &'a Store<C>,
 }
 
-impl<'a> Cameras<'a> {
-    pub fn new(data: &'a Store) -> Self {
+impl<'a, C> Cameras<'a, C> {
+    pub fn new(data: &'a Store<C>) -> Self {
         Self { data }
     }
 }
 
-impl Widget for &mut Cameras<'_> {
+impl<C> Widget for &mut Cameras<'_, C> {
     fn ui(self, ui: &mut egui::Ui) -> egui::Response {
         ui.allocate_ui(vec2(200.0, 0.0), |ui| {
-            if let Some(Value::Cameras(cameras)) = self.data.get(&Key::Cameras) {
-                for (name, addrs) in cameras {
-                    ui.label(format!("{name}: {addrs}"));
+            if let Some(cameras) = self.data.get(&tokens::CAMERAS) {
+                for Camera { name, location } in &*cameras {
+                    ui.label(format!("{name}: {location}"));
                     // TODO Maybe show preview
                 }
             }

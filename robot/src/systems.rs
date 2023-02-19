@@ -13,7 +13,6 @@ pub mod robot;
 
 use std::{
     any,
-    sync::RwLock,
     thread::{self, Scope},
 };
 use tracing::info;

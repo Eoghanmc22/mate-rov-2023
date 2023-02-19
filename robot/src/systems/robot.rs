@@ -24,7 +24,8 @@ impl System for StoreSystem {
             for event in listner.into_iter() {
                 match &*event {
                     Event::PacketRx(Protocol::Store(key, data)) => {
-                        let adapter = adapters.get(key.as_str());
+                        let key = key.to_owned().into();
+                        let adapter = adapters.get(&key);
 
                         if let Some(adapter) = adapter {
                             match data {

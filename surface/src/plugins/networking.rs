@@ -2,6 +2,7 @@ use crate::plugins::robot::RobotEvent;
 use crate::plugins::MateStage;
 use bevy::prelude::*;
 use common::protocol::Protocol;
+use common::store::tokens;
 use common::LogLevel;
 use crossbeam::channel::{bounded, Receiver};
 use networking::{Event, Messenger, Networking};
@@ -53,6 +54,7 @@ fn setup_network(mut commands: Commands, mut errors: EventWriter<Notification>) 
         let messenger = network.messenger();
         thread::spawn(move || {
             let mut clients = HashMap::new();
+            let adapters = tokens::generate_adaptors();
 
             network.start(|event| match event {
                 Event::Conected(token, addrs) => {
@@ -64,13 +66,25 @@ fn setup_network(mut commands: Commands, mut errors: EventWriter<Notification>) 
                     let _ = tx.send(RobotEvent::Connected(addrs));
                 }
                 Event::Data(token, packet) => match packet {
-                    Protocol::RobotState(updates) => {
-                        for update in updates {
-                            let _ = tx.send(RobotEvent::StateChanged(update));
+                    Protocol::Store(key, data) => {
+                        let key = key.to_owned().into();
+                        let adapter = adapters.get(&key);
+
+                        if let Some(adapter) = adapter {
+                            match data {
+                                Some(data) => {
+                                    let data = adapter.deserialize(&data);
+
+                                    if let Some(data) = data {
+                                        let _ =
+                                            tx.send(RobotEvent::Store((key, Some(data.into()))));
+                                    }
+                                }
+                                None => {
+                                    let _ = tx.send(RobotEvent::Store((key, None)));
+                                }
+                            }
                         }
-                    }
-                    Protocol::KVUpdate(value) => {
-                        let _ = tx.send(RobotEvent::KVChanged(value));
                     }
                     Protocol::RequestSync => {
                         let packet =

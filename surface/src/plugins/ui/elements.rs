@@ -1,7 +1,7 @@
 use bevy::prelude::Commands;
 use common::{
-    kvdata::{Key, Store, Value},
-    state::RobotState,
+    store::{tokens, Store},
+    types::Camera,
 };
 use egui::Context;
 
@@ -13,21 +13,21 @@ use super::{
     WindowComponent,
 };
 
-pub fn side_bar(ctx: &Context, _cmd: &mut Commands, state: &RobotState, store: &Store) {
+pub fn side_bar<C>(ctx: &Context, _cmd: &mut Commands, store: &Store<C>) {
     egui::SidePanel::left("Panel Left")
         .min_width(200.0)
         .show(ctx, |ui| {
             ui.collapsing("Orientation", |ui| {
-                ui.add(&mut Orientation::new(state));
+                ui.add(&mut Orientation::new(store));
             });
             ui.collapsing("Movement", |ui| {
-                ui.add(&mut Movement::new(state));
+                ui.add(&mut Movement::new(store));
             });
             ui.collapsing("Raw Sensor Data", |ui| {
-                ui.add(&mut RawSensorData::new(state));
+                ui.add(&mut RawSensorData::new(store));
             });
             ui.collapsing("Motors", |ui| {
-                ui.add(&mut Motors::new(state));
+                ui.add(&mut Motors::new(store));
             });
             ui.collapsing("Cameras", |ui| {
                 ui.add(&mut Cameras::new(store));
@@ -39,7 +39,7 @@ pub fn side_bar(ctx: &Context, _cmd: &mut Commands, state: &RobotState, store: &
         });
 }
 
-pub fn menu_bar(ctx: &Context, cmd: &mut Commands, _state: &RobotState, _store: &Store) {
+pub fn menu_bar<C>(ctx: &Context, cmd: &mut Commands, _store: &Store<C>) {
     egui::TopBottomPanel::top("top_panel").show(ctx, |ui| {
         egui::menu::bar(ui, |ui| {
             egui::menu::menu_button(ui, "File", |ui| {
@@ -59,15 +59,15 @@ pub fn menu_bar(ctx: &Context, cmd: &mut Commands, _state: &RobotState, _store: 
     });
 }
 
-pub fn top_panel(ctx: &Context, cmd: &mut Commands, _state: &RobotState, store: &Store) {
+pub fn top_panel<C>(ctx: &Context, cmd: &mut Commands, store: &Store<C>) {
     egui::TopBottomPanel::top("Panel Top").show(ctx, |ui| {
         ui.horizontal(|ui| {
-            if let Some(Value::Cameras(cameras)) = store.get(&Key::Cameras) {
-                for (name, addrs) in cameras {
+            if let Some(cameras) = store.get(&tokens::CAMERAS) {
+                for Camera { name, location } in cameras.iter() {
                     if ui.button(name).clicked() {
                         cmd.spawn().insert_bundle(Video::new(
                             name.to_owned(),
-                            addrs.to_owned(),
+                            location.to_owned(),
                             Position::Center,
                         ));
                     }

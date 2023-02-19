@@ -1,10 +1,13 @@
 use crate::plugins::networking::NetworkEvent;
 use crate::plugins::MateStage;
 use bevy::prelude::*;
-use common::kvdata::Key::Cameras;
-use common::kvdata::{Store, Value};
 use common::protocol::Protocol;
-use common::state::{RobotState, RobotStateUpdate};
+use common::store::adapters::{BackingType, TypeAdapter};
+use common::store::{self, tokens, Key, Store, Token, Update, UpdateCallback};
+use common::types::Camera;
+use crossbeam::channel::{bounded, Receiver, Sender};
+use fxhash::FxHashMap as HashMap;
+use std::any::Any;
 use std::net::{IpAddr, Ipv4Addr, SocketAddr};
 use std::time::SystemTime;
 
@@ -13,30 +16,56 @@ pub struct RobotPlugin;
 impl Plugin for RobotPlugin {
     fn build(&self, app: &mut App) {
         app.add_event::<RobotEvent>();
-        app.add_event::<RobotStateUpdate>();
+        app.add_event::<Update>();
         app.init_resource::<Robot>();
+        app.init_resource::<Adapters>();
         // app.add_startup_system(mock_data);
         app.add_system_to_stage(MateStage::UpdateStateEarly, update_robot);
         app.add_system_to_stage(MateStage::UpdateStateLate, updates_to_packets);
     }
 }
 
-#[derive(Default)]
-pub struct Robot(RobotState, Store);
+pub struct Adapters(HashMap<Key, Box<dyn TypeAdapter<BackingType> + Send + Sync>>);
+impl Default for Adapters {
+    fn default() -> Self {
+        Self(tokens::generate_adaptors())
+    }
+}
+
+pub struct Robot(Store<NotificationHandler>, Sender<Update>, Receiver<Update>);
 impl Robot {
-    pub fn state(&self) -> &RobotState {
+    pub fn store(&self) -> &Store<NotificationHandler> {
         &self.0
     }
+}
 
-    pub fn store(&self) -> &Store {
-        &self.1
+impl Default for Robot {
+    fn default() -> Self {
+        let (tx, rx) = bounded(50);
+
+        Robot(Store::new(NotificationHandler(tx.clone())), tx, rx)
+    }
+}
+
+pub struct Updater(Sender<Update>);
+impl Updater {
+    pub fn emit_update<V: Any + Send + Sync>(&self, token: &Token<V>, value: V) {
+        let update = store::create_update(token, value);
+        let _ = self.0.send(update);
+    }
+}
+
+impl FromWorld for Updater {
+    fn from_world(world: &mut World) -> Self {
+        let robot = world.get_resource::<Robot>().expect("No `Robot` resource");
+
+        Self(robot.1.clone())
     }
 }
 
 #[derive(Debug, Clone)]
 pub enum RobotEvent {
-    StateChanged(RobotStateUpdate),
-    KVChanged(Value),
+    Store(Update),
     Ping(SystemTime, SystemTime),
 
     Connected(SocketAddr),
@@ -44,37 +73,34 @@ pub enum RobotEvent {
 }
 
 fn mock_data(mut robot: ResMut<Robot>) {
-    robot.1.insert(
-        Cameras,
-        Value::Cameras(vec![
-            (
-                "Test A".to_owned(),
-                SocketAddr::new(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)), 4444),
-            ),
-            (
-                "Test B".to_owned(),
-                SocketAddr::new(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)), 4444),
-            ),
-            (
-                "Test C".to_owned(),
-                SocketAddr::new(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)), 4444),
-            ),
-            (
-                "Test D".to_owned(),
-                SocketAddr::new(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)), 4444),
-            ),
-        ]),
+    robot.0.insert(
+        &tokens::CAMERAS,
+        vec![
+            Camera {
+                name: "Test A".to_owned(),
+                location: SocketAddr::new(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)), 4444),
+            },
+            Camera {
+                name: "Test B".to_owned(),
+                location: SocketAddr::new(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)), 4444),
+            },
+            Camera {
+                name: "Test C".to_owned(),
+                location: SocketAddr::new(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)), 4444),
+            },
+            Camera {
+                name: "Test D".to_owned(),
+                location: SocketAddr::new(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)), 4444),
+            },
+        ],
     );
 }
 
 fn update_robot(mut robot: ResMut<Robot>, mut events: EventReader<RobotEvent>) {
     for event in events.iter() {
         match event {
-            RobotEvent::StateChanged(update) => {
-                robot.0.update(update);
-            }
-            RobotEvent::KVChanged(value) => {
-                robot.1.insert(value.to_key(), value.clone());
+            RobotEvent::Store(update) => {
+                robot.0.handle_update(update);
             }
             RobotEvent::Connected(..) | RobotEvent::Disconnected(..) => {
                 *robot = Default::default();
@@ -85,12 +111,37 @@ fn update_robot(mut robot: ResMut<Robot>, mut events: EventReader<RobotEvent>) {
 }
 
 fn updates_to_packets(
-    mut updates: EventReader<RobotStateUpdate>,
+    adapters: Res<Adapters>,
+    robot: Res<Robot>,
     mut net: EventWriter<NetworkEvent>,
 ) {
-    for update in updates.iter() {
-        net.send(NetworkEvent::SendPacket(Protocol::RobotState(vec![
-            update.clone()
-        ])));
+    for (key, data) in robot.2.try_iter() {
+        let adapter = adapters.0.get(&key);
+
+        if let Some(adapter) = adapter {
+            match data {
+                Some(data) => {
+                    let data = adapter.serialize(&data);
+
+                    if let Some(data) = data {
+                        net.send(NetworkEvent::SendPacket(Protocol::Store(
+                            key.into(),
+                            Some(data),
+                        )));
+                    }
+                }
+                None => {
+                    net.send(NetworkEvent::SendPacket(Protocol::Store(key.into(), None)));
+                }
+            }
+        }
+    }
+}
+
+pub struct NotificationHandler(Sender<Update>);
+
+impl UpdateCallback for NotificationHandler {
+    fn call(&mut self, update: Update) {
+        let _ = self.0.send(update);
     }
 }

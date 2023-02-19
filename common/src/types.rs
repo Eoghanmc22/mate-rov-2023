@@ -295,6 +295,6 @@ pub struct Network {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Camera {
-    name: String,
-    location: SocketAddr,
+    pub name: String,
+    pub location: SocketAddr,
 }
