@@ -10,7 +10,7 @@ use std::thread::Scope;
 use std::time::SystemTime;
 use tracing::{debug, error, info, span, warn, Level};
 
-const ADDRS: &str = "localhost:44444";
+const ADDRS: &str = "0.0.0.0:44444";
 
 pub struct NetworkSystem;
 

@@ -103,7 +103,7 @@ fn update_robot(mut robot: ResMut<Robot>, mut events: EventReader<RobotEvent>) {
                 robot.0.handle_update_shared(update);
             }
             RobotEvent::Connected(..) | RobotEvent::Disconnected(..) => {
-                *robot = Default::default();
+                robot.0.reset();
             }
             _ => {}
         }
@@ -127,7 +127,7 @@ fn updates_to_packets(
         if let Some(adapter) = adapter {
             match data {
                 Some(data) => {
-                    let data = adapter.serialize(&data);
+                    let data = adapter.serialize(&*data);
 
                     if let Some(data) = data {
                         net.send(NetworkEvent::SendPacket(Protocol::Store(

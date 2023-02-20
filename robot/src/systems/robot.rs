@@ -46,7 +46,7 @@ impl System for StoreSystem {
                         if let Some(adapter) = adapter {
                             match data {
                                 Some(data) => {
-                                    let data = adapter.serialize(data);
+                                    let data = adapter.serialize(&**data);
 
                                     if let Some(data) = data {
                                         events.send(Event::PacketTx(Protocol::Store(

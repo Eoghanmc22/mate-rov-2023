@@ -70,6 +70,7 @@ fn setup_network(mut commands: Commands, mut errors: EventWriter<Notification>) 
                         let key = key.to_owned().into();
                         let adapter = adapters.get(&key);
 
+                        // TODO handle in robot
                         if let Some(adapter) = adapter {
                             match data {
                                 Some(data) => {

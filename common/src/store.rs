@@ -1,7 +1,12 @@
 pub mod adapters;
 pub mod tokens;
 
-use std::{any::Any, marker::PhantomData, sync::Arc};
+use std::{
+    any::Any,
+    hash::{Hash, Hasher},
+    marker::PhantomData,
+    sync::Arc,
+};
 
 use fxhash::FxHashMap as HashMap;
 
@@ -79,6 +84,11 @@ impl<C> Store<C> {
         self.owned.contains_key(key)
     }
 
+    pub fn reset(&mut self) {
+        self.owned.clear();
+        self.shared.clear();
+    }
+
     pub fn handle_update_shared(&mut self, update: &Update) {
         if self.owned.contains_key(&update.0) {
             return;
@@ -121,7 +131,7 @@ impl UpdateCallback for () {
     fn call(&mut self, _: Update) {}
 }
 
-#[derive(Hash, PartialEq, Eq, Debug, Clone)]
+#[derive(Debug, Clone, Eq)]
 pub enum KeyImpl {
     Owned(String),
     Static(&'static str),
@@ -130,6 +140,13 @@ pub enum KeyImpl {
 impl KeyImpl {
     pub fn owned(self) -> Self {
         Self::Owned(self.into())
+    }
+
+    pub fn as_str(&self) -> &str {
+        match self {
+            KeyImpl::Owned(value) => value.as_str(),
+            KeyImpl::Static(value) => value,
+        }
     }
 }
 
@@ -157,6 +174,21 @@ impl From<KeyImpl> for String {
 impl ToString for KeyImpl {
     fn to_string(&self) -> String {
         self.to_owned().into()
+    }
+}
+
+impl Hash for KeyImpl {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        match self {
+            KeyImpl::Owned(value) => value.hash(state),
+            KeyImpl::Static(value) => value.hash(state),
+        }
+    }
+}
+
+impl PartialEq for KeyImpl {
+    fn eq(&self, other: &Self) -> bool {
+        self.as_str() == other.as_str()
     }
 }
 

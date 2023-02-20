@@ -1,4 +1,8 @@
-use std::{any::Any, marker::PhantomData, time::Instant};
+use std::{
+    any::{self, Any, TypeId},
+    marker::PhantomData,
+    time::Instant,
+};
 
 use bincode::{DefaultOptions, Options};
 use serde::{Deserialize, Serialize};
@@ -20,9 +24,9 @@ pub struct TimestampedAdapter<T>(PhantomData<T>);
 
 // Current automatic impls
 
-impl<'a, T> TypeAdapter<BackingType> for Adapter<T>
+impl<T> TypeAdapter<BackingType> for Adapter<T>
 where
-    T: Serialize + Deserialize<'a> + Any,
+    for<'a> T: Serialize + Deserialize<'a> + Any + Send + Sync,
 {
     fn serialize(&self, obj: &dyn Any) -> Option<BackingType> {
         let obj = obj.downcast_ref::<T>()?;
@@ -30,12 +34,12 @@ where
     }
 
     fn deserialize(&self, data: &BackingType) -> Option<Box<dyn Any + Send + Sync>> {
-        let obj = options().deserialize(data).ok()?;
+        let obj = options().deserialize::<T>(data).ok()?;
         Some(Box::new(obj))
     }
 }
 
-impl<'a, T, B> TypedAdapter<B> for Adapter<T>
+impl<T, B> TypedAdapter<B> for Adapter<T>
 where
     Adapter<T>: TypeAdapter<B>,
 {
@@ -48,9 +52,9 @@ impl<B> Default for Adapter<B> {
     }
 }
 
-impl<'a, T> TypeAdapter<BackingType> for TimestampedAdapter<(T, Instant)>
+impl<T> TypeAdapter<BackingType> for TimestampedAdapter<(T, Instant)>
 where
-    T: Serialize + Deserialize<'a> + Any,
+    for<'a> T: Serialize + Deserialize<'a> + Any + Send + Sync,
 {
     fn serialize(&self, obj: &dyn Any) -> Option<BackingType> {
         let (obj, _) = obj.downcast_ref::<(T, Instant)>()?;
@@ -58,12 +62,12 @@ where
     }
 
     fn deserialize(&self, data: &BackingType) -> Option<Box<dyn Any + Send + Sync>> {
-        let obj = options().deserialize(data).ok()?;
+        let obj = options().deserialize::<T>(data).ok()?;
         Some(Box::new((obj, Instant::now())))
     }
 }
 
-impl<'a, T, B> TypedAdapter<B> for TimestampedAdapter<T>
+impl<T, B> TypedAdapter<B> for TimestampedAdapter<T>
 where
     TimestampedAdapter<T>: TypeAdapter<B>,
 {
