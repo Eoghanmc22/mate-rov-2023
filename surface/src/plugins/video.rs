@@ -91,7 +91,6 @@ impl VideoTree {
                 a.remove(entity);
                 b.remove(entity);
 
-                // Not sure why this compiles
                 if let VideoTree::Empty = **a {
                     *self = mem::take(b);
                 } else if let VideoTree::Empty = **b {

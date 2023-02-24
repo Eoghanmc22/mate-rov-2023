@@ -166,7 +166,11 @@ impl System for MotorSystem {
                                                 movement += depth;
                                             }
                                         }
+                                    } else {
+                                        // Armed expired
                                     }
+                                } else {
+                                    // events.send(Event::Error(anyhow!("No armed token")));
                                 }
 
                                 store.insert(&tokens::MOVEMENT_CALCULATED, (movement, now));
@@ -186,6 +190,8 @@ impl System for MotorSystem {
                                     }
 
                                     store.insert(&tokens::MOTOR_SPEED, (new_speeds, now));
+                                } else {
+                                    events.send(Event::Error(anyhow!("No motor speed token")));
                                 }
                             }
                         }

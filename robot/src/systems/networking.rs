@@ -1,7 +1,7 @@
 use crate::event::Event as RobotEvent;
 use crate::events::EventHandle;
 use crate::systems::System;
-use anyhow::Context;
+use anyhow::{Context, Error};
 use common::protocol::Protocol;
 use common::LogLevel;
 use networking::{Event as NetEvent, Networking};
@@ -65,7 +65,7 @@ impl System for NetworkSystem {
                     NetEvent::Error(_token, err) => {
                         // TODO filter some errors
                         events.send(RobotEvent::Error(
-                            anyhow::Error::new(err).context("Networking error"),
+                            Error::new(err).context("Networking error"),
                         ));
                     }
                     _ => unreachable!(),

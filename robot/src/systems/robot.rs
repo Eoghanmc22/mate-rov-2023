@@ -1,5 +1,6 @@
 use std::thread::Scope;
 
+use anyhow::anyhow;
 use common::{protocol::Protocol, store::tokens};
 use tracing::{span, Level};
 
@@ -34,10 +35,16 @@ impl System for StoreSystem {
 
                                     if let Some(data) = data {
                                         events.send(Event::Store((key, Some(data.into()))));
+                                    } else {
+                                        events.send(Event::Error(anyhow!(
+                                            "Could not deserialize for {key:?}"
+                                        )));
                                     }
                                 }
                                 None => events.send(Event::Store((key, None))),
                             }
+                        } else {
+                            events.send(Event::Error(anyhow!("No adapter found for {key:?}")));
                         }
                     }
                     Event::Store((key, data)) => {
@@ -53,6 +60,10 @@ impl System for StoreSystem {
                                             key.to_string(),
                                             Some(data),
                                         )));
+                                    } else {
+                                        events.send(Event::Error(anyhow!(
+                                            "Could not serialize for {key:?}"
+                                        )));
                                     }
                                 }
                                 None => {
@@ -62,6 +73,8 @@ impl System for StoreSystem {
                                     )));
                                 }
                             }
+                        } else {
+                            events.send(Event::Error(anyhow!("No adapter found for {key:?}")));
                         }
                     }
                     _ => {}

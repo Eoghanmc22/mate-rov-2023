@@ -40,7 +40,7 @@ impl EventHandle {
             let ret = peer.try_send(event.clone());
             if let Err(err) = ret {
                 match err {
-                    TrySendError::Full(_) => error!("Message channel full"),
+                    TrySendError::Full(_) => error!("Message channel full, event dropped"),
                     TrySendError::Disconnected(_) => {
                         dropped_peers.push(idx);
                     }

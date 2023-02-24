@@ -42,7 +42,7 @@ fn setup_network(mut commands: Commands, mut errors: EventWriter<Notification>) 
         Err(err) => {
             errors.send(Notification::Error(
                 "Could start networking".to_owned(),
-                anyhow::Error::new(err),
+                err.into(),
             ));
             return;
         }
@@ -79,12 +79,16 @@ fn setup_network(mut commands: Commands, mut errors: EventWriter<Notification>) 
                                     if let Some(data) = data {
                                         let _ =
                                             tx.send(RobotEvent::Store((key, Some(data.into()))));
+                                    } else {
+                                        error!("Could not deserialize for {key:?}");
                                     }
                                 }
                                 None => {
                                     let _ = tx.send(RobotEvent::Store((key, None)));
                                 }
                             }
+                        } else {
+                            error!("No adapter found for {key:?}");
                         }
                     }
                     Protocol::RequestSync => {
