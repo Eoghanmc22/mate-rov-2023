@@ -1,6 +1,7 @@
 use crate::plugins::networking::NetworkEvent;
 use crate::plugins::MateStage;
 use bevy::prelude::*;
+use common::error::LogError;
 use common::protocol::Protocol;
 use common::store::adapters::{BackingType, TypeAdapter};
 use common::store::{self, tokens, Key, Store, Token, Update, UpdateCallback};
@@ -51,7 +52,7 @@ pub struct Updater(Sender<Update>);
 impl Updater {
     pub fn emit_update<V: Any + Send + Sync>(&self, token: &Token<V>, value: V) {
         let update = store::create_update(token, value);
-        let _ = self.0.send(update);
+        self.0.send(update).log_error("Emit update failed");
     }
 }
 
@@ -148,6 +149,8 @@ pub struct NotificationHandler(Sender<Update>);
 
 impl UpdateCallback for NotificationHandler {
     fn call(&mut self, update: Update) {
-        let _ = self.0.send(update);
+        self.0
+            .send(update)
+            .log_error("NotificationHandler send failed");
     }
 }

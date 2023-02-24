@@ -4,6 +4,7 @@ use crate::peripheral::motor::Motor;
 use crate::systems::System;
 use anyhow::{anyhow, Context};
 use common::{
+    error::LogError,
     store::{tokens, KeyImpl, Store},
     types::{Armed, MotorFrame, MotorId, Movement, Speed},
 };
@@ -207,7 +208,8 @@ impl System for MotorSystem {
                 span!(Level::INFO, "Motor deadline check thread");
 
                 loop {
-                    let _ = tx.send(Message::CheckDeadlines);
+                    tx.send(Message::CheckDeadlines)
+                        .log_error("Could not send deadline check");
 
                     thread::sleep(Duration::from_millis(20));
                 }

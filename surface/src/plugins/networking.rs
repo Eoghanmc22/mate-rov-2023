@@ -1,6 +1,7 @@
 use crate::plugins::robot::RobotEvent;
 use crate::plugins::MateStage;
 use bevy::prelude::*;
+use common::error::LogError;
 use common::protocol::Protocol;
 use common::store::tokens;
 use common::LogLevel;
@@ -62,29 +63,33 @@ fn setup_network(mut commands: Commands, mut errors: EventWriter<Notification>) 
 
                     clients.insert(token, addrs);
 
-                    let _ = messenger.send_packet(token, Protocol::RequestSync);
-                    let _ = tx.send(RobotEvent::Connected(addrs));
+                    messenger
+                        .send_packet(token, Protocol::RequestSync)
+                        .log_error("Could not send Message");
+                    tx.send(RobotEvent::Connected(addrs))
+                        .log_error("Could not send RobotEvent");
                 }
                 Event::Data(token, packet) => match packet {
                     Protocol::Store(key, data) => {
                         let key = key.to_owned().into();
                         let adapter = adapters.get(&key);
 
-                        // TODO handle in robot
+                        // TODO handle in robot system
                         if let Some(adapter) = adapter {
                             match data {
                                 Some(data) => {
                                     let data = adapter.deserialize(&data);
 
                                     if let Some(data) = data {
-                                        let _ =
-                                            tx.send(RobotEvent::Store((key, Some(data.into()))));
+                                        tx.send(RobotEvent::Store((key, Some(data.into()))))
+                                            .log_error("Could not send RobotEvent");
                                     } else {
                                         error!("Could not deserialize for {key:?}");
                                     }
                                 }
                                 None => {
-                                    let _ = tx.send(RobotEvent::Store((key, None)));
+                                    tx.send(RobotEvent::Store((key, None)))
+                                        .log_error("Could not send RobotEvent");
                                 }
                             }
                         } else {
@@ -94,7 +99,9 @@ fn setup_network(mut commands: Commands, mut errors: EventWriter<Notification>) 
                     Protocol::RequestSync => {
                         let packet =
                             Protocol::Log(LogLevel::Warn, "RequestSync not implemented".to_owned());
-                        let _ = messenger.send_packet(token, packet);
+                        messenger
+                            .send_packet(token, packet)
+                            .log_error("Could not send Message");
                     }
                     Protocol::Log(level, msg) => match level {
                         LogLevel::Debug => debug!("Peer logged: `{msg}`"),
@@ -104,17 +111,21 @@ fn setup_network(mut commands: Commands, mut errors: EventWriter<Notification>) 
                     },
                     Protocol::Ping(ping) => {
                         let response = Protocol::Pong(ping, SystemTime::now());
-                        let _ = messenger.send_packet(token, response);
+                        messenger
+                            .send_packet(token, response)
+                            .log_error("Could not send Message");
                     }
                     Protocol::Pong(ping, pong) => {
-                        let _ = tx.send(RobotEvent::Ping(ping, pong));
+                        tx.send(RobotEvent::Ping(ping, pong))
+                            .log_error("Could not send RobotEvent");
                     }
                 },
                 Event::Error(token, error) => {
                     let addrs = token.and_then(|token| clients.remove(&token));
                     if let Some(addrs) = addrs {
                         error!("Network error, addrs: {addrs}, {error:?}");
-                        let _ = tx.send(RobotEvent::Disconnected(addrs));
+                        tx.send(RobotEvent::Disconnected(addrs))
+                            .log_error("Could not send RobotEvent");
                     } else {
                         error!("Network error, {error:?}");
                     }
@@ -139,10 +150,13 @@ fn events_to_packets(
     for event in events.iter() {
         match event.to_owned() {
             NetworkEvent::SendPacket(packet) => {
-                let _ = net_link.0.brodcast_packet(packet);
+                net_link
+                    .0
+                    .brodcast_packet(packet)
+                    .log_error("Brodcast packet failed");
             }
             NetworkEvent::ConnectTo(peer) => {
-                let _ = net_link.0.connect_to(peer);
+                net_link.0.connect_to(peer).log_error("Connect to failed");
             }
         }
     }

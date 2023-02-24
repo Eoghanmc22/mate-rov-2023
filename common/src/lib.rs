@@ -3,6 +3,7 @@
 
 use serde::{Deserialize, Serialize};
 
+pub mod error;
 pub mod protocol;
 pub mod store;
 pub mod types;
