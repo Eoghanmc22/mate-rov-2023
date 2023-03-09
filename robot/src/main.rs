@@ -19,11 +19,14 @@ pub mod peripheral;
 mod systems;
 
 use crate::systems::error::ErrorSystem;
+use crate::systems::logging::LogEventSystem;
 use crate::systems::robot::StoreSystem;
 use crate::systems::SystemManager;
 use crate::systems::{hw_stat::HwStatSystem, networking::NetworkSystem};
 use tracing::{info, Level};
 
+#[cfg(rpi)]
+use crate::systems::cameras::CameraSystem;
 #[cfg(rpi)]
 use crate::systems::motor::MotorSystem;
 
@@ -36,12 +39,15 @@ fn main() -> anyhow::Result<()> {
     let mut systems = SystemManager::new();
 
     info!("---------- Registering systems ----------");
+    systems.add_system::<LogEventSystem>()?;
     systems.add_system::<ErrorSystem>()?;
     systems.add_system::<StoreSystem>()?;
     systems.add_system::<NetworkSystem>()?;
     systems.add_system::<HwStatSystem>()?;
     #[cfg(rpi)]
     systems.add_system::<MotorSystem>()?;
+    #[cfg(rpi)]
+    systems.add_system::<CameraSystem>()?;
     info!("--------------------------------------");
 
     systems.start();

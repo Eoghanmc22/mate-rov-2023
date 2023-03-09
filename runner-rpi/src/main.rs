@@ -11,7 +11,7 @@ pub fn main() -> anyhow::Result<()> {
 
     let status = Command::new("ssh")
         .arg("pi@mate.local")
-        .arg("pkill exec || exit 0")
+        .arg("sudo pkill mate-exec || exit 0")
         .spawn()
         .context("Spawn ssh")?
         .wait()
@@ -26,12 +26,20 @@ pub fn main() -> anyhow::Result<()> {
 
     eprintln!("Uploading");
 
+    let rst = Command::new("scp")
+        .arg("./detect_cameras.sh")
+        .arg("pi@mate.local:~/mate/detect_cameras.sh")
+        .spawn()
+        .context("Spawn scp")?
+        .wait();
+
     let status = Command::new("scp")
         .arg(bin)
-        .arg("pi@mate.local:~/mate/exec")
+        .arg("pi@mate.local:~/mate/mate-exec")
         .spawn()
         .context("Spawn scp")?
         .wait()
+        .and(rst)
         .context("Wait on scp")?;
 
     if status.success() {
@@ -45,7 +53,7 @@ pub fn main() -> anyhow::Result<()> {
 
     let status = Command::new("ssh")
         .arg("pi@mate.local")
-        .arg("sudo ~/mate/exec")
+        .arg("sudo ~/mate/mate-exec")
         .spawn()
         .context("Spawn ssh")?
         .wait()

@@ -1,7 +1,7 @@
 use std::thread::Scope;
 
 use common::{protocol::Protocol, LogLevel};
-use tracing::error;
+use tracing::{error, span, Level};
 
 use crate::{event::Event, events::EventHandle, systems::System};
 
@@ -15,6 +15,8 @@ impl System for ErrorSystem {
         let listner = events.take_listner().unwrap();
 
         spawner.spawn(move || {
+            span!(Level::ERROR, "Error handler");
+
             for event in listner.into_iter() {
                 match &*event {
                     Event::Error(err) => {

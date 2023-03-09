@@ -11,6 +11,7 @@ use sysinfo::{
     ComponentExt, CpuExt, DiskExt, NetworkExt, NetworksExt, PidExt, ProcessExt, System, SystemExt,
     UserExt,
 };
+use tracing::{span, Level};
 
 use crate::{event::Event, events::EventHandle};
 
@@ -29,6 +30,8 @@ impl RobotSystem for HwStatSystem {
         let _ = events.take_listner();
 
         spawner.spawn(move || {
+            span!(Level::INFO, "Hardware monitor");
+
             let mut system = System::new();
             loop {
                 system.refresh_all();

@@ -38,6 +38,8 @@ impl System for NetworkSystem {
                 net.start(|event| match event {
                     NetEvent::Accepted(_token, addrs) => {
                         info!("Accepted peer at {addrs}");
+
+                        events.send(RobotEvent::PeerConnected(addrs));
                     }
                     NetEvent::Data(token, packet) => match packet {
                         Protocol::Log(level, msg) => match level {
@@ -77,6 +79,7 @@ impl System for NetworkSystem {
             let mut events = events.clone();
             spawner.spawn(move || {
                 span!(Level::INFO, "Net forward thread");
+
                 for event in listner.into_iter() {
                     if let RobotEvent::PacketTx(packet) = &*event {
                         let res = messenger

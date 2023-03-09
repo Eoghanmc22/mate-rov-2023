@@ -39,6 +39,7 @@ impl System for MotorSystem {
             let mut events = events.clone();
             spawner.spawn(move || {
                 span!(Level::INFO, "Motor thread");
+
                 let mut motors: HashMap<MotorId, Motor<OutputPin>> = HashMap::default();
                 let mut deadlines: HashMap<MotorId, Instant> = HashMap::default();
 
