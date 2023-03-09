@@ -52,6 +52,7 @@ pub fn generate_adaptors() -> HashMap<Key, Box<dyn TypeAdapter<BackingType> + Se
         from::<Adapter<_>>(SYSTEM_INFO),
         from::<Adapter<_>>(CAMERAS),
         from::<TimestampedAdapter<_>>(ARMED),
+        from::<TimestampedAdapter<_>>(MOTOR_SPEED),
         from::<TimestampedAdapter<_>>(MOVEMENT_JOYSTICK),
         from::<TimestampedAdapter<_>>(MOVEMENT_OPENCV),
         from::<TimestampedAdapter<_>>(MOVEMENT_DEPTH),

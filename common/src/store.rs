@@ -44,7 +44,9 @@ impl<C: UpdateCallback> Store<C> {
     }
 
     pub fn insert<V: Any + Send + Sync>(&mut self, key: &Token<V>, value: V) {
-        debug_assert!(!self.shared.contains_key(&key.0));
+        if self.shared.contains_key(&key.0) {
+            error!("Tried to update a shared key: {:?}", key.0);
+        }
 
         let value = Arc::new(value);
 
@@ -93,7 +95,6 @@ impl<C> Store<C> {
     #[tracing::instrument(skip(self))]
     pub fn handle_update_shared(&mut self, update: &Update) {
         if self.owned.contains_key(&update.0) {
-            error!("Forign tried to update owned key");
             return;
         }
 
@@ -107,7 +108,6 @@ impl<C> Store<C> {
     #[tracing::instrument(skip(self))]
     pub fn handle_update_owned(&mut self, update: &Update) {
         if self.shared.contains_key(&update.0) {
-            error!("Local tried to update shared key");
             return;
         }
 

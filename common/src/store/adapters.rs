@@ -1,8 +1,4 @@
-use std::{
-    any::{self, Any, TypeId},
-    marker::PhantomData,
-    time::Instant,
-};
+use std::{any::Any, marker::PhantomData, time::Instant};
 
 use bincode::{DefaultOptions, Options};
 use serde::{Deserialize, Serialize};
