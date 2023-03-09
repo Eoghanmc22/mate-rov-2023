@@ -1,11 +1,15 @@
-use bevy::prelude::Commands;
+use bevy::prelude::{Commands, World};
 use common::{
+    protocol::Protocol,
     store::{tokens, Store},
     types::Camera,
 };
 use egui::Context;
 
-use crate::plugins::video::{Position, Video};
+use crate::plugins::{
+    networking::NetworkEvent,
+    video::{Position, Video},
+};
 
 use super::{
     widgets::{Cameras, Motors, Movement, Orientation, RawSensorData, RemoteSystem},
@@ -53,6 +57,11 @@ pub fn menu_bar<C>(ctx: &Context, cmd: &mut Commands, _store: &Store<C>) {
                         "Connect to robot".to_string(),
                         ConnectionWindow::default(),
                     ));
+                }
+                if ui.button("Resync").clicked() {
+                    cmd.add(move |world: &mut World| {
+                        world.send_event(NetworkEvent::SendPacket(Protocol::RequestSync));
+                    });
                 }
             });
         });
