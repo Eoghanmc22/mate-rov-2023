@@ -4,6 +4,7 @@ use bevy::prelude::*;
 pub mod gamepad;
 pub mod networking;
 pub mod notification;
+pub mod opencv;
 pub mod robot;
 pub mod ui;
 pub mod video;
