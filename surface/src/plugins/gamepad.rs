@@ -15,7 +15,7 @@ pub struct GamepadPlugin;
 
 impl Plugin for GamepadPlugin {
     fn build(&self, app: &mut App) {
-        app.add_system(gamepad_connections.in_base_set(CoreSet::PostUpdate))
+        app.add_system(gamepad_connections.in_base_set(CoreSet::PreUpdate))
             .add_system(gamepad_input);
     }
 }
