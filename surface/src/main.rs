@@ -1,7 +1,12 @@
 mod plugins;
 
+use std::env;
+
 use crate::plugins::MatePlugins;
-use bevy::prelude::*;
+use bevy::{
+    diagnostic::{FrameTimeDiagnosticsPlugin, LogDiagnosticsPlugin},
+    prelude::*,
+};
 
 fn main() {
     App::new()

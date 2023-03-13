@@ -1,5 +1,4 @@
 use crate::plugins::robot::RobotEvent;
-use crate::plugins::MateStage;
 use bevy::prelude::*;
 use common::error::LogError;
 use common::protocol::Protocol;
@@ -20,9 +19,9 @@ impl Plugin for NetworkPlugin {
     fn build(&self, app: &mut App) {
         app.add_event::<NetworkEvent>();
         app.add_startup_system(setup_network);
-        app.add_system_to_stage(MateStage::NetworkRead, updates_to_events);
-        app.add_system_to_stage(MateStage::NetworkRead, events_to_notifs);
-        app.add_system_to_stage(MateStage::NetworkWrite, events_to_packets);
+        app.add_system(updates_to_events.in_base_set(CoreSet::PreUpdate));
+        app.add_system(events_to_notifs.after(updates_to_events));
+        app.add_system(events_to_packets.in_base_set(CoreSet::PostUpdate));
     }
 }
 
@@ -32,6 +31,7 @@ pub enum NetworkEvent {
     ConnectTo(SocketAddr),
 }
 
+#[derive(Resource)]
 struct NetworkLink(Messenger<Protocol>, Receiver<RobotEvent>);
 
 fn setup_network(mut commands: Commands, mut errors: EventWriter<Notification>) {
@@ -142,11 +142,7 @@ fn updates_to_events(mut events: EventWriter<RobotEvent>, net_link: Res<NetworkL
     events.send_batch(net_link.1.try_iter());
 }
 
-fn events_to_packets(
-    mut events: EventReader<NetworkEvent>,
-    net_link: Res<NetworkLink>,
-    _errors: EventWriter<Notification>,
-) {
+fn events_to_packets(mut events: EventReader<NetworkEvent>, net_link: Res<NetworkLink>) {
     for event in events.iter() {
         match event.to_owned() {
             NetworkEvent::SendPacket(packet) => {

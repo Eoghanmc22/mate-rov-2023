@@ -4,7 +4,7 @@ pub mod windows;
 
 use crate::plugins::robot::Robot;
 use bevy::prelude::*;
-use bevy_egui::{EguiContext, EguiPlugin};
+use bevy_egui::{EguiContexts, EguiPlugin};
 use egui::{Id, Ui};
 
 pub struct UiPlugin;
@@ -32,7 +32,7 @@ pub trait Renderable {
     fn close(&mut self, _cmds: &mut Commands, _entity: Entity) {}
 }
 
-fn draw_ui(mut cmds: Commands, robot: Res<Robot>, mut egui_context: ResMut<EguiContext>) {
+fn draw_ui(mut cmds: Commands, robot: Res<Robot>, mut egui_context: EguiContexts) {
     let ctx = egui_context.ctx_mut();
     let store = robot.store();
 
@@ -43,7 +43,7 @@ fn draw_ui(mut cmds: Commands, robot: Res<Robot>, mut egui_context: ResMut<EguiC
 
 fn draw_windows(
     mut cmds: Commands,
-    mut egui_context: ResMut<EguiContext>,
+    mut egui_context: EguiContexts,
     mut windows: Query<(Entity, &mut WindowComponent)>,
 ) {
     let ctx = egui_context.ctx_mut();

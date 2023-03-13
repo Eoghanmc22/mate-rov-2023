@@ -2,12 +2,12 @@ use bevy::prelude::{Commands, World};
 use common::{
     protocol::Protocol,
     store::{tokens, Store},
-    types::Camera,
 };
 use egui::Context;
 
 use crate::plugins::{
     networking::NetworkEvent,
+    opencv::VideoCapturePeer,
     video::{Position, Video},
 };
 
@@ -53,7 +53,7 @@ pub fn menu_bar<C>(ctx: &Context, cmd: &mut Commands, _store: &Store<C>) {
             });
             egui::menu::menu_button(ui, "Robot", |ui| {
                 if ui.button("Connect").clicked() {
-                    cmd.spawn().insert(WindowComponent::new(
+                    cmd.spawn_empty().insert(WindowComponent::new(
                         "Connect to robot".to_string(),
                         ConnectionWindow::default(),
                     ));
@@ -72,13 +72,10 @@ pub fn top_panel<C>(ctx: &Context, cmd: &mut Commands, store: &Store<C>) {
     egui::TopBottomPanel::top("Panel Top").show(ctx, |ui| {
         ui.horizontal(|ui| {
             if let Some(cameras) = store.get(&tokens::CAMERAS) {
-                for Camera { name, location } in cameras.iter() {
-                    if ui.button(name).clicked() {
-                        cmd.spawn().insert_bundle(Video::new(
-                            name.to_owned(),
-                            location.to_owned(),
-                            Position::Center,
-                        ));
+                for camera in cameras.iter() {
+                    if ui.button(&camera.name).clicked() {
+                        cmd.spawn(Video::new(camera.name.to_owned(), Position::Center))
+                            .insert(VideoCapturePeer(camera.to_owned()));
                     }
                 }
             }

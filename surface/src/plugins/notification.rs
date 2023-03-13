@@ -1,8 +1,7 @@
 use std::time::{Duration, Instant};
 
-use crate::plugins::MateStage;
 use bevy::prelude::*;
-use bevy_egui::EguiContext;
+use bevy_egui::EguiContexts;
 use egui::{Align2, Frame, Id, Vec2};
 
 const TIMEOUT: Duration = Duration::from_secs(15);
@@ -14,12 +13,12 @@ impl Plugin for NotificationPlugin {
     fn build(&self, app: &mut App) {
         app.add_event::<Notification>();
         app.init_resource::<NotificationResource>();
-        app.add_system_to_stage(MateStage::ErrorHandling, handle_notification);
+        app.add_system(handle_notification.in_base_set(CoreSet::Last));
         app.add_system(render_notifications);
     }
 }
 
-#[derive(Default)]
+#[derive(Default, Resource)]
 struct NotificationResource(Vec<(InternalNotification, Instant)>);
 
 #[derive(Debug)]
@@ -79,10 +78,7 @@ fn handle_notification(
     }
 }
 
-fn render_notifications(
-    mut res: ResMut<NotificationResource>,
-    mut egui_context: ResMut<EguiContext>,
-) {
+fn render_notifications(mut res: ResMut<NotificationResource>, mut egui_context: EguiContexts) {
     let ctx = egui_context.ctx_mut();
 
     res.0.retain(|item| item.1.elapsed() < TIMEOUT);

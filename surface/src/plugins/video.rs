@@ -1,10 +1,13 @@
-use std::{mem, net::SocketAddr};
+use std::mem;
 
 use bevy::{prelude::*, utils::HashMap};
-use bevy_egui::EguiContext;
-use egui::{vec2, Align, Layout, Ui};
+use bevy_egui::EguiContexts;
+use common::error::LogError;
+use egui::{vec2, Align, Layout, TextureId, Ui};
 
-use super::{ui::widgets, MateStage};
+use crate::plugins::opencv::VideoMessage;
+
+use super::{opencv::VideoCaptureThread, ui::widgets};
 
 pub struct VideoPlugin;
 
@@ -12,24 +15,23 @@ impl Plugin for VideoPlugin {
     fn build(&self, app: &mut App) {
         app.init_resource::<VideoState>();
         app.add_startup_system(video_setup);
-        app.add_system_to_stage(CoreStage::PostUpdate, video_add);
-        app.add_system_to_stage(CoreStage::PostUpdate, video_remove);
-        app.add_system_to_stage(MateStage::RenderVideo, video_render);
+        app.add_system(video_add);
+        app.add_system(video_remove);
+        app.add_system(video_frames);
+        app.add_system(video_render.in_base_set(CoreSet::PostUpdate));
     }
 }
 
 #[derive(Bundle)]
 pub struct Video {
     pub name: VideoName,
-    pub source: VideoSource,
     pub position: VideoPosition,
 }
 
 impl Video {
-    pub fn new(name: String, src: SocketAddr, pos: Position) -> Self {
+    pub fn new(name: String, pos: Position) -> Self {
         Self {
             name: VideoName(name),
-            source: VideoSource(src),
             position: VideoPosition(pos),
         }
     }
@@ -37,17 +39,13 @@ impl Video {
 
 #[derive(Component)]
 pub struct VideoName(pub String);
-
-#[derive(Component)]
-pub struct VideoSource(pub SocketAddr);
-
 #[derive(Component)]
 pub struct VideoPosition(pub Position);
-
 #[derive(Component)]
 pub struct VideoRemove;
-
-#[derive(Default)]
+#[derive(Component)]
+pub struct VideoTexture(Handle<Image>, TextureId);
+#[derive(Default, Resource)]
 struct VideoState(HashMap<Position, VideoTree>);
 
 #[derive(PartialEq, Eq, Hash, Clone, Debug)]
@@ -113,21 +111,59 @@ impl Default for VideoTree {
     }
 }
 
-fn video_setup(mut _cmds: Commands, mut video: ResMut<VideoState>) {
+fn video_setup(mut video: ResMut<VideoState>) {
     video.0.insert(Position::Center, VideoTree::Empty);
 }
 
 fn video_add(
     mut video: ResMut<VideoState>,
-    cameras: Query<(Entity, &VideoSource, &VideoPosition), Added<VideoSource>>,
+    cameras: Query<(Entity, &VideoPosition), Added<VideoName>>,
 ) {
-    for (entity, _src, pos) in &cameras {
+    for (entity, pos) in &cameras {
         let tree = video.0.entry(pos.0.clone()).or_default();
         tree.insert(entity);
-
-        // TODO start video thread
     }
 }
+
+fn video_frames(
+    mut cmds: Commands,
+    mut images: ResMut<Assets<Image>>,
+    mut egui_ctx: EguiContexts,
+    mut cameras: Query<(Entity, &VideoCaptureThread, Option<&VideoTexture>)>,
+) {
+    for (entity, thread, texture) in cameras.iter_mut() {
+        let mut new_image = None;
+
+        for image in thread.1.try_iter() {
+            if let Some(reuse_image) = new_image {
+                thread
+                    .0
+                    .send(VideoMessage::ReuseImage(reuse_image))
+                    .log_error("Reuse image");
+            }
+
+            new_image = Some(image);
+        }
+
+        if let Some(new_image) = new_image {
+            if let Some(texture) = texture {
+                let texture = images.get_mut(&texture.0).expect("Lookup image handle");
+                let old_image = mem::replace(texture, new_image);
+
+                thread
+                    .0
+                    .try_send(VideoMessage::ReuseImage(old_image))
+                    .log_error("Reuse mats");
+            } else {
+                let texture = images.add(new_image);
+                let texture_id = egui_ctx.add_image(texture.clone_weak());
+                cmds.entity(entity)
+                    .insert(VideoTexture(texture, texture_id));
+            }
+        }
+    }
+}
+
 fn video_remove(
     mut cmd: Commands,
     mut video: ResMut<VideoState>,
@@ -146,9 +182,9 @@ fn video_remove(
 
 fn video_render(
     mut cmds: Commands,
-    mut egui_context: ResMut<EguiContext>,
+    mut egui_context: EguiContexts,
     video: Res<VideoState>,
-    cameras: Query<&VideoName>,
+    cameras: Query<(&VideoName, Option<&VideoTexture>)>,
 ) {
     let ctx = egui_context.ctx_mut();
 
@@ -159,7 +195,12 @@ fn video_render(
     });
 }
 
-fn render(cmds: &mut Commands, ui: &mut Ui, tree: &VideoTree, cameras: &Query<&VideoName>) {
+fn render(
+    cmds: &mut Commands,
+    ui: &mut Ui,
+    tree: &VideoTree,
+    cameras: &Query<(&VideoName, Option<&VideoTexture>)>,
+) {
     match tree {
         VideoTree::Node(a, b) => {
             let available = ui.available_size();
@@ -187,8 +228,8 @@ fn render(cmds: &mut Commands, ui: &mut Ui, tree: &VideoTree, cameras: &Query<&V
             });
         }
         VideoTree::Leaf(entity) => {
-            if let Ok(name) = cameras.get(*entity) {
-                let mut video = widgets::Video::new(&name.0);
+            if let Ok((name, texture)) = cameras.get(*entity) {
+                let mut video = widgets::Video::new(&name.0, texture.map(|it| it.1));
 
                 ui.with_layout(Layout::top_down(Align::LEFT), |ui| {
                     ui.add(&mut video);

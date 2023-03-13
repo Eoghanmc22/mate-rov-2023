@@ -12,7 +12,7 @@ use common::{
     types::Camera,
 };
 use fxhash::{FxHashMap as HashMap, FxHashSet as HashSet};
-use tracing::{debug, info, span, Level};
+use tracing::{info, span, Level};
 
 use crate::{event::Event, events::EventHandle, systems::System};
 

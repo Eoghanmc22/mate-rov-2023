@@ -1,10 +1,10 @@
-use bevy::prelude::EulerRot;
 use common::{
     store::{tokens, Store},
     types::{Camera, Celsius, MotorFrame},
 };
-use egui::{vec2, Align, Layout, Widget};
-use egui_extras::{Size, TableBuilder};
+use egui::{vec2, Align, Direction, Layout, TextureHandle, TextureId, Widget};
+use egui_extras::{Column, TableBuilder};
+use glam::EulerRot;
 
 const TABLE_ROW_HEIGHT: f32 = 15.0;
 
@@ -34,7 +34,7 @@ impl<C> Widget for &mut RemoteSystem<'_, C> {
                     ));
                     TableBuilder::new(ui)
                         .striped(true)
-                        .columns(Size::remainder(), 3)
+                        .columns(Column::remainder(), 3)
                         .header(TABLE_ROW_HEIGHT, |mut row| {
                             row.col(|ui| {
                                 ui.label("Name");
@@ -76,8 +76,9 @@ impl<C> Widget for &mut RemoteSystem<'_, C> {
                     ui.set_max_height(500.0);
                     TableBuilder::new(ui)
                         .striped(true)
-                        .column(Size::remainder())
-                        .columns(Size::exact(60.0), 4)
+                        .resizable(true)
+                        .column(Column::auto())
+                        .columns(Column::exact(60.0), 4)
                         .header(TABLE_ROW_HEIGHT, |mut row| {
                             row.col(|ui| {
                                 ui.label("Name");
@@ -134,7 +135,7 @@ impl<C> Widget for &mut RemoteSystem<'_, C> {
                     ui.set_max_height(500.0);
                     TableBuilder::new(ui)
                         .striped(true)
-                        .columns(Size::remainder(), 7)
+                        .columns(Column::remainder(), 7)
                         .header(20.0, |mut row| {
                             row.col(|ui| {
                                 ui.label("Name");
@@ -222,7 +223,7 @@ impl<C> Widget for &mut RemoteSystem<'_, C> {
                     ui.set_max_height(500.0);
                     TableBuilder::new(ui)
                         .striped(true)
-                        .columns(Size::remainder(), 4)
+                        .columns(Column::remainder(), 4)
                         .header(20.0, |mut row| {
                             row.col(|ui| {
                                 ui.label("Name");
@@ -268,7 +269,7 @@ impl<C> Widget for &mut RemoteSystem<'_, C> {
                     ui.set_max_height(500.0);
                     TableBuilder::new(ui)
                         .striped(true)
-                        .columns(Size::remainder(), 5)
+                        .columns(Column::remainder(), 5)
                         .header(20.0, |mut row| {
                             row.col(|ui| {
                                 ui.label("Name");
@@ -542,13 +543,15 @@ impl<C> Widget for &mut Cameras<'_, C> {
 
 pub struct Video<'a> {
     name: &'a str,
+    texture: Option<TextureId>,
     pub should_delete: bool, // TODO
 }
 
 impl<'a> Video<'a> {
-    pub fn new(name: &'a str) -> Self {
+    pub fn new(name: &'a str, texture: Option<TextureId>) -> Self {
         Self {
             name,
+            texture,
             should_delete: false,
         }
     }
@@ -571,9 +574,23 @@ impl Widget for &mut Video<'_> {
                         });
                     },
                 );
-                ui.label("end");
+
+                if let Some(texture) = self.texture {
+                    ui.with_layout(
+                        Layout::centered_and_justified(Direction::LeftToRight),
+                        |ui| {
+                            let available = ui.available_size();
+                            let x = available.x;
+                            let y = x / 16.0 * 9.0;
+
+                            ui.image(texture, (x, y));
+                        },
+                    );
+                } else {
+                    ui.label("No video");
+                }
+
                 ui.allocate_space(ui.available_size());
-                // Todo
             });
         })
         .response

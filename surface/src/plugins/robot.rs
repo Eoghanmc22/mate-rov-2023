@@ -1,5 +1,4 @@
 use crate::plugins::networking::NetworkEvent;
-use crate::plugins::MateStage;
 use bevy::prelude::*;
 use common::error::LogError;
 use common::protocol::Protocol;
@@ -21,18 +20,21 @@ impl Plugin for RobotPlugin {
         app.init_resource::<Robot>();
         app.init_resource::<Adapters>();
         // app.add_startup_system(mock_data);
-        app.add_system_to_stage(MateStage::UpdateStateEarly, update_robot);
-        app.add_system_to_stage(MateStage::UpdateStateLate, updates_to_packets);
+        app.add_system(update_robot.in_base_set(CoreSet::PreUpdate));
+        app.add_system(updates_to_packets.in_base_set(CoreSet::PostUpdate));
     }
 }
 
+#[derive(Resource)]
 pub struct Adapters(HashMap<Key, Box<dyn TypeAdapter<BackingType> + Send + Sync>>);
+
 impl Default for Adapters {
     fn default() -> Self {
         Self(tokens::generate_adaptors())
     }
 }
 
+#[derive(Resource)]
 pub struct Robot(Store<NotificationHandler>, Sender<Update>, Receiver<Update>);
 impl Robot {
     pub fn store(&self) -> &Store<NotificationHandler> {

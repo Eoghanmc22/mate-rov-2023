@@ -9,19 +9,14 @@ pub fn main() -> anyhow::Result<()> {
 
     eprintln!("Killing process");
 
-    let status = Command::new("ssh")
+    Command::new("ssh")
         .arg("pi@mate.local")
-        .arg("sudo pkill mate-exec || exit 0")
+        .arg("sudo pkill mate-exec ; sudo pkill gst-launch-1.0")
         .spawn()
         .context("Spawn ssh")?
         .wait()
         .context("Wait on ssh")?;
 
-    if status.success() {
-        eprintln!("Killed");
-    } else {
-        bail!("Could not kill process");
-    }
     eprintln!();
 
     eprintln!("Uploading");

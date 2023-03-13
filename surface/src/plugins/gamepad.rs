@@ -1,6 +1,9 @@
 use std::time::Instant;
 
-use bevy::prelude::*;
+use bevy::{
+    input::gamepad::{GamepadConnection, GamepadEvent},
+    prelude::*,
+};
 use common::{
     store::tokens,
     types::{Movement, Speed},
@@ -12,11 +15,12 @@ pub struct GamepadPlugin;
 
 impl Plugin for GamepadPlugin {
     fn build(&self, app: &mut App) {
-        app.add_system(gamepad_connections)
+        app.add_system(gamepad_connections.in_base_set(CoreSet::PostUpdate))
             .add_system(gamepad_input);
     }
 }
 
+#[derive(Resource)]
 struct CurrentGamepad(Gamepad);
 
 fn gamepad_connections(
@@ -24,29 +28,32 @@ fn gamepad_connections(
     current_gamepad: Option<Res<CurrentGamepad>>,
     mut gamepad_evr: EventReader<GamepadEvent>,
 ) {
-    for GamepadEvent {
-        gamepad,
-        event_type,
-    } in gamepad_evr.iter()
-    {
-        match event_type {
-            GamepadEventType::Connected => {
-                info!("New gamepad connected with ID: {gamepad:?}");
+    for event in gamepad_evr.iter() {
+        match event {
+            GamepadEvent::Connection(event) => match &event.connection {
+                GamepadConnection::Connected(info) => {
+                    info!(
+                        "New gamepad ({}) connected with ID: {:?}",
+                        info.name, event.gamepad
+                    );
 
-                if current_gamepad.is_none() {
-                    commands.insert_resource(CurrentGamepad(*gamepad));
-                }
-            }
-            GamepadEventType::Disconnected => {
-                info!("Lost gamepad connection with ID: {gamepad:?}");
-
-                if let Some(CurrentGamepad(gamepad_lost)) = current_gamepad.as_deref() {
-                    if gamepad_lost == gamepad {
-                        commands.remove_resource::<CurrentGamepad>();
+                    if current_gamepad.is_none() {
+                        commands.insert_resource(CurrentGamepad(event.gamepad));
                     }
                 }
-            }
-            _ => {}
+                GamepadConnection::Disconnected => {
+                    info!("Lost gamepad connection with ID: {:?}", event.gamepad);
+
+                    if let Some(CurrentGamepad(gamepad_lost)) = current_gamepad.as_deref() {
+                        if *gamepad_lost == event.gamepad {
+                            commands.remove_resource::<CurrentGamepad>();
+                        }
+                    }
+                }
+                _ => {}
+            },
+            GamepadEvent::Button(_) => {}
+            GamepadEvent::Axis(_) => {}
         }
     }
 }

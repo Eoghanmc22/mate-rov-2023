@@ -23,7 +23,7 @@ impl Renderable for ConnectionWindow {
         match (self.typed.as_str(), 44444)
             .to_socket_addrs()
             .context("Create socket addrs")
-            .and_then(|it| {
+            .and_then(|mut it| {
                 it.filter(|it| it.is_ipv4())
                     .next()
                     .ok_or_else(|| anyhow!("No Socket address found"))
