@@ -16,6 +16,8 @@ use tracing::{info, span, Level};
 
 use crate::{event::Event, events::EventHandle, systems::System};
 
+/// Handles camera detection, starting and stopping gstreamer, and notifying the suface about
+/// available cameras
 pub struct CameraSystem;
 
 impl System for CameraSystem {

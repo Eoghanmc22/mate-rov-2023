@@ -1,3 +1,6 @@
+//! Implementation of a store that can store key value pairs where the value is any type
+//! Generates updates to keep surface and robot in sync
+
 pub mod adapters;
 pub mod tokens;
 

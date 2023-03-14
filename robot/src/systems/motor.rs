@@ -18,6 +18,7 @@ use tracing::{span, Level};
 
 const MAX_UPDATE_AGE: Duration = Duration::from_millis(250);
 
+/// Handles Motor speed updated and controlls the motors
 pub struct MotorSystem;
 
 enum Message {

@@ -1,3 +1,6 @@
+//! Egui window renders
+//! Api not final
+
 use anyhow::anyhow;
 use anyhow::Context;
 use bevy::prelude::*;

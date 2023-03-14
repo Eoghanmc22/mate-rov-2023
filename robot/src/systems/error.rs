@@ -5,6 +5,7 @@ use tracing::{error, span, Level};
 
 use crate::{event::Event, events::EventHandle, systems::System};
 
+/// Handles error events
 pub struct ErrorSystem;
 
 impl System for ErrorSystem {

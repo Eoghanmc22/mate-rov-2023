@@ -39,7 +39,9 @@ enum Level {
     Error,
 }
 
-pub fn create_handle_errors(
+/// Returns a function that converts errors to notification
+/// For use with system piping
+pub fn create_error_handler(
     name: impl Into<String>,
 ) -> impl Fn(In<anyhow::Result<()>>, EventWriter<Notification>) {
     let name = name.into();
@@ -51,6 +53,7 @@ pub fn create_handle_errors(
     }
 }
 
+/// Adds `NotificationEvents` to the `NotificationResource`
 fn handle_notification(
     mut notifications: EventReader<Notification>,
     mut res: ResMut<NotificationResource>,
@@ -90,9 +93,11 @@ fn handle_notification(
     }
 }
 
+/// Renders `NotificationResource` to the screen
 fn render_notifications(mut res: ResMut<NotificationResource>, mut egui_context: EguiContexts) {
     let ctx = egui_context.ctx_mut();
 
+    // TODO this could be its own system?
     res.0.retain(|item| item.1.elapsed() < TIMEOUT);
 
     // TODO change font size

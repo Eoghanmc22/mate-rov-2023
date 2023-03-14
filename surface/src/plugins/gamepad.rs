@@ -23,6 +23,7 @@ impl Plugin for GamepadPlugin {
 #[derive(Resource)]
 struct CurrentGamepad(Gamepad);
 
+/// Listens to the connection and disconnection of gamepads
 fn gamepad_connections(
     mut commands: Commands,
     current_gamepad: Option<Res<CurrentGamepad>>,
@@ -57,6 +58,7 @@ fn gamepad_connections(
     }
 }
 
+/// Processes gamepad input and adds it to the global store
 fn gamepad_input(
     axes: Res<Axis<GamepadAxis>>,
     buttons: Res<Input<GamepadButton>>,

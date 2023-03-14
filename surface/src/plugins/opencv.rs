@@ -1,3 +1,5 @@
+//! Handles video io and processing
+
 use std::{cell::RefCell, thread, time::Duration};
 
 use anyhow::Context;
@@ -51,6 +53,7 @@ pub enum VideoMessage {
     Pipeline(PipelineProto, MatId),
 }
 
+/// Spawn video capture for each video entity
 fn spawn_video_captures(
     mut cmds: Commands,
     query: Query<
@@ -83,6 +86,7 @@ fn spawn_video_captures(
     }
 }
 
+/// Tells video capture thread about pipeline changes
 fn update_pipelines(
     query: Query<(&VideoCaptureThread, &VideoCapturePipeline), Changed<VideoCapturePipeline>>,
 ) {
@@ -94,7 +98,7 @@ fn update_pipelines(
     }
 }
 
-// TODO Handle Appexit
+/// The video capture thread
 fn video_capture_thread(
     msg_receiver: Receiver<VideoMessage>,
     image_sender: Sender<Image>,
@@ -187,6 +191,7 @@ fn video_capture_thread(
 
         let dont_block = src.borrow().is_some();
 
+        // Avoid spinning when no source is set
         if dont_block {
             for message in msg_receiver.try_iter() {
                 (handle)(message);
@@ -198,6 +203,7 @@ fn video_capture_thread(
     }
 }
 
+/// Converts opencv `Mat`s to bevy `Image`s
 fn mats_to_image(
     mats: &Mats,
     mat_id: MatId,

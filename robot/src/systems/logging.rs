@@ -5,6 +5,8 @@ use tracing::{debug, span, Level};
 
 use crate::{event::Event, events::EventHandle, systems::System};
 
+/// System for debugging
+/// Prings all messages on the event bus
 pub struct LogEventSystem;
 
 impl System for LogEventSystem {

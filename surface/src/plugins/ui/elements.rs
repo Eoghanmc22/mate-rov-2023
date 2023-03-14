@@ -17,6 +17,7 @@ use super::{
     WindowComponent,
 };
 
+/// Information panel on left of window
 pub fn side_bar<C>(ctx: &Context, _cmd: &mut Commands, store: &Store<C>) {
     egui::SidePanel::left("Panel Left")
         .min_width(200.0)
@@ -43,6 +44,7 @@ pub fn side_bar<C>(ctx: &Context, _cmd: &mut Commands, store: &Store<C>) {
         });
 }
 
+/// Menu bar at top of screen
 pub fn menu_bar<C>(ctx: &Context, cmd: &mut Commands, _store: &Store<C>) {
     egui::TopBottomPanel::top("top_panel").show(ctx, |ui| {
         egui::menu::bar(ui, |ui| {
@@ -68,6 +70,7 @@ pub fn menu_bar<C>(ctx: &Context, cmd: &mut Commands, _store: &Store<C>) {
     });
 }
 
+/// Camera select bar
 pub fn top_panel<C>(ctx: &Context, cmd: &mut Commands, store: &Store<C>) {
     egui::TopBottomPanel::top("Panel Top").show(ctx, |ui| {
         ui.horizontal(|ui| {

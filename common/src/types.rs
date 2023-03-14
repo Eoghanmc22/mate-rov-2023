@@ -1,3 +1,5 @@
+//! Definitions of important types used throughout the project
+
 use glam::Quat;
 use serde::{Deserialize, Serialize};
 use std::fmt::{Display, Formatter};

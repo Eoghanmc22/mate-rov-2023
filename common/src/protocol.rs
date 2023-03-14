@@ -1,3 +1,5 @@
+//! Repersents the protocol used for two way communication
+
 use crate::LogLevel;
 use anyhow::Context;
 use bincode::{DefaultOptions, Options};

@@ -19,6 +19,7 @@ use tracing::info;
 
 use crate::events::EventHandle;
 
+/// Manages all the systems running on the robot
 pub struct SystemManager(Vec<for<'a> fn(EventHandle, &'a Scope<'a, '_>) -> anyhow::Result<()>>);
 
 impl SystemManager {
@@ -26,6 +27,7 @@ impl SystemManager {
         Self(Vec::new())
     }
 
+    /// Registers a system
     #[tracing::instrument(skip(self))]
     pub fn add_system<S: System>(&mut self) -> anyhow::Result<()> {
         self.0.push(S::start);
@@ -34,6 +36,7 @@ impl SystemManager {
         Ok(())
     }
 
+    /// Starts all the systems
     #[tracing::instrument(skip(self))]
     pub fn start(self) {
         let SystemManager(systems) = self;
@@ -67,6 +70,7 @@ impl SystemManager {
     }
 }
 
+/// Trait that repersents a system
 pub trait System {
     fn start<'scope>(events: EventHandle, spawner: &'scope Scope<'scope, '_>)
         -> anyhow::Result<()>;

@@ -8,6 +8,7 @@ use crate::{event::Event, events::EventHandle};
 
 use super::System;
 
+/// Handles inbound and outbound updates to the global store
 pub struct StoreSystem;
 
 impl System for StoreSystem {

@@ -1,3 +1,5 @@
+//! Handles video display
+
 use std::mem;
 
 use bevy::{prelude::*, utils::HashMap};
@@ -111,10 +113,12 @@ impl Default for VideoTree {
     }
 }
 
+/// Sets up `VideoState`
 fn video_setup(mut video: ResMut<VideoState>) {
     video.0.insert(Position::Center, VideoTree::Empty);
 }
 
+/// Add new camera entities to `VideoState`
 fn video_add(
     mut video: ResMut<VideoState>,
     cameras: Query<(Entity, &VideoPosition), Added<VideoName>>,
@@ -125,6 +129,7 @@ fn video_add(
     }
 }
 
+/// Process new frames from opencv
 fn video_frames(
     mut cmds: Commands,
     mut images: ResMut<Assets<Image>>,
@@ -164,6 +169,7 @@ fn video_frames(
     }
 }
 
+/// Handles the removal of video feeds
 fn video_remove(
     mut cmd: Commands,
     mut video: ResMut<VideoState>,
@@ -173,13 +179,13 @@ fn video_remove(
         if let Some(tree) = video.0.get_mut(&pos.0) {
             tree.remove(entity);
 
-            // TODO stop video thread
-
+            // Despawning the entity drops the `VideoCaptureThread` component and stops the thread
             cmd.entity(entity).despawn_recursive();
         }
     }
 }
 
+/// Renders the video panel
 fn video_render(
     mut cmds: Commands,
     mut egui_context: EguiContexts,
@@ -195,6 +201,7 @@ fn video_render(
     });
 }
 
+/// Renders each node in the `VideoTree`
 fn render(
     cmds: &mut Commands,
     ui: &mut Ui,

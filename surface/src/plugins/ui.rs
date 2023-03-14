@@ -32,6 +32,7 @@ pub trait Renderable {
     fn close(&mut self, _cmds: &mut Commands, _entity: Entity) {}
 }
 
+/// Draws egui ui
 fn draw_ui(mut cmds: Commands, robot: Res<Robot>, mut egui_context: EguiContexts) {
     let ctx = egui_context.ctx_mut();
     let store = robot.store();
@@ -39,6 +40,8 @@ fn draw_ui(mut cmds: Commands, robot: Res<Robot>, mut egui_context: EguiContexts
     elements::menu_bar(ctx, &mut cmds, store);
     elements::side_bar(ctx, &mut cmds, store);
     elements::top_panel(ctx, &mut cmds, store);
+    // Video is rendered in video.rs
+    // Windows are rendered draw_windows function
 }
 
 fn draw_windows(

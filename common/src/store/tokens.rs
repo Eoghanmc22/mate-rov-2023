@@ -1,3 +1,5 @@
+//! Definitions of everything that can be stored in the global store
+
 use crate::{
     store::adapters::{Adapter, BackingType, TimestampedAdapter, TypeAdapter, TypedAdapter},
     store::{Key, Token},

@@ -17,6 +17,7 @@ use crate::{event::Event, events::EventHandle};
 
 use super::System as RobotSystem;
 
+/// Reports the system resource utilization to surface
 pub struct HwStatSystem;
 
 impl RobotSystem for HwStatSystem {

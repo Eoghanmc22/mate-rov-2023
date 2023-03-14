@@ -1,8 +1,10 @@
+//! Egui widget implementations
+
 use common::{
     store::{tokens, Store},
     types::{Camera, Celsius, MotorFrame},
 };
-use egui::{vec2, Align, Direction, Layout, TextureHandle, TextureId, Widget};
+use egui::{vec2, Align, Direction, Layout, TextureId, Widget};
 use egui_extras::{Column, TableBuilder};
 use glam::EulerRot;
 

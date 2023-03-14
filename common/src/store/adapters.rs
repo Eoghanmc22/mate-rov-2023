@@ -1,3 +1,5 @@
+//! Infrastructure to serialize and recover data
+
 use std::{any::Any, marker::PhantomData, time::Instant};
 
 use bincode::{DefaultOptions, Options};

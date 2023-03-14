@@ -48,6 +48,8 @@ impl Default for Robot {
     }
 }
 
+/// Way for systems to update store
+/// For use with bevy's `Local` system argurment
 pub struct Updater(Sender<Update>);
 impl Updater {
     pub fn emit_update<V: Any + Send + Sync>(&self, token: &Token<V>, value: V) {
@@ -73,6 +75,7 @@ pub enum RobotEvent {
     Disconnected(SocketAddr),
 }
 
+/// Handle `RobotEvent`s
 fn update_robot(mut robot: ResMut<Robot>, mut events: EventReader<RobotEvent>) {
     for event in events.iter() {
         match event {
@@ -87,6 +90,7 @@ fn update_robot(mut robot: ResMut<Robot>, mut events: EventReader<RobotEvent>) {
     }
 }
 
+/// Handle writes to store and send the corresponding packets to the robot
 fn updates_to_packets(
     adapters: Res<Adapters>,
     mut robot: ResMut<Robot>,

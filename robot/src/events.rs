@@ -5,6 +5,7 @@ use tracing::error;
 
 use crate::event::Event;
 
+/// Facilitates communication between systems
 #[derive(Debug, Clone)]
 pub struct EventHandle {
     peers: Vec<Sender<Arc<Event>>>,

@@ -12,6 +12,7 @@ use tracing::{debug, error, info, span, warn, Level};
 
 const ADDRS: &str = "0.0.0.0:44444";
 
+/// Handles the robot side of robot <-> surface communication.
 pub struct NetworkSystem;
 
 impl System for NetworkSystem {

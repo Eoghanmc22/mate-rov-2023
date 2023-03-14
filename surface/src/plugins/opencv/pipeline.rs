@@ -9,6 +9,7 @@ pub type SourceFn = Box<dyn FnMut(&mut Mats) -> anyhow::Result<bool>>;
 pub type ProcessorFn = Box<dyn FnMut(&mut Mats) -> anyhow::Result<Movement>>;
 pub type PipelineProto = Vec<PipelineStage>;
 
+/// Repersents a image created in the image process pipeline
 #[derive(Debug, Hash, PartialEq, Eq, Clone, Copy)]
 pub enum MatId {
     Raw,
@@ -24,6 +25,7 @@ impl Display for MatId {
     }
 }
 
+/// Repersents a stage in the image processing pipeline
 #[derive(Debug, Hash, PartialEq, Eq, Clone, Copy)]
 pub enum PipelineStage {}
 
