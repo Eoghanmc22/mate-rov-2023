@@ -5,8 +5,8 @@ use common::protocol::Protocol;
 use common::store::tokens;
 use common::LogLevel;
 use crossbeam::channel::{bounded, Receiver};
+use fxhash::FxHashMap as HashMap;
 use networking::{Event, Messenger, Networking};
-use std::collections::HashMap;
 use std::net::SocketAddr;
 use std::thread;
 use std::time::SystemTime;
@@ -54,7 +54,7 @@ fn setup_network(mut commands: Commands, mut errors: EventWriter<Notification>) 
     {
         let messenger = network.messenger();
         thread::spawn(move || {
-            let mut clients = HashMap::new();
+            let mut clients = HashMap::default();
             let adapters = tokens::generate_adaptors();
 
             network.start(|event| match event {

@@ -4,11 +4,10 @@ use common::error::LogError;
 use common::protocol::Protocol;
 use common::store::adapters::{BackingType, TypeAdapter};
 use common::store::{self, tokens, Key, Store, Token, Update, UpdateCallback};
-use common::types::Camera;
 use crossbeam::channel::{bounded, Receiver, Sender};
 use fxhash::FxHashMap as HashMap;
 use std::any::Any;
-use std::net::{IpAddr, Ipv4Addr, SocketAddr};
+use std::net::SocketAddr;
 use std::time::SystemTime;
 
 pub struct RobotPlugin;
@@ -19,7 +18,6 @@ impl Plugin for RobotPlugin {
         app.add_event::<Update>();
         app.init_resource::<Robot>();
         app.init_resource::<Adapters>();
-        // app.add_startup_system(mock_data);
         app.add_system(update_robot.in_base_set(CoreSet::PreUpdate));
         app.add_system(updates_to_packets.in_base_set(CoreSet::PostUpdate));
     }
@@ -73,30 +71,6 @@ pub enum RobotEvent {
 
     Connected(SocketAddr),
     Disconnected(SocketAddr),
-}
-
-fn mock_data(mut robot: ResMut<Robot>) {
-    robot.0.insert(
-        &tokens::CAMERAS,
-        vec![
-            Camera {
-                name: "Test A".to_owned(),
-                location: SocketAddr::new(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)), 4444),
-            },
-            Camera {
-                name: "Test B".to_owned(),
-                location: SocketAddr::new(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)), 4444),
-            },
-            Camera {
-                name: "Test C".to_owned(),
-                location: SocketAddr::new(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)), 4444),
-            },
-            Camera {
-                name: "Test D".to_owned(),
-                location: SocketAddr::new(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)), 4444),
-            },
-        ],
-    );
 }
 
 fn update_robot(mut robot: ResMut<Robot>, mut events: EventReader<RobotEvent>) {

@@ -13,6 +13,7 @@ use common::{
     types::{Camera, Movement},
 };
 use crossbeam::channel::{self, Receiver, Sender, TrySendError};
+use fxhash::FxHashSet as HashSet;
 use opencv::{
     imgproc,
     prelude::{Mat, MatTraitConstManual},
