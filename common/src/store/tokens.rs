@@ -11,6 +11,8 @@ use crate::{
 use fxhash::FxHashMap as HashMap;
 use std::time::Instant;
 
+// Adaptor Definitions
+
 #[rustfmt::skip]
 pub const SYSTEM_INFO: Token<SystemInfo> = Token::new_const("robot.system_info");
 
@@ -43,6 +45,8 @@ pub const ORIENTATION: Token<(Orientation, Instant)> = Token::new_const("robot.s
 #[rustfmt::skip]
 pub const DEPTH_TARGET: Token<(Meters, Instant)> = Token::new_const("robot.ai.depth_target");
 
+/// Returns a map between `Key` and `TypeAdapter`
+/// Used to convert the binary data for key into the correct struct
 pub fn generate_adaptors() -> HashMap<Key, Box<dyn TypeAdapter<BackingType> + Send + Sync>> {
     fn from<A: TypedAdapter<BackingType> + Default + Send + Sync + 'static>(
         token: Token<A::Data>,

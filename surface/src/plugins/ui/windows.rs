@@ -1,4 +1,4 @@
-//! Egui window renders
+//! Egui window renderers
 //! Api not final
 
 use anyhow::anyhow;

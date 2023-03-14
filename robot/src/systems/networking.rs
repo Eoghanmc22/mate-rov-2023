@@ -3,7 +3,7 @@ use crate::events::EventHandle;
 use crate::systems::System;
 use anyhow::{Context, Error};
 use common::protocol::Protocol;
-use common::LogLevel;
+use common::types::LogLevel;
 use networking::{Event as NetEvent, Networking};
 use std::net::ToSocketAddrs;
 use std::thread::Scope;

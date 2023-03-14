@@ -1,10 +1,10 @@
 use crate::plugins::robot::RobotEvent;
 use anyhow::Context;
 use bevy::prelude::*;
-use common::error::LogError;
+use common::error::LogErrorExt;
 use common::protocol::Protocol;
 use common::store::tokens;
-use common::LogLevel;
+use common::types::LogLevel;
 use crossbeam::channel::{bounded, Receiver};
 use fxhash::FxHashMap as HashMap;
 use networking::{Event, Messenger, Networking};

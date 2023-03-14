@@ -300,3 +300,11 @@ pub struct Camera {
     pub name: String,
     pub location: SocketAddr,
 }
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum LogLevel {
+    Debug,
+    Info,
+    Warn,
+    Error,
+}

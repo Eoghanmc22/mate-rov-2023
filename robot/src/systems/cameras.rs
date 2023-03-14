@@ -44,6 +44,7 @@ impl System for CameraSystem {
 
             for event in listner.into_iter() {
                 match &*event {
+                    // Respawns all instances of gstreamer and points the new ones towards the new peer
                     Event::PeerConnected(addrs) => {
                         target_ip = Some(addrs.ip());
 
@@ -73,6 +74,7 @@ impl System for CameraSystem {
                     Event::Store(update) => {
                         store.handle_update_shared(update);
                     }
+                    // Reruns detect cameras script and start or kill instances of gstreamer as needed
                     Event::SyncStore => {
                         info!("Checking for new cameras");
 
@@ -152,6 +154,7 @@ impl System for CameraSystem {
     }
 }
 
+/// Spawns a gstreamer with the args necessary
 fn start_gstreamer(camera: &str, addrs: SocketAddr) -> io::Result<Child> {
     Command::new("gst-launch-1.0")
         .arg("v4l2src")
@@ -167,6 +170,7 @@ fn start_gstreamer(camera: &str, addrs: SocketAddr) -> io::Result<Child> {
         .spawn()
 }
 
+/// Starts a gstreamer and updates state
 fn add_camera(
     camera: &str,
     ip: IpAddr,
@@ -183,6 +187,7 @@ fn add_camera(
     Ok(())
 }
 
+/// Converts internal repersentation of cameras to what the protocol calls for
 fn camera_list(cameras: &HashMap<String, (Child, SocketAddr)>) -> Vec<Camera> {
     let mut list = Vec::new();
 

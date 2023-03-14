@@ -1,6 +1,6 @@
 use std::thread::Scope;
 
-use common::{protocol::Protocol, LogLevel};
+use common::{protocol::Protocol, types::LogLevel};
 use tracing::{error, span, Level};
 
 use crate::{event::Event, events::EventHandle, systems::System};

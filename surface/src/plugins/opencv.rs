@@ -3,19 +3,12 @@
 use std::{cell::RefCell, thread, time::Duration};
 
 use anyhow::Context;
-use bevy::{
-    prelude::*,
-    render::{
-        render_resource::{Extent3d, TextureFormat},
-        texture::BevyDefault,
-    },
-};
+use bevy::{prelude::*, render::render_resource::Extent3d};
 use common::{
-    error::LogError,
+    error::LogErrorExt,
     types::{Camera, Movement},
 };
-use crossbeam::channel::{self, Receiver, Sender, TrySendError};
-use fxhash::FxHashSet as HashSet;
+use crossbeam::channel::{self, Receiver, Sender};
 use opencv::{
     imgproc,
     prelude::{Mat, MatTraitConstManual},

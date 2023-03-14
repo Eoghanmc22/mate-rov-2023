@@ -7,20 +7,23 @@ use serde::{Deserialize, Serialize};
 
 pub type BackingType = Vec<u8>;
 
+/// Repersents a type that can be serialized to and deserialized from another type
+/// Usually a `BackingType`
 pub trait TypeAdapter<Output> {
     fn serialize(&self, obj: &dyn Any) -> Option<Output>;
     fn deserialize(&self, data: &Output) -> Option<Box<dyn Any + Send + Sync>>;
 }
 
+/// Trait ontop of `TypeAdapter` that encodes the expected type
+/// Used improve type checking
 pub trait TypedAdapter<Output>: TypeAdapter<Output> {
     type Data;
 }
 
 pub struct Adapter<T>(PhantomData<T>);
-
 pub struct TimestampedAdapter<T>(PhantomData<T>);
 
-// Current automatic impls
+// Current blanket impls
 
 impl<T> TypeAdapter<BackingType> for Adapter<T>
 where
@@ -78,6 +81,7 @@ impl<B> Default for TimestampedAdapter<B> {
     }
 }
 
+/// The serializeation settings used
 fn options() -> impl Options {
     DefaultOptions::new()
 }

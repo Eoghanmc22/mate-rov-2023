@@ -4,7 +4,7 @@ use std::mem;
 
 use bevy::{prelude::*, utils::HashMap};
 use bevy_egui::EguiContexts;
-use common::error::LogError;
+use common::error::LogErrorExt;
 use egui::{vec2, Align, Layout, TextureId, Ui};
 
 use crate::plugins::opencv::VideoMessage;

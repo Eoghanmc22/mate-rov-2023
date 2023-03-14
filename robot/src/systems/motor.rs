@@ -4,7 +4,7 @@ use crate::peripheral::motor::Motor;
 use crate::systems::System;
 use anyhow::{anyhow, Context};
 use common::{
-    error::LogError,
+    error::LogErrorExt,
     store::{tokens, KeyImpl, Store},
     types::{Armed, MotorFrame, MotorId, Movement, Speed},
 };
@@ -18,7 +18,7 @@ use tracing::{span, Level};
 
 const MAX_UPDATE_AGE: Duration = Duration::from_millis(250);
 
-/// Handles Motor speed updated and controlls the motors
+/// Handles Motor speed updated and controls the motors
 pub struct MotorSystem;
 
 enum Message {

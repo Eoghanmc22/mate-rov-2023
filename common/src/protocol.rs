@@ -1,6 +1,6 @@
 //! Repersents the protocol used for two way communication
 
-use crate::LogLevel;
+use crate::types::LogLevel;
 use anyhow::Context;
 use bincode::{DefaultOptions, Options};
 use serde::{Deserialize, Serialize};

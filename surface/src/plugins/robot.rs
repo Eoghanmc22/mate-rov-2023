@@ -1,6 +1,6 @@
 use crate::plugins::networking::NetworkEvent;
 use bevy::prelude::*;
-use common::error::LogError;
+use common::error::LogErrorExt;
 use common::protocol::Protocol;
 use common::store::adapters::{BackingType, TypeAdapter};
 use common::store::{self, tokens, Key, Store, Token, Update, UpdateCallback};
