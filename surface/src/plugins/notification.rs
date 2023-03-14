@@ -39,6 +39,18 @@ enum Level {
     Error,
 }
 
+pub fn create_handle_errors(
+    name: impl Into<String>,
+) -> impl Fn(In<anyhow::Result<()>>, EventWriter<Notification>) {
+    let name = name.into();
+
+    move |In(result), mut notifs| {
+        if let Err(err) = result {
+            notifs.send(Notification::Error(name.clone(), err));
+        }
+    }
+}
+
 fn handle_notification(
     mut notifications: EventReader<Notification>,
     mut res: ResMut<NotificationResource>,

@@ -50,7 +50,6 @@ fn gamepad_connections(
                         }
                     }
                 }
-                _ => {}
             },
             GamepadEvent::Button(_) => {}
             GamepadEvent::Axis(_) => {}

@@ -1,4 +1,5 @@
 use crate::plugins::robot::RobotEvent;
+use anyhow::Context;
 use bevy::prelude::*;
 use common::error::LogError;
 use common::protocol::Protocol;
@@ -11,14 +12,14 @@ use std::net::SocketAddr;
 use std::thread;
 use std::time::SystemTime;
 
-use super::notification::Notification;
+use super::notification::{create_handle_errors, Notification};
 
 pub struct NetworkPlugin;
 
 impl Plugin for NetworkPlugin {
     fn build(&self, app: &mut App) {
         app.add_event::<NetworkEvent>();
-        app.add_startup_system(setup_network);
+        app.add_startup_system(setup_network.pipe(create_handle_errors("Setup network error")));
         app.add_system(updates_to_events.in_base_set(CoreSet::PreUpdate));
         app.add_system(events_to_notifs.after(updates_to_events));
         app.add_system(events_to_packets.in_base_set(CoreSet::PostUpdate));
@@ -34,20 +35,10 @@ pub enum NetworkEvent {
 #[derive(Resource)]
 struct NetworkLink(Messenger<Protocol>, Receiver<RobotEvent>);
 
-fn setup_network(mut commands: Commands, mut errors: EventWriter<Notification>) {
+fn setup_network(mut commands: Commands) -> anyhow::Result<()> {
     let (tx, rx) = bounded(30);
 
-    let network = Networking::new();
-    let network = match network {
-        Ok(network) => network,
-        Err(err) => {
-            errors.send(Notification::Error(
-                "Could start networking".to_owned(),
-                err.into(),
-            ));
-            return;
-        }
-    };
+    let network = Networking::new().context("Could start networking")?;
 
     let messenger = network.messenger();
 
@@ -136,6 +127,8 @@ fn setup_network(mut commands: Commands, mut errors: EventWriter<Notification>) 
     }
 
     commands.insert_resource(NetworkLink(messenger, rx));
+
+    Ok(())
 }
 
 fn updates_to_events(mut events: EventWriter<RobotEvent>, net_link: Res<NetworkLink>) {
