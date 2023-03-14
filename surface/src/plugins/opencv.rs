@@ -146,15 +146,13 @@ fn video_capture_thread(
                     }
 
                     // Return processed mats
-                    let rst = image_sender.try_send(image);
+                    let rst = image_sender.send(image);
                     // move_sender.try_send(movement_total).log_error("Send move");
 
-                    if let Err(TrySendError::Disconnected(_)) = rst {
+                    if let Err(_) = rst {
                         info!("Image receiver disconnected, stoping video capture thread");
 
                         return;
-                    } else {
-                        rst.log_error("Send image");
                     }
                 }
                 Ok(false) => {
