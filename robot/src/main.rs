@@ -15,7 +15,7 @@
 
 pub mod event;
 pub mod events;
-pub mod peripheral;
+pub mod peripheral_new;
 mod systems;
 
 use crate::systems::error::ErrorSystem;

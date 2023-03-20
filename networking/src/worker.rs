@@ -129,7 +129,7 @@ pub fn start_worker<P: Packet>(
                                 if let Err(err) = res {
                                     (handler)(Event::Error(
                                         Some(peer_token),
-                                        NetError::from(err).chain("Write packet".to_owned()),
+                                        err.chain("Write packet".to_owned()),
                                     ));
                                     peers.remove(&peer_token);
                                     continue 'message;
@@ -153,7 +153,7 @@ pub fn start_worker<P: Packet>(
                                 if let Err(err) = res {
                                     (handler)(Event::Error(
                                         Some(*token),
-                                        NetError::from(err).chain("Brodcast packet".to_owned()),
+                                        err.chain("Brodcast packet".to_owned()),
                                     ));
                                     to_remove.push(*token);
                                     continue 'peer;
@@ -189,8 +189,7 @@ pub fn start_worker<P: Packet>(
                                         // Couldnt setup the peer's socket
                                         (handler)(Event::Error(
                                             Some(event.token()),
-                                            NetError::from(err)
-                                                .chain("Setup peer socket".to_owned()),
+                                            err.chain("Setup peer socket".to_owned()),
                                         ));
                                         peers.remove(&event.token());
                                         continue 'event;
@@ -226,7 +225,7 @@ pub fn start_worker<P: Packet>(
                     if let Err(err) = res {
                         (handler)(Event::Error(
                             Some(event.token()),
-                            NetError::from(err).chain("Write packets".to_owned()),
+                            err.chain("Write packets".to_owned()),
                         ));
                         peers.remove(&event.token());
                         continue 'event;
@@ -248,7 +247,7 @@ pub fn start_worker<P: Packet>(
                             Err(err) => {
                                 (handler)(Event::Error(
                                     Some(event.token()),
-                                    NetError::from(err).chain("Read packets".to_owned()),
+                                    err.chain("Read packets".to_owned()),
                                 ));
                                 peers.remove(&event.token());
                                 continue 'event;
@@ -302,7 +301,7 @@ pub fn start_worker<P: Packet>(
                         if let Err(err) = res {
                             (handler)(Event::Error(
                                 Some(token),
-                                NetError::from(err).chain("Setup accepted socket".to_owned()),
+                                err.chain("Setup accepted socket".to_owned()),
                             ));
                             continue 'accept;
                         }

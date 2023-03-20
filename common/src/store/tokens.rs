@@ -51,7 +51,7 @@ pub fn generate_adaptors() -> HashMap<Key, Box<dyn TypeAdapter<BackingType> + Se
     fn from<A: TypedAdapter<BackingType> + Default + Send + Sync + 'static>(
         token: Token<A::Data>,
     ) -> (Key, Box<dyn TypeAdapter<BackingType> + Send + Sync>) {
-        (token.0, Box::new(A::default()))
+        (token.0, Box::<A>::default())
     }
 
     vec![

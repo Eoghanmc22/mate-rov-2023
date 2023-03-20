@@ -4,7 +4,7 @@
 //pub mod lis3mdl;
 //pub mod lsm6dsl;
 //pub mod depth;
-pub mod motor;
+// pub mod motor;
 
 pub trait Device {
     fn read_byte(&mut self, address: u8) -> anyhow::Result<u8> {

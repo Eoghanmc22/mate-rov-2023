@@ -1,8 +1,8 @@
-use crate::event::Event;
 use crate::events::EventHandle;
-use crate::peripheral::motor::Motor;
+use crate::peripheral_new::motor::Motor;
 use crate::systems::System;
-use anyhow::{anyhow, Context};
+use crate::{event::Event, peripheral_new::pca9685::Pca9685};
+use anyhow::anyhow;
 use common::{
     error::LogErrorExt,
     store::{tokens, KeyImpl, Store},
@@ -10,10 +10,9 @@ use common::{
 };
 use crossbeam::channel;
 use fxhash::{FxHashMap as HashMap, FxHashSet as HashSet};
-use rppal::gpio::{Gpio, OutputPin};
 use std::thread::{self, Scope};
 use std::time::Duration;
-use std::{collections::hash_map::Entry, time::Instant};
+use std::time::Instant;
 use tracing::{span, Level};
 
 const MAX_UPDATE_AGE: Duration = Duration::from_millis(250);
@@ -34,14 +33,26 @@ impl System for MotorSystem {
         let listner = events.take_listner().unwrap();
 
         let (tx, rx) = channel::bounded(30);
-        let gpio = Gpio::new().context("Create gpio")?;
 
         {
             let mut events = events.clone();
             spawner.spawn(move || {
                 span!(Level::INFO, "Motor thread");
 
-                let mut motors: HashMap<MotorId, Motor<OutputPin>> = HashMap::default();
+                let pwm_controller = Pca9685::new(
+                    Pca9685::I2C_BUS,
+                    Pca9685::I2C_ADDRESS,
+                    Duration::from_secs_f64(1.0 / 400.0),
+                );
+                let mut pwm_controller = match pwm_controller {
+                    Ok(pwm_controller) => pwm_controller,
+                    Err(err) => {
+                        events.send(Event::Error(err.context("PCA9685")));
+                        return;
+                    }
+                };
+                pwm_controller.output_enable();
+
                 let mut deadlines: HashMap<MotorId, Instant> = HashMap::default();
 
                 for message in rx.into_iter() {
@@ -49,41 +60,29 @@ impl System for MotorSystem {
                         Message::MotorSpeed(motor_id, frame, deadline) => {
                             deadlines.insert(motor_id, deadline);
 
-                            let mut entry = motors.entry(motor_id);
-                            let motor = match entry {
-                                Entry::Occupied(ref mut occupied) => Some(occupied.get_mut()),
-                                Entry::Vacant(vacant) => {
-                                    let ret = Motor::new(&gpio, motor_id.into());
-                                    match ret {
-                                        Ok(motor) => Some(vacant.insert(motor)),
-                                        Err(error) => {
-                                            events.send(Event::Error(error.context(format!(
-                                                "Could not create motor: {motor_id:?}"
-                                            ))));
-                                            None
-                                        }
-                                    }
-                                }
-                            };
-                            if let Some(motor) = motor {
-                                let ret = motor.set_speed(frame.0).context("Set speed");
-                                if let Err(error) = ret {
-                                    events.send(Event::Error(
-                                        error.context(format!("Couldn't set speed: {motor_id:?}")),
-                                    ));
-                                }
+                            let motor = Motor::from(motor_id);
+                            let pwm = motor.speed_to_pwm(frame.0);
+
+                            let rst = pwm_controller.set_pwm(motor.channel(), pwm);
+                            if let Err(error) = rst {
+                                events.send(Event::Error(
+                                    error.context(format!("Couldn't set speed: {motor_id:?}")),
+                                ));
                             }
                         }
                         Message::CheckDeadlines => {
                             for (motor_id, deadline) in &deadlines {
                                 if Instant::now() - *deadline > MAX_UPDATE_AGE {
-                                    if let Some(motor) = motors.get_mut(motor_id) {
-                                        let ret = motor.set_speed(Speed::ZERO).context("Set speed");
-                                        if let Err(error) = ret {
-                                            events.send(Event::Error(error.context(format!(
+                                    let motor = Motor::from(*motor_id);
+                                    let pwm = motor.speed_to_pwm(Speed::ZERO);
+
+                                    let rst = pwm_controller.set_pwm(motor.channel(), pwm);
+                                    if let Err(error) = rst {
+                                        events.send(Event::Error(
+                                            error.context(format!(
                                                 "Couldn't set speed: {motor_id:?}"
-                                            ))));
-                                        }
+                                            )),
+                                        ));
                                     }
                                 }
                             }
