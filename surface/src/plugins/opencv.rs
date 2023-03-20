@@ -146,7 +146,7 @@ fn video_capture_thread(
                     let rst = image_sender.send(image);
                     // move_sender.try_send(movement_total).log_error("Send move");
 
-                    if let Err(_) = rst {
+                    if rst.is_err() {
                         info!("Image receiver disconnected, stoping video capture thread");
 
                         return;

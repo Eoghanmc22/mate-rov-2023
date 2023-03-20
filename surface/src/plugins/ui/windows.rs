@@ -27,8 +27,7 @@ impl Renderable for ConnectionWindow {
             .to_socket_addrs()
             .context("Create socket addrs")
             .and_then(|mut it| {
-                it.filter(|it| it.is_ipv4())
-                    .next()
+                it.find(|it| it.is_ipv4())
                     .ok_or_else(|| anyhow!("No Socket address found"))
             }) {
             Ok(remote) => {

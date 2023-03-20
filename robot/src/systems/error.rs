@@ -19,15 +19,12 @@ impl System for ErrorSystem {
             span!(Level::ERROR, "Error handler");
 
             for event in listner.into_iter() {
-                match &*event {
-                    Event::Error(err) => {
-                        error!("Encountered error: {err:?}");
-                        events.send(Event::PacketTx(Protocol::Log(
-                            LogLevel::Error,
-                            format!("Robot encountered error: {err}"),
-                        )))
-                    }
-                    _ => {}
+                if let Event::Error(err) = &*event {
+                    error!("Encountered error: {err:?}");
+                    events.send(Event::PacketTx(Protocol::Log(
+                        LogLevel::Error,
+                        format!("Robot encountered error: {err}"),
+                    )))
                 }
             }
         });

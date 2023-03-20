@@ -123,10 +123,10 @@ impl System for MotorSystem {
                 store.insert(&tokens::MOTOR_SPEED, (motors, Instant::now()));
 
                 let listening: HashSet<KeyImpl> = vec![
-                    tokens::ARMED.0.clone(),
-                    tokens::MOVEMENT_JOYSTICK.0.clone(),
-                    tokens::MOVEMENT_OPENCV.0.clone(),
-                    tokens::MOVEMENT_DEPTH.0.clone(),
+                    tokens::ARMED.0,
+                    tokens::MOVEMENT_JOYSTICK.0,
+                    tokens::MOVEMENT_OPENCV.0,
+                    tokens::MOVEMENT_DEPTH.0,
                 ]
                 .into_iter()
                 .collect();
@@ -184,7 +184,7 @@ impl System for MotorSystem {
                                     for (motor, speed) in &new_speeds {
                                         let ret =
                                             tx.send(Message::MotorSpeed(*motor, *speed, deadline));
-                                        if let Err(_) = ret {
+                                        if ret.is_err() {
                                             events.send(Event::Error(anyhow!(
                                                 "Couldn't update new speed"
                                             )));

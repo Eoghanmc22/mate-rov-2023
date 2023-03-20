@@ -120,14 +120,9 @@ impl<C> Widget for &mut RemoteSystem<'_, C> {
                                         ));
                                     });
                                     row.col(|ui| {
-                                        ui.label(format!(
-                                            "{}",
-                                            process
-                                                .user
-                                                .as_ref()
-                                                .map(|it| it.as_str())
-                                                .unwrap_or("None")
-                                        ));
+                                        ui.label(
+                                            process.user.as_deref().unwrap_or("None").to_string(),
+                                        );
                                     });
                                 },
                             );

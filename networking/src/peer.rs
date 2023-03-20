@@ -51,9 +51,7 @@ where
         // Write the packet to the buffer
         {
             let expected_size = header::HEADER_SIZE
-                + packet
-                    .expected_size()
-                    .map_err(|err| NetError::WritingError(err))? as usize;
+                + packet.expected_size().map_err(NetError::WritingError)? as usize;
             let mut buffer = temp.get_unwritten(expected_size);
 
             let header = header::Header::new(&mut buffer);
@@ -61,7 +59,7 @@ where
             let available = buffer.len();
             packet
                 .write_buf(&mut buffer)
-                .map_err(|err| NetError::WritingError(err))?;
+                .map_err(NetError::WritingError)?;
             let remaining = buffer.len();
 
             let packet_size = available - remaining;
@@ -127,9 +125,9 @@ impl<S: Read> Peer<S> {
                         temp.advance_read(header::HEADER_SIZE);
                         let mut complete_packet_buf = temp.advance_read(len);
                         let packet = P::read_buf(&mut complete_packet_buf)
-                            .map_err(|err| NetError::ParsingError(err))?;
+                            .map_err(NetError::ParsingError)?;
 
-                        if complete_packet_buf.len() > 0 {
+                        if !complete_packet_buf.is_empty() {
                             warn!("Packet not completely read");
                         }
 

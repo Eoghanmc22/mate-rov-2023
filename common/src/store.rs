@@ -78,7 +78,7 @@ impl<C> Store<C> {
         self.owned
             .get(&key.0)
             .or_else(|| self.shared.get(&key.0))
-            .map(|it| it.clone())
+            .cloned()
             .and_then(|it| it.downcast::<V>().ok())
     }
 

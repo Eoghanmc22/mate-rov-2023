@@ -25,14 +25,11 @@ fn main() -> anyhow::Result<()> {
             net.start(|event| {
                 println!("{event:?}");
 
-                match event {
-                    Event::Data(_token, packet) => {
-                        messenger
-                            .brodcast_packet(packet)
-                            .context("explosion")
-                            .unwrap();
-                    }
-                    _ => {}
+                if let Event::Data(_token, packet) = event {
+                    messenger
+                        .brodcast_packet(packet)
+                        .context("explosion")
+                        .unwrap();
                 }
             });
         })

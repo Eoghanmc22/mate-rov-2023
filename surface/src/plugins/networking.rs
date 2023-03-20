@@ -63,7 +63,7 @@ fn setup_network(mut commands: Commands) -> anyhow::Result<()> {
                 }
                 Event::Data(token, packet) => match packet {
                     Protocol::Store(key, data) => {
-                        let key = key.to_owned().into();
+                        let key = key.into();
                         let adapter = adapters.get(&key);
 
                         // TODO handle in robot system
