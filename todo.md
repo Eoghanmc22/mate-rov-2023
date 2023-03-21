@@ -28,7 +28,7 @@
     - [ ] Timer
     - [ ] Visualize our data
   - [ ] Use the LEDs on the navigator better
-  - [ ] 
+  - [ ] Make a README.md
 - [ ] Misc
   - [ ] Surface network system has too much responsibility
   - [ ] Ip resolution should not occur in the code of ConnectWindow
