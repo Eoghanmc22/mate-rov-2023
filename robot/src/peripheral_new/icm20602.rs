@@ -1,0 +1,134 @@
+use core::slice;
+use std::{thread, time::Duration};
+
+use anyhow::Context;
+use common::types::{Celsius, Dps, GForce, InertialFrame};
+use rppal::spi::{Bus, Mode, SlaveSelect, Spi};
+
+pub struct Icm20602 {
+    spi: Spi,
+}
+
+impl Icm20602 {
+    pub const SPI_BUS: Bus = Bus::Spi1;
+    pub const SPI_SELECT: SlaveSelect = SlaveSelect::Ss2;
+    pub const SPI_CLOCK: u32 = 10_000_000;
+
+    pub fn new(bus: Bus, slave_select: SlaveSelect, clock_speed: u32) -> anyhow::Result<Self> {
+        let spi = Spi::new(bus, slave_select, clock_speed, Mode::Mode0).context("Open spi")?;
+
+        let mut this = Self { spi };
+        this.initialize().context("Initialize")?;
+
+        Ok(this)
+    }
+
+    // TODO convert native axises to the cordnate system for everything else
+    pub fn read_frame(&mut self) -> anyhow::Result<InertialFrame> {
+        let raw = self.read_raw_frame().context("Read raw frame")?;
+
+        let raw_accel_native_x = (raw[0] as u16) << 8 | raw[1] as u16;
+        let raw_accel_native_y = (raw[2] as u16) << 8 | raw[3] as u16;
+        let raw_accel_native_z = (raw[4] as u16) << 8 | raw[5] as u16;
+
+        let raw_tempature = (raw[6] as u16) << 8 | raw[7] as u16;
+
+        let raw_gyro_native_x = (raw[8] as u16) << 8 | raw[9] as u16;
+        let raw_gyro_native_y = (raw[10] as u16) << 8 | raw[11] as u16;
+        let raw_gyro_native_z = (raw[12] as u16) << 8 | raw[13] as u16;
+
+        let accel_native_x = raw_accel_native_x as f64 / 16384.0;
+        let accel_native_y = raw_accel_native_y as f64 / 16384.0;
+        let accel_native_z = raw_accel_native_z as f64 / 16384.0;
+
+        let tempature = raw_tempature as f64 / 326.8 + 25.0;
+
+        let gyro_native_x = raw_gyro_native_x as f64 / 131.0;
+        let gyro_native_y = raw_gyro_native_y as f64 / 131.0;
+        let gyro_native_z = raw_gyro_native_z as f64 / 131.0;
+
+        Ok(InertialFrame {
+            gyro_x: Dps(gyro_native_x),
+            gyro_y: Dps(gyro_native_y),
+            gyro_z: Dps(gyro_native_z),
+            accel_x: GForce(accel_native_x),
+            accel_y: GForce(accel_native_y),
+            accel_z: GForce(accel_native_z),
+            tempature: Celsius(tempature),
+        })
+    }
+}
+
+// Implementation based on https://github.com/bluerobotics/icm20602-python
+impl Icm20602 {
+    const REG_I2C_IF: u8 = 0x70;
+    const REG_CONFIG: u8 = 0x1A;
+    const REG_GYRO_CONFIG: u8 = 0x1B;
+    const REG_ACCEL_CONFIG: u8 = 0x1C;
+    const REG_ACCEL_CONFIG_2: u8 = 0x1D;
+    const REG_ACCEL_INTEL_CTRL: u8 = 0x69;
+    const REG_PWR_MGMT_1: u8 = 0x6B;
+    const REG_WHO_AM_I: u8 = 0x75;
+    const REG_ACCEL_XOUT_H: u8 = 0x3B;
+
+    const READ: u8 = 0x80;
+
+    fn initialize(&mut self) -> anyhow::Result<()> {
+        let mut id = 0;
+        self.spi
+            .write(&[Self::REG_WHO_AM_I | Self::READ])
+            .context("Request id")?;
+        self.spi.read(slice::from_mut(&mut id)).context("Read id")?;
+        assert_eq!(id, 0x12);
+
+        self.spi
+            .write(&[Self::REG_I2C_IF, 0x40])
+            .context("Disable i2c")?;
+
+        // 1Hz sample rate
+        self.spi
+            .write(&[Self::REG_CONFIG, 0x1])
+            .context("Setup lowpass filter")?;
+
+        // 250 deg range, lowpass filter
+        self.spi
+            .write(&[Self::REG_GYRO_CONFIG, 0x0])
+            .context("Setup gyro")?;
+
+        // 2g range
+        self.spi
+            .write(&[Self::REG_ACCEL_CONFIG, 0x0])
+            .context("Setup accel")?;
+
+        // lowpass filter
+        self.spi
+            .write(&[Self::REG_ACCEL_CONFIG_2, 0x0])
+            .context("Setup accel")?;
+
+        // Disable output limit
+        self.spi
+            .write(&[Self::REG_ACCEL_INTEL_CTRL, 0x2])
+            .context("Setup accel")?;
+
+        // Exit sleep mode
+        self.spi
+            .write(&[Self::REG_PWR_MGMT_1, 0x1])
+            .context("Exit sleep")?;
+
+        // Delay to allow sensors to start up and stabilize
+        thread::sleep(Duration::from_millis(100));
+
+        Ok(())
+    }
+
+    fn read_raw_frame(&mut self) -> anyhow::Result<[u8; 14]> {
+        let mut raw = [0; 14];
+
+        self.spi
+            .write(&[Self::REG_ACCEL_XOUT_H | Self::READ])
+            .context("Begin read imu frame")?;
+        self.spi.read(&mut raw).context("Read imu frame")?;
+
+        Ok(raw)
+    }
+}

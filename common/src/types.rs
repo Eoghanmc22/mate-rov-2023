@@ -73,6 +73,8 @@ pub struct InertialFrame {
     pub accel_x: GForce,
     pub accel_y: GForce,
     pub accel_z: GForce,
+
+    pub tempature: Celsius,
 }
 
 #[derive(Debug, Copy, Clone, Default, Serialize, Deserialize, PartialEq)]

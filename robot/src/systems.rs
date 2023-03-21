@@ -5,9 +5,9 @@ pub mod motor;
 pub mod networking;
 pub mod robot;
 // TODO indicators
-// TODO inertial
 // TODO mag
 // TODO depth
+pub mod inertial;
 pub mod logging;
 // TODO perhaps just a single sensor system?
 
