@@ -4,7 +4,7 @@ use std::{
 };
 
 use common::store::{self, tokens};
-use tracing::{error, span, Level};
+use tracing::{span, Level};
 
 use crate::{event::Event, events::EventHandle, peripheral_new::icm20602::Icm20602};
 
@@ -56,17 +56,13 @@ impl System for InertialSystem {
                     }
                 }
 
-                let sleep = deadline - Instant::now();
-                if !sleep.is_zero() {
-                    thread::sleep(sleep);
-                } else {
-                    error!("Did not meet deadline");
-                }
+                let remaining = deadline - Instant::now();
+                thread::sleep(remaining);
 
                 counter += 1;
             }
         });
 
-        todo!()
+        Ok(())
     }
 }

@@ -21,6 +21,12 @@ impl System for LogEventSystem {
 
             for event in listner.into_iter() {
                 match &*event {
+                    // The sensors emit thousands of events per second
+                    // Hide this
+                    Event::PacketTx(Protocol::Store(key, _)) if key.contains("sensor") => {}
+                    Event::PacketRx(Protocol::Store(key, _)) if key.contains("sensor") => {}
+                    Event::Store((key, _)) if key.as_str().contains("sensor") => {}
+
                     Event::PacketTx(Protocol::Store(key, _)) => {
                         debug!("PacketTx(Store({key}, ..))");
                     }

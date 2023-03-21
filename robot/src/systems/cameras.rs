@@ -8,9 +8,11 @@ use std::{
 
 use anyhow::{anyhow, Context, Error};
 use common::{
-    store::{tokens, Store},
+    error::LogErrorExt,
+    store::{self, tokens},
     types::Camera,
 };
+use crossbeam::channel::bounded;
 use fxhash::{FxHashMap as HashMap, FxHashSet as HashSet};
 use tracing::{info, span, Level};
 
@@ -27,12 +29,21 @@ impl System for CameraSystem {
     ) -> anyhow::Result<()> {
         let listner = events.take_listner().unwrap();
 
-        let mut store = {
-            let mut events = events.clone();
-            Store::new(move |update| {
-                events.send(Event::Store(update));
-            })
-        };
+        let (tx, rx) = bounded(30);
+
+        spawner.spawn(move || {
+            span!(Level::INFO, "Event filterer");
+
+            for event in listner.into_iter() {
+                match &*event {
+                    Event::PeerConnected(_) | Event::SyncStore => {
+                        tx.try_send(event)
+                            .log_error("Forward event to camera manager");
+                    }
+                    _ => {}
+                }
+            }
+        });
 
         spawner.spawn(move || {
             span!(Level::INFO, "Camera manager");
@@ -42,7 +53,7 @@ impl System for CameraSystem {
             let mut target_ip = None;
             let mut port = 1024u16;
 
-            for event in listner.into_iter() {
+            for event in rx.into_iter() {
                 match &*event {
                     // Respawns all instances of gstreamer and points the new ones towards the new peer
                     Event::PeerConnected(addrs) => {
@@ -69,10 +80,8 @@ impl System for CameraSystem {
                         }
 
                         let camera_list = camera_list(&cameras);
-                        store.insert(&tokens::CAMERAS, camera_list);
-                    }
-                    Event::Store(update) => {
-                        store.handle_update_shared(update);
+                        let update = store::create_update(&tokens::CAMERAS, camera_list);
+                        events.send(Event::Store(update));
                     }
                     // Reruns detect cameras script and start or kill instances of gstreamer as needed
                     Event::SyncStore => {
@@ -130,7 +139,9 @@ impl System for CameraSystem {
                                         last_cameras = next_cameras;
 
                                         let camera_list = camera_list(&cameras);
-                                        store.insert(&tokens::CAMERAS, camera_list);
+                                        let update =
+                                            store::create_update(&tokens::CAMERAS, camera_list);
+                                        events.send(Event::Store(update));
                                     }
                                     Err(err) => {
                                         events.send(Event::Error(

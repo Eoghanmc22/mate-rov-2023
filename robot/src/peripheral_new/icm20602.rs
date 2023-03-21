@@ -1,4 +1,3 @@
-use core::slice;
 use std::{thread, time::Duration};
 
 use anyhow::Context;
@@ -26,6 +25,8 @@ impl Icm20602 {
     // TODO convert native axises to the cordnate system for everything else
     pub fn read_frame(&mut self) -> anyhow::Result<InertialFrame> {
         let raw = self.read_raw_frame().context("Read raw frame")?;
+        // The first byte is junk
+        let raw = &raw[1..];
 
         let raw_accel_native_x = (raw[0] as u16) << 8 | raw[1] as u16;
         let raw_accel_native_y = (raw[2] as u16) << 8 | raw[3] as u16;
@@ -37,15 +38,15 @@ impl Icm20602 {
         let raw_gyro_native_y = (raw[10] as u16) << 8 | raw[11] as u16;
         let raw_gyro_native_z = (raw[12] as u16) << 8 | raw[13] as u16;
 
-        let accel_native_x = raw_accel_native_x as f64 / 16384.0;
-        let accel_native_y = raw_accel_native_y as f64 / 16384.0;
-        let accel_native_z = raw_accel_native_z as f64 / 16384.0;
+        let accel_native_x = raw_accel_native_x as i16 as f64 / 16384.0;
+        let accel_native_y = raw_accel_native_y as i16 as f64 / 16384.0;
+        let accel_native_z = raw_accel_native_z as i16 as f64 / 16384.0;
 
-        let tempature = raw_tempature as f64 / 326.8 + 25.0;
+        let tempature = raw_tempature as i16 as f64 / 326.8 + 25.0;
 
-        let gyro_native_x = raw_gyro_native_x as f64 / 131.0;
-        let gyro_native_y = raw_gyro_native_y as f64 / 131.0;
-        let gyro_native_z = raw_gyro_native_z as f64 / 131.0;
+        let gyro_native_x = raw_gyro_native_x as i16 as f64 / 131.0;
+        let gyro_native_y = raw_gyro_native_y as i16 as f64 / 131.0;
+        let gyro_native_z = raw_gyro_native_z as i16 as f64 / 131.0;
 
         Ok(InertialFrame {
             gyro_x: Dps(gyro_native_x),
@@ -74,12 +75,11 @@ impl Icm20602 {
     const READ: u8 = 0x80;
 
     fn initialize(&mut self) -> anyhow::Result<()> {
-        let mut id = 0;
+        let mut id = [0, 0];
         self.spi
-            .write(&[Self::REG_WHO_AM_I | Self::READ])
+            .transfer(&mut id, &[Self::REG_WHO_AM_I | Self::READ, 0])
             .context("Request id")?;
-        self.spi.read(slice::from_mut(&mut id)).context("Read id")?;
-        assert_eq!(id, 0x12);
+        assert_eq!(id[1], 0x12);
 
         self.spi
             .write(&[Self::REG_I2C_IF, 0x40])
@@ -121,14 +121,16 @@ impl Icm20602 {
         Ok(())
     }
 
-    fn read_raw_frame(&mut self) -> anyhow::Result<[u8; 14]> {
-        let mut raw = [0; 14];
+    fn read_raw_frame(&mut self) -> anyhow::Result<[u8; 15]> {
+        let mut output = [0; 15];
+        let mut input = [0; 15];
+
+        output[0] = Self::REG_ACCEL_XOUT_H | Self::READ;
 
         self.spi
-            .write(&[Self::REG_ACCEL_XOUT_H | Self::READ])
+            .transfer(&mut input, &output)
             .context("Begin read imu frame")?;
-        self.spi.read(&mut raw).context("Read imu frame")?;
 
-        Ok(raw)
+        Ok(input)
     }
 }
