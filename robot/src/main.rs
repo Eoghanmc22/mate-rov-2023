@@ -28,6 +28,8 @@ use tracing::{info, Level};
 #[cfg(rpi)]
 use crate::systems::cameras::CameraSystem;
 #[cfg(rpi)]
+use crate::systems::indicators::IndicatorsSystem;
+#[cfg(rpi)]
 use crate::systems::inertial::InertialSystem;
 #[cfg(rpi)]
 use crate::systems::motor::MotorSystem;
@@ -46,8 +48,10 @@ fn main() -> anyhow::Result<()> {
     systems.add_system::<StoreSystem>()?;
     systems.add_system::<NetworkSystem>()?;
     systems.add_system::<HwStatSystem>()?;
+    // #[cfg(rpi)]
+    // systems.add_system::<MotorSystem>()?;
     #[cfg(rpi)]
-    systems.add_system::<MotorSystem>()?;
+    systems.add_system::<IndicatorsSystem>()?;
     #[cfg(rpi)]
     systems.add_system::<InertialSystem>()?;
     #[cfg(rpi)]

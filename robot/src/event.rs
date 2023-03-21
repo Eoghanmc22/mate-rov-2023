@@ -6,6 +6,7 @@ use common::{protocol::Protocol, store::Update};
 #[derive(Debug)]
 pub enum Event {
     PeerConnected(SocketAddr),
+    PeerDisconnected(Option<SocketAddr>),
 
     PacketTx(Protocol),
     PacketRx(Protocol),

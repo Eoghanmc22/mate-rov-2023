@@ -4,6 +4,7 @@ use crate::systems::System;
 use anyhow::{Context, Error};
 use common::protocol::Protocol;
 use common::types::LogLevel;
+use fxhash::FxHashMap as HashMap;
 use networking::{Event as NetEvent, Networking};
 use std::net::ToSocketAddrs;
 use std::thread::Scope;
@@ -33,14 +34,16 @@ impl System for NetworkSystem {
 
         {
             let mut events = events.clone();
+            let mut peers = HashMap::default();
 
             spawner.spawn(move || {
                 let messenger = net.messenger();
                 net.start(|event| match event {
-                    NetEvent::Accepted(_token, addrs) => {
+                    NetEvent::Accepted(token, addrs) => {
                         info!("Accepted peer at {addrs}");
 
                         events.send(RobotEvent::PeerConnected(addrs));
+                        peers.insert(token, addrs);
                     }
                     NetEvent::Data(token, packet) => match packet {
                         Protocol::Log(level, msg) => match level {
@@ -65,8 +68,12 @@ impl System for NetworkSystem {
                             events.send(RobotEvent::PacketRx(packet));
                         }
                     },
-                    NetEvent::Error(_token, err) => {
+                    NetEvent::Error(token, err) => {
                         // TODO filter some errors
+                        if let Some(token) = token {
+                            events.send(RobotEvent::PeerDisconnected(peers.remove(&token)));
+                        }
+
                         events.send(RobotEvent::Error(
                             Error::new(err).context("Networking error"),
                         ));

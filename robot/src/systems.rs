@@ -1,15 +1,16 @@
+// TODO mag
+// TODO depth
+// TODO fusion
+// TODO ai
 pub mod cameras;
 pub mod error;
 pub mod hw_stat;
+pub mod indicators;
+pub mod inertial;
+pub mod logging;
 pub mod motor;
 pub mod networking;
 pub mod robot;
-// TODO indicators
-// TODO mag
-// TODO depth
-pub mod inertial;
-pub mod logging;
-// TODO perhaps just a single sensor system?
 
 use std::{
     any,

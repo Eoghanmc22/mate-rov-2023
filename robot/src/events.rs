@@ -8,8 +8,9 @@ use crate::event::Event;
 /// Facilitates communication between systems
 #[derive(Debug, Clone)]
 pub struct EventHandle {
-    peers: Vec<Sender<Arc<Event>>>,
+    peers: Vec<(usize, Sender<Arc<Event>>)>,
     listner: Option<Receiver<Arc<Event>>>,
+    id: usize,
 }
 
 impl EventHandle {
@@ -17,17 +18,19 @@ impl EventHandle {
         let mut peers = Vec::new();
         let mut listners = Vec::new();
 
-        for _ in 0..count {
+        for id in 0..count {
             let (tx, rx) = crossbeam::channel::bounded(50);
-            peers.push(tx);
+            peers.push((id, tx));
             listners.push(rx);
         }
 
         listners
             .into_iter()
-            .map(|listner| EventHandle {
+            .enumerate()
+            .map(|(id, listner)| EventHandle {
                 peers: peers.clone(),
                 listner: Some(listner),
+                id,
             })
             .collect()
     }
@@ -37,11 +40,13 @@ impl EventHandle {
         let event = Arc::new(event);
         let mut dropped_peers = Vec::new();
 
-        for (idx, peer) in self.peers.iter().enumerate() {
+        for (idx, (id, peer)) in self.peers.iter().enumerate() {
             let ret = peer.try_send(event.clone());
             if let Err(err) = ret {
                 match err {
-                    TrySendError::Full(_) => error!("Message channel full, event dropped"),
+                    TrySendError::Full(_) => {
+                        error!("Message channel full, event dropped. Peer id: {id}")
+                    }
                     TrySendError::Disconnected(_) => {
                         dropped_peers.push(idx);
                     }
@@ -60,5 +65,9 @@ impl EventHandle {
 
     pub fn take_listner(&mut self) -> Option<Receiver<Arc<Event>>> {
         self.listner.take()
+    }
+
+    pub fn id(&self) -> usize {
+        self.id
     }
 }

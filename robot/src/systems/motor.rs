@@ -15,7 +15,7 @@ use std::time::Duration;
 use std::time::Instant;
 use tracing::{span, Level};
 
-const MAX_UPDATE_AGE: Duration = Duration::from_millis(250);
+pub const MAX_UPDATE_AGE: Duration = Duration::from_millis(250);
 
 /// Handles Motor speed updated and controls the motors
 pub struct MotorSystem;
