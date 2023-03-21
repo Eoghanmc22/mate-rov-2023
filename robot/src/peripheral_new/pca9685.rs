@@ -51,12 +51,12 @@ impl Pca9685 {
     }
 
     pub fn set_pwm(&mut self, channel: u8, pwm: Duration) -> anyhow::Result<()> {
-        let raw = self.pwm_to_raw(pwm);
+        let raw = pwm_to_raw(pwm, self.period);
         let upper = ((raw & 0x0f00) >> 8) as u8;
         let lower = ((raw & 0x00ff) >> 0) as u8;
         let expected = [lower, upper];
 
-        let register = Self::channel_to_reg(channel);
+        let register = channel_to_reg(channel);
         self.i2c
             .write(&[register, lower, upper])
             .context("Write pwm")?;
@@ -78,6 +78,7 @@ impl Pca9685 {
     const REG_MODE1: u8 = 0x00;
     const REG_PRESCALE: u8 = 0xfe;
     const REG_LED0_OFF_L: u8 = 0x08;
+    const REG_ALL_LED_OFF_H: u8 = 0xfd;
 
     const MODE1_SLEEP: u8 = 1 << 4;
     const MODE1_EXTCLK: u8 = 1 << 6;
@@ -95,7 +96,7 @@ impl Pca9685 {
     }
 
     fn set_prescale(&mut self) -> anyhow::Result<()> {
-        let prescale = self.calc_prescale();
+        let prescale = calc_prescale(self.period);
         if prescale < 3 {
             bail!("Prescale must be greater then 3, got: {prescale}");
         }
@@ -132,18 +133,26 @@ impl Pca9685 {
             .context("Read reg")?;
         Ok(out)
     }
+}
 
-    fn calc_prescale(&self) -> u8 {
-        let update_rate = 1.0 / self.period.as_secs_f64();
-        ((Self::EXT_CLOCK / (4096.0 * update_rate)).round() - 1.0) as u8
+impl Drop for Pca9685 {
+    fn drop(&mut self) {
+        let _ = self.i2c.write(&[Self::REG_ALL_LED_OFF_H, 0x08]);
+        let _ = self.i2c.write(&[Self::REG_MODE1, Self::MODE1_SLEEP]);
+        self.output_disable();
     }
+}
 
-    fn pwm_to_raw(&self, pwm: Duration) -> u16 {
-        pwm.as_micros() as u16 * 4096 / self.period.as_micros() as u16 - 1
-    }
+fn calc_prescale(period: Duration) -> u8 {
+    let update_rate = 1.0 / period.as_secs_f64();
+    ((Pca9685::EXT_CLOCK / (4096.0 * update_rate)).round() - 1.0) as u8
+}
 
-    fn channel_to_reg(channel: u8) -> u8 {
-        assert!(channel < 16);
-        Self::REG_LED0_OFF_L + (4 * channel)
-    }
+fn pwm_to_raw(pwm: Duration, period: Duration) -> u16 {
+    pwm.as_micros() as u16 * 4096 / period.as_micros() as u16 - 1
+}
+
+fn channel_to_reg(channel: u8) -> u8 {
+    assert!(channel < 16);
+    Pca9685::REG_LED0_OFF_L + (4 * channel)
 }

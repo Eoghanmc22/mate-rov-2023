@@ -303,10 +303,22 @@ pub struct Camera {
     pub location: SocketAddr,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
 pub enum LogLevel {
     Debug,
     Info,
     Warn,
     Error,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
+pub enum RobotStatus {
+    // No peer is connected
+    NoPeer,
+    // Peer is connected and robot is disarmed
+    Ready,
+    // Peer is connected and robot is armed
+    Armed,
+    // The robot is moving, includes speed
+    Moving(Speed),
 }

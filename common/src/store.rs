@@ -204,6 +204,14 @@ pub fn create_update<V: Any + Send + Sync>(key: &Token<V>, value: V) -> Update {
     (key.0.clone(), Some(Arc::new(value)))
 }
 
+pub fn handle_update<V: Any + Send + Sync>(key: &Token<V>, update: &Update) -> Option<Arc<V>> {
+    if key.0 == update.0 {
+        update.1.clone().and_then(|it| it.downcast::<V>().ok())
+    } else {
+        None
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use std::sync::Arc;

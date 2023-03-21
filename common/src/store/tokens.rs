@@ -5,7 +5,7 @@ use crate::{
     store::{Key, Token},
     types::{
         Armed, Camera, DepthFrame, InertialFrame, MagFrame, Meters, MotorFrame, MotorId, Movement,
-        Orientation, SystemInfo,
+        Orientation, RobotStatus, SystemInfo,
     },
 };
 use fxhash::FxHashMap as HashMap;
@@ -15,6 +15,9 @@ use std::time::Instant;
 
 #[rustfmt::skip]
 pub const SYSTEM_INFO: Token<SystemInfo> = Token::new_const("robot.system_info");
+
+#[rustfmt::skip]
+pub const STATUS: Token<RobotStatus> = Token::new_const("robot.status");
 
 #[rustfmt::skip]
 pub const CAMERAS: Token<Vec<Camera>> = Token::new_const("robot.cameras");
@@ -56,6 +59,7 @@ pub fn generate_adaptors() -> HashMap<Key, Box<dyn TypeAdapter<BackingType> + Se
 
     vec![
         from::<Adapter<_>>(SYSTEM_INFO),
+        from::<Adapter<_>>(STATUS),
         from::<Adapter<_>>(CAMERAS),
         from::<TimestampedAdapter<_>>(ARMED),
         from::<TimestampedAdapter<_>>(MOTOR_SPEED),

@@ -21,6 +21,7 @@ mod systems;
 use crate::systems::error::ErrorSystem;
 use crate::systems::logging::LogEventSystem;
 use crate::systems::robot::StoreSystem;
+use crate::systems::status::StatusSystem;
 use crate::systems::SystemManager;
 use crate::systems::{hw_stat::HwStatSystem, networking::NetworkSystem};
 use tracing::{info, Level};
@@ -48,6 +49,7 @@ fn main() -> anyhow::Result<()> {
     systems.add_system::<StoreSystem>()?;
     systems.add_system::<NetworkSystem>()?;
     systems.add_system::<HwStatSystem>()?;
+    systems.add_system::<StatusSystem>()?;
     // #[cfg(rpi)]
     // systems.add_system::<MotorSystem>()?;
     #[cfg(rpi)]
@@ -59,6 +61,7 @@ fn main() -> anyhow::Result<()> {
     info!("--------------------------------------");
 
     systems.start();
+
     info!("Robot stopped");
 
     Ok(())

@@ -11,6 +11,7 @@ pub mod logging;
 pub mod motor;
 pub mod networking;
 pub mod robot;
+pub mod status;
 
 use std::{
     any,

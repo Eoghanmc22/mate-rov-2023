@@ -25,6 +25,7 @@ impl Icm20602 {
     // TODO convert native axises to the cordnate system for everything else
     pub fn read_frame(&mut self) -> anyhow::Result<InertialFrame> {
         let raw = self.read_raw_frame().context("Read raw frame")?;
+
         // The first byte is junk
         let raw = &raw[1..];
 
