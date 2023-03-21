@@ -442,29 +442,30 @@ impl<'a, C> RawSensorData<'a, C> {
 impl<C> Widget for &mut RawSensorData<'_, C> {
     fn ui(self, ui: &mut egui::Ui) -> egui::Response {
         ui.allocate_ui(vec2(200.0, 0.0), |ui| {
-            ui.collapsing("Accelerometer", |ui| {
+            ui.collapsing("Imu", |ui| {
                 if let Some(data) = self.data.get(&tokens::RAW_INERTIAL) {
                     let (inertial, _) = &*data;
 
+                    ui.label("Accel");
                     ui.label(format!("X: {}", inertial.accel_x));
                     ui.label(format!("Y: {}", inertial.accel_y));
                     ui.label(format!("Z: {}", inertial.accel_z));
+
+                    ui.label("Gyro");
+                    ui.label(format!("X: {}", inertial.gyro_x));
+                    ui.label(format!("Y: {}", inertial.gyro_y));
+                    ui.label(format!("Z: {}", inertial.gyro_z));
+
+                    ui.label("Temp");
+                    ui.label(format!("In robot: {}", inertial.tempature));
+
                     // TODO visual
                 } else {
                     ui.label("No accelerometer data");
                 }
             });
-            ui.collapsing("Gyro", |ui| {
-                if let Some(data) = self.data.get(&tokens::RAW_INERTIAL) {
-                    let (inertial, _) = &*data;
-
-                    ui.label(format!("X: {}", inertial.gyro_x));
-                    ui.label(format!("Y: {}", inertial.gyro_y));
-                    ui.label(format!("Z: {}", inertial.gyro_z));
-                    // TODO visual
-                } else {
-                    ui.label("No gyro data");
-                }
+            ui.collapsing("Fusion", |ui| {
+                ui.label("TODO");
             });
             ui.collapsing("Depth", |ui| {
                 if let Some(data) = self.data.get(&tokens::RAW_DEPTH) {
