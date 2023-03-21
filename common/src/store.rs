@@ -69,8 +69,6 @@ impl<C: UpdateCallback> Store<C> {
             self.callback.call((key.clone(), Some(data.clone())))
         }
     }
-
-    // TODO: Implement `get_mut`
 }
 
 impl<C> Store<C> {

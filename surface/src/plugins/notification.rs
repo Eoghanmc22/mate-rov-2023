@@ -14,7 +14,8 @@ impl Plugin for NotificationPlugin {
         app.add_event::<Notification>();
         app.init_resource::<NotificationResource>();
         app.add_system(handle_notification.in_base_set(CoreSet::Last));
-        app.add_system(render_notifications);
+        app.add_system(expire_notifications);
+        app.add_system(render_notifications.after(expire_notifications));
     }
 }
 
@@ -93,12 +94,13 @@ fn handle_notification(
     }
 }
 
-/// Renders `NotificationResource` to the screen
-fn render_notifications(mut res: ResMut<NotificationResource>, mut egui_context: EguiContexts) {
-    let ctx = egui_context.ctx_mut();
-
-    // TODO this could be its own system?
+fn expire_notifications(mut res: ResMut<NotificationResource>) {
     res.0.retain(|item| item.1.elapsed() < TIMEOUT);
+}
+
+/// Renders `NotificationResource` to the screen
+fn render_notifications(res: Res<NotificationResource>, mut egui_context: EguiContexts) {
+    let ctx = egui_context.ctx_mut();
 
     // TODO change font size
     for (idx, (notif, time)) in res.0.iter().enumerate() {

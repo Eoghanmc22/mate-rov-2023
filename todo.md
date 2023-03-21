@@ -1,0 +1,40 @@
+# Mate TODO List
+
+- [ ] Motors
+  - [ ] Test
+  - [ ] Servos
+  - [ ] Arming
+- [ ] Sensors
+  - [ ] Sensor fusion
+  - [ ] Magnetometers
+  - [ ] Barometer
+  - [ ] ADCs
+  - [ ] Don't store raw frames in global store
+- [ ] Control
+  - [ ] OpenCV control
+  - [ ] Autonomous control
+  - [ ] New gamepad setup
+  - [ ] Speeds larger than 1
+- [ ] Debugging
+  - [ ] Better logging
+  - [ ] Better & more error notifs in ui
+  - [ ] Tests
+  - [ ] Make important settings editable in real time
+- [ ] UI
+  - [ ] Better video view
+  - [ ] Improve notifications
+    - [ ] Animations
+    - [ ] Color
+    - [ ] Timer
+    - [ ] Visualize our data
+  - [ ] Use the LEDs on the navigator better
+  - [ ] 
+- [ ] Misc
+  - [ ] Surface network system has too much responsibility
+  - [ ] Ip resolution should not occur in the code of ConnectWindow
+  - [ ] Clear foreign store on disconnect
+  - [ ] Graceful shutdown
+  - [ ] Image pi
+  - [ ] Systemd service
+  - [ ] Linters
+

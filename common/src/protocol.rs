@@ -7,7 +7,6 @@ use serde::{Deserialize, Serialize};
 use std::time::SystemTime;
 
 /// Representation of all messages that can be communicated between peers
-// TODO use references
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum Protocol {
     /// Update peers data store

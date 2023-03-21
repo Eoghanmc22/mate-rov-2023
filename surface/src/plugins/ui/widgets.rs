@@ -544,7 +544,7 @@ impl<C> Widget for &mut Cameras<'_, C> {
 pub struct Video<'a> {
     name: &'a str,
     texture: Option<TextureId>,
-    pub should_delete: bool, // TODO
+    pub should_delete: bool,
 }
 
 impl<'a> Video<'a> {
@@ -596,5 +596,3 @@ impl Widget for &mut Video<'_> {
         .response
     }
 }
-
-// TODO
