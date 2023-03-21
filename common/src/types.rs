@@ -61,6 +61,9 @@ pub enum MotorId {
 #[derive(Debug, Copy, Clone, Default, Serialize, Deserialize, PartialEq)]
 pub struct DepthFrame {
     pub depth: Meters,
+    pub altitude: Meters,
+    pub pressure: Mbar,
+
     pub temperature: Celsius,
 }
 
@@ -102,6 +105,15 @@ pub struct Meters(pub f64);
 impl Display for Meters {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         f.pad(&format!("{:.2}M", self.0))
+    }
+}
+
+#[derive(Debug, Copy, Clone, Default, Serialize, Deserialize, PartialOrd, PartialEq)]
+pub struct Mbar(pub f64);
+
+impl Display for Mbar {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        f.pad(&format!("{:.2}mbar", self.0))
     }
 }
 

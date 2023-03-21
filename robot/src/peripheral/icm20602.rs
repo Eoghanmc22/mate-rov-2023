@@ -22,7 +22,6 @@ impl Icm20602 {
         Ok(this)
     }
 
-    // TODO convert native axises to the cordnate system for everything else
     pub fn read_frame(&mut self) -> anyhow::Result<InertialFrame> {
         let raw = self.read_raw_frame().context("Read raw frame")?;
 
@@ -49,13 +48,21 @@ impl Icm20602 {
         let gyro_native_y = raw_gyro_native_y as i16 as f64 / 131.0;
         let gyro_native_z = raw_gyro_native_z as i16 as f64 / 131.0;
 
+        let accel_x = accel_native_y;
+        let accel_y = accel_native_x;
+        let accel_z = -accel_native_z;
+
+        let gyro_x = gyro_native_y;
+        let gyro_y = gyro_native_x;
+        let gyro_z = -gyro_native_z;
+
         Ok(InertialFrame {
-            gyro_x: Dps(gyro_native_x),
-            gyro_y: Dps(gyro_native_y),
-            gyro_z: Dps(gyro_native_z),
-            accel_x: GForce(accel_native_x),
-            accel_y: GForce(accel_native_y),
-            accel_z: GForce(accel_native_z),
+            gyro_x: Dps(gyro_x),
+            gyro_y: Dps(gyro_y),
+            gyro_z: Dps(gyro_z),
+            accel_x: GForce(accel_x),
+            accel_y: GForce(accel_y),
+            accel_z: GForce(accel_z),
             tempature: Celsius(tempature),
         })
     }

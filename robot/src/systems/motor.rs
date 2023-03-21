@@ -1,7 +1,7 @@
 use crate::events::EventHandle;
-use crate::peripheral_new::motor::Motor;
+use crate::peripheral::motor::Motor;
 use crate::systems::System;
-use crate::{event::Event, peripheral_new::pca9685::Pca9685};
+use crate::{event::Event, peripheral::pca9685::Pca9685};
 use anyhow::anyhow;
 use common::{
     error::LogErrorExt,

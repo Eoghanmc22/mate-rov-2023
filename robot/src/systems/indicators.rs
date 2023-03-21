@@ -16,7 +16,7 @@ use tracing::{span, Level};
 use crate::{
     event::Event,
     events::EventHandle,
-    peripheral_new::neopixel::{self, NeoPixel},
+    peripheral::neopixel::{self, NeoPixel},
 };
 
 use super::System;

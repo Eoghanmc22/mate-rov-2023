@@ -471,7 +471,9 @@ impl<C> Widget for &mut RawSensorData<'_, C> {
                 if let Some(data) = self.data.get(&tokens::RAW_DEPTH) {
                     let (depth, _) = &*data;
 
+                    ui.label(format!("Pressure: {}", depth.pressure));
                     ui.label(format!("Depth: {}", depth.depth));
+                    ui.label(format!("Attitude: {}", depth.altitude));
                     ui.label(format!("Temp: {}", depth.temperature));
                 } else {
                     ui.label("No depth data");

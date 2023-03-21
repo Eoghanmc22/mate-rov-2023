@@ -15,7 +15,7 @@
 
 pub mod event;
 pub mod events;
-pub mod peripheral_new;
+pub mod peripheral;
 mod systems;
 
 use crate::systems::error::ErrorSystem;
@@ -28,6 +28,8 @@ use tracing::{info, Level};
 
 #[cfg(rpi)]
 use crate::systems::cameras::CameraSystem;
+#[cfg(rpi)]
+use crate::systems::depth::DepthSystem;
 #[cfg(rpi)]
 use crate::systems::indicators::IndicatorsSystem;
 #[cfg(rpi)]
@@ -56,6 +58,8 @@ fn main() -> anyhow::Result<()> {
     systems.add_system::<IndicatorsSystem>()?;
     #[cfg(rpi)]
     systems.add_system::<InertialSystem>()?;
+    #[cfg(rpi)]
+    systems.add_system::<DepthSystem>()?;
     #[cfg(rpi)]
     systems.add_system::<CameraSystem>()?;
     info!("--------------------------------------");

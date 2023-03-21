@@ -6,7 +6,7 @@ use std::{
 use common::store::{self, tokens};
 use tracing::{span, Level};
 
-use crate::{event::Event, events::EventHandle, peripheral_new::icm20602::Icm20602};
+use crate::{event::Event, events::EventHandle, peripheral::icm20602::Icm20602};
 
 use super::System;
 
@@ -31,13 +31,13 @@ impl System for InertialSystem {
                 }
             };
 
-            let duration = Duration::from_secs_f64(1.0 / 1000.0);
+            let interval = Duration::from_secs_f64(1.0 / 1000.0);
             let imu_divisor = 1;
 
             let mut deadline = Instant::now();
             let mut counter = 0;
             loop {
-                deadline += duration;
+                deadline += interval;
 
                 if counter % imu_divisor == 0 {
                     let rst = imu.read_frame();
