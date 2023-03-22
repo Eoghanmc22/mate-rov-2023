@@ -12,7 +12,9 @@ use crate::plugins::{
 };
 
 use super::{
-    widgets::{Cameras, Motors, Movement, Orientation, RawSensorData, RemoteSystem},
+    widgets::{
+        CamerasUi, MotorsUi, MovementUi, OrientationUi, RawSensorDataUi, RemoteSystemUi, RobotUi,
+    },
     windows::ConnectionWindow,
     WindowComponent,
 };
@@ -22,23 +24,26 @@ pub fn side_bar<C>(ctx: &Context, _cmd: &mut Commands, store: &Store<C>) {
     egui::SidePanel::left("Panel Left")
         .min_width(200.0)
         .show(ctx, |ui| {
+            ui.collapsing("Robot", |ui| {
+                ui.add(&mut RobotUi::new(store));
+            });
             ui.collapsing("Orientation", |ui| {
-                ui.add(&mut Orientation::new(store));
+                ui.add(&mut OrientationUi::new(store));
             });
             ui.collapsing("Movement", |ui| {
-                ui.add(&mut Movement::new(store));
+                ui.add(&mut MovementUi::new(store));
             });
             ui.collapsing("Raw Sensor Data", |ui| {
-                ui.add(&mut RawSensorData::new(store));
+                ui.add(&mut RawSensorDataUi::new(store));
             });
             ui.collapsing("Motors", |ui| {
-                ui.add(&mut Motors::new(store));
+                ui.add(&mut MotorsUi::new(store));
             });
             ui.collapsing("Cameras", |ui| {
-                ui.add(&mut Cameras::new(store));
+                ui.add(&mut CamerasUi::new(store));
             });
             ui.collapsing("System", |ui| {
-                ui.add(&mut RemoteSystem::new(store));
+                ui.add(&mut RemoteSystemUi::new(store));
             });
             ui.allocate_space(ui.available_size());
         });

@@ -72,10 +72,8 @@ fn compute_status<C: UpdateCallback>(store: &Store<C>, peers: i32) -> RobotStatu
     let mut state = RobotStatus::Ready;
 
     let now = Instant::now();
-    if let Some(data) = store.get(&tokens::ARMED) {
-        let (armed, time_stamp) = &*data;
-
-        if matches!(armed, Armed::Armed) && now - *time_stamp < motor::MAX_UPDATE_AGE {
+    if let Some(armed) = store.get(&tokens::ARMED) {
+        if matches!(*armed, Armed::Armed) {
             state = RobotStatus::Armed;
 
             if let Some(data) = store.get(&tokens::MOTOR_SPEED) {

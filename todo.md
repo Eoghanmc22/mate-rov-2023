@@ -6,6 +6,7 @@
   - [ ] Arming
 - [ ] Sensors
   - [ ] Sensor fusion
+  - [ ] Leak
   - [ ] Magnetometers
   - [ ] Barometer
   - [ ] ADCs
@@ -26,9 +27,10 @@
     - [ ] Animations
     - [ ] Color
     - [ ] Timer
-    - [ ] Visualize our data
+  - [ ] Visualize our data
   - [ ] Use the LEDs on the navigator better
   - [ ] Make a README.md
+  - [ ] Window to view and edit global store
 - [ ] Misc
   - [ ] Surface network system has too much responsibility
   - [ ] Ip resolution should not occur in the code of ConnectWindow

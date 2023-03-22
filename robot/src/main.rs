@@ -35,6 +35,8 @@ use crate::systems::indicators::IndicatorsSystem;
 #[cfg(rpi)]
 use crate::systems::inertial::InertialSystem;
 #[cfg(rpi)]
+use crate::systems::leak::LeakSystem;
+#[cfg(rpi)]
 use crate::systems::motor::MotorSystem;
 
 fn main() -> anyhow::Result<()> {
@@ -56,6 +58,8 @@ fn main() -> anyhow::Result<()> {
     // systems.add_system::<MotorSystem>()?;
     #[cfg(rpi)]
     systems.add_system::<IndicatorsSystem>()?;
+    #[cfg(rpi)]
+    systems.add_system::<LeakSystem>()?;
     #[cfg(rpi)]
     systems.add_system::<InertialSystem>()?;
     #[cfg(rpi)]

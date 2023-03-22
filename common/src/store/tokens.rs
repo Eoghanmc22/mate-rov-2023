@@ -18,12 +18,14 @@ pub const SYSTEM_INFO: Token<SystemInfo> = Token::new_const("robot.system_info")
 
 #[rustfmt::skip]
 pub const STATUS: Token<RobotStatus> = Token::new_const("robot.status");
+#[rustfmt::skip]
+pub const LEAK: Token<bool> = Token::new_const("robot.status.leak");
 
 #[rustfmt::skip]
 pub const CAMERAS: Token<Vec<Camera>> = Token::new_const("robot.cameras");
 
 #[rustfmt::skip]
-pub const ARMED: Token<(Armed, Instant)> = Token::new_const("robot.motors.armed");
+pub const ARMED: Token<Armed> = Token::new_const("robot.motors.armed");
 #[rustfmt::skip]
 pub const MOTOR_SPEED: Token<(HashMap<MotorId, MotorFrame>, Instant)> = Token::new_const("robot.motors.speed");
 
@@ -33,6 +35,8 @@ pub const MOVEMENT_JOYSTICK: Token<(Movement, Instant)> = Token::new_const("robo
 pub const MOVEMENT_OPENCV: Token<(Movement, Instant)> = Token::new_const("robot.movement.ai");
 #[rustfmt::skip]
 pub const MOVEMENT_DEPTH: Token<(Movement, Instant)> = Token::new_const("robot.movement.depth");
+#[rustfmt::skip]
+pub const DEPTH_TARGET: Token<(Meters, Instant)> = Token::new_const("robot.movement.ai.depth.target");
 #[rustfmt::skip]
 pub const MOVEMENT_CALCULATED: Token<(Movement, Instant)> = Token::new_const("robot.movement.calculated");
 
@@ -44,9 +48,6 @@ pub const RAW_INERTIAL: Token<(InertialFrame, Instant)> = Token::new_const("robo
 pub const RAW_MAGNETIC: Token<(MagFrame, Instant)> = Token::new_const("robot.sensors.mag");
 #[rustfmt::skip]
 pub const ORIENTATION: Token<(Orientation, Instant)> = Token::new_const("robot.sensors.fusion");
-
-#[rustfmt::skip]
-pub const DEPTH_TARGET: Token<(Meters, Instant)> = Token::new_const("robot.ai.depth_target");
 
 /// Returns a map between `Key` and `TypeAdapter`
 /// Used to convert the binary data for key into the correct struct
@@ -60,18 +61,19 @@ pub fn generate_adaptors() -> HashMap<Key, Box<dyn TypeAdapter<BackingType> + Se
     vec![
         from::<Adapter<_>>(SYSTEM_INFO),
         from::<Adapter<_>>(STATUS),
+        from::<Adapter<_>>(LEAK),
         from::<Adapter<_>>(CAMERAS),
-        from::<TimestampedAdapter<_>>(ARMED),
+        from::<Adapter<_>>(ARMED),
         from::<TimestampedAdapter<_>>(MOTOR_SPEED),
         from::<TimestampedAdapter<_>>(MOVEMENT_JOYSTICK),
         from::<TimestampedAdapter<_>>(MOVEMENT_OPENCV),
         from::<TimestampedAdapter<_>>(MOVEMENT_DEPTH),
+        from::<TimestampedAdapter<_>>(DEPTH_TARGET),
         from::<TimestampedAdapter<_>>(MOVEMENT_CALCULATED),
         from::<TimestampedAdapter<_>>(RAW_DEPTH),
         from::<TimestampedAdapter<_>>(RAW_INERTIAL),
         from::<TimestampedAdapter<_>>(RAW_MAGNETIC),
         from::<TimestampedAdapter<_>>(ORIENTATION),
-        from::<TimestampedAdapter<_>>(DEPTH_TARGET),
     ]
     .into_iter()
     .collect()

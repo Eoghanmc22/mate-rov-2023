@@ -10,17 +10,17 @@ use glam::EulerRot;
 
 const TABLE_ROW_HEIGHT: f32 = 15.0;
 
-pub struct RemoteSystem<'a, C> {
+pub struct RemoteSystemUi<'a, C> {
     data: &'a Store<C>,
 }
 
-impl<'a, C> RemoteSystem<'a, C> {
+impl<'a, C> RemoteSystemUi<'a, C> {
     pub fn new(data: &'a Store<C>) -> Self {
         Self { data }
     }
 }
 
-impl<C> Widget for &mut RemoteSystem<'_, C> {
+impl<C> Widget for &mut RemoteSystemUi<'_, C> {
     fn ui(self, ui: &mut egui::Ui) -> egui::Response {
         ui.allocate_ui(vec2(ui.available_width(), 0.0), |ui| {
             if let Some(hw_state) = self.data.get(&tokens::SYSTEM_INFO) {
@@ -326,19 +326,19 @@ impl<C> Widget for &mut RemoteSystem<'_, C> {
     }
 }
 
-pub struct Orientation<'a, C> {
+pub struct OrientationUi<'a, C> {
     data: &'a Store<C>,
 }
 
-impl<'a, C> Orientation<'a, C> {
+impl<'a, C> OrientationUi<'a, C> {
     pub fn new(data: &'a Store<C>) -> Self {
         Self { data }
     }
 }
 
-impl<C> Widget for &mut Orientation<'_, C> {
+impl<C> Widget for &mut OrientationUi<'_, C> {
     fn ui(self, ui: &mut egui::Ui) -> egui::Response {
-        ui.allocate_ui(vec2(200.0, 0.0), |ui| {
+        ui.allocate_ui(vec2(ui.available_width(), 0.0), |ui| {
             if let Some(data) = self.data.get(&tokens::ORIENTATION) {
                 let (orientation, _) = &*data;
 
@@ -355,19 +355,19 @@ impl<C> Widget for &mut Orientation<'_, C> {
     }
 }
 
-pub struct Movement<'a, C> {
+pub struct MovementUi<'a, C> {
     data: &'a Store<C>,
 }
 
-impl<'a, C> Movement<'a, C> {
+impl<'a, C> MovementUi<'a, C> {
     pub fn new(data: &'a Store<C>) -> Self {
         Self { data }
     }
 }
 
-impl<C> Widget for &mut Movement<'_, C> {
+impl<C> Widget for &mut MovementUi<'_, C> {
     fn ui(self, ui: &mut egui::Ui) -> egui::Response {
-        ui.allocate_ui(vec2(200.0, 0.0), |ui| {
+        ui.allocate_ui(vec2(ui.available_width(), 0.0), |ui| {
             if let Some(data) = self.data.get(&tokens::MOVEMENT_CALCULATED) {
                 let (movement, _) = &*data;
 
@@ -429,19 +429,19 @@ impl<C> Widget for &mut Movement<'_, C> {
     }
 }
 
-pub struct RawSensorData<'a, C> {
+pub struct RawSensorDataUi<'a, C> {
     data: &'a Store<C>,
 }
 
-impl<'a, C> RawSensorData<'a, C> {
+impl<'a, C> RawSensorDataUi<'a, C> {
     pub fn new(data: &'a Store<C>) -> Self {
         Self { data }
     }
 }
 
-impl<C> Widget for &mut RawSensorData<'_, C> {
+impl<C> Widget for &mut RawSensorDataUi<'_, C> {
     fn ui(self, ui: &mut egui::Ui) -> egui::Response {
-        ui.allocate_ui(vec2(200.0, 0.0), |ui| {
+        ui.allocate_ui(vec2(ui.available_width(), 0.0), |ui| {
             ui.collapsing("Imu", |ui| {
                 if let Some(data) = self.data.get(&tokens::RAW_INERTIAL) {
                     let (inertial, _) = &*data;
@@ -491,19 +491,19 @@ impl<C> Widget for &mut RawSensorData<'_, C> {
     }
 }
 
-pub struct Motors<'a, C> {
+pub struct MotorsUi<'a, C> {
     data: &'a Store<C>,
 }
 
-impl<'a, C> Motors<'a, C> {
+impl<'a, C> MotorsUi<'a, C> {
     pub fn new(data: &'a Store<C>) -> Self {
         Self { data }
     }
 }
 
-impl<C> Widget for &mut Motors<'_, C> {
+impl<C> Widget for &mut MotorsUi<'_, C> {
     fn ui(self, ui: &mut egui::Ui) -> egui::Response {
-        ui.allocate_ui(vec2(200.0, 0.0), |ui| {
+        ui.allocate_ui(vec2(ui.available_width(), 0.0), |ui| {
             if let Some(data) = self.data.get(&tokens::MOTOR_SPEED) {
                 let (speeds, _) = &*data;
 
@@ -517,19 +517,19 @@ impl<C> Widget for &mut Motors<'_, C> {
     }
 }
 
-pub struct Cameras<'a, C> {
+pub struct CamerasUi<'a, C> {
     data: &'a Store<C>,
 }
 
-impl<'a, C> Cameras<'a, C> {
+impl<'a, C> CamerasUi<'a, C> {
     pub fn new(data: &'a Store<C>) -> Self {
         Self { data }
     }
 }
 
-impl<C> Widget for &mut Cameras<'_, C> {
+impl<C> Widget for &mut CamerasUi<'_, C> {
     fn ui(self, ui: &mut egui::Ui) -> egui::Response {
-        ui.allocate_ui(vec2(200.0, 0.0), |ui| {
+        ui.allocate_ui(vec2(ui.available_width(), 0.0), |ui| {
             if let Some(cameras) = self.data.get(&tokens::CAMERAS) {
                 for Camera { name, location } in &*cameras {
                     ui.label(format!("{name}: {location}"));
@@ -594,5 +594,22 @@ impl Widget for &mut Video<'_> {
             });
         })
         .response
+    }
+}
+
+pub struct RobotUi<'a, C> {
+    data: &'a Store<C>,
+}
+
+impl<'a, C> RobotUi<'a, C> {
+    pub fn new(data: &'a Store<C>) -> Self {
+        Self { data }
+    }
+}
+
+impl<C> Widget for &mut RobotUi<'_, C> {
+    fn ui(self, ui: &mut egui::Ui) -> egui::Response {
+        ui.allocate_ui(vec2(ui.available_width(), 0.0), |ui| ui.label("TODO"))
+            .response
     }
 }

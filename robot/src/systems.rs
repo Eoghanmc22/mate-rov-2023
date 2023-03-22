@@ -13,6 +13,7 @@ pub mod motor;
 pub mod networking;
 pub mod robot;
 pub mod status;
+pub mod leak;
 
 use std::{
     any,

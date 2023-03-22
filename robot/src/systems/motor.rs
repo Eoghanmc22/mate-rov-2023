@@ -144,12 +144,8 @@ impl System for MotorSystem {
                                 let now = Instant::now();
                                 let mut movement = Movement::default();
 
-                                if let Some(data) = store.get(&tokens::ARMED) {
-                                    let (armed, time_stamp) = *data;
-
-                                    if matches!(armed, Armed::Armed)
-                                        && now - time_stamp < MAX_UPDATE_AGE
-                                    {
+                                if let Some(armed) = store.get(&tokens::ARMED) {
+                                    if matches!(*armed, Armed::Armed) {
                                         if let Some(data) = store.get(&tokens::MOVEMENT_JOYSTICK) {
                                             let (joystick, time_stamp) = *data;
                                             if now - time_stamp < MAX_UPDATE_AGE {
@@ -169,7 +165,7 @@ impl System for MotorSystem {
                                             }
                                         }
                                     } else {
-                                        // Armed expired
+                                        // Disarmed
                                     }
                                 } else {
                                     // events.send(Event::Error(anyhow!("No armed token")));
