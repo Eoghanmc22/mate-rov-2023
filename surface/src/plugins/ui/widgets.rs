@@ -410,7 +410,7 @@ impl<C> Widget for &mut MovementUi<'_, C> {
                     // TODO visual
                 });
             }
-            if let Some(data) = self.data.get(&tokens::MOVEMENT_DEPTH) {
+            if let Some(data) = self.data.get(&tokens::MOVEMENT_AI) {
                 let (movement, _) = &*data;
 
                 ui.collapsing("Depth Correction", |ui| {

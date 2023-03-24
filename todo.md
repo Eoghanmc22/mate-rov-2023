@@ -6,7 +6,7 @@
   - [ ] Arming
 - [ ] Sensors
   - [ ] Sensor fusion
-  - [ ] Leak
+  - [-] Leak
   - [ ] Magnetometers
   - [ ] Barometer
   - [ ] ADCs
@@ -35,8 +35,8 @@
   - [ ] Some calls to log_error should be replaced with proper handling and or the opposite
   - [ ] Surface network system has too much responsibility
   - [ ] Ip resolution should not occur in the code of ConnectWindow
-  - [ ] Clear foreign store on disconnect
-  - [ ] Graceful shutdown
+  - [-] Clear foreign store on disconnect
+  - [-] Graceful shutdown
   - [ ] Image pi
   - [ ] Systemd service
   - [ ] Linters

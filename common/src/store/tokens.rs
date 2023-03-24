@@ -32,9 +32,9 @@ pub const MOTOR_SPEED: Token<(HashMap<MotorId, MotorFrame>, Instant)> = Token::n
 #[rustfmt::skip]
 pub const MOVEMENT_JOYSTICK: Token<(Movement, Instant)> = Token::new_const("robot.movement.joystick");
 #[rustfmt::skip]
-pub const MOVEMENT_OPENCV: Token<(Movement, Instant)> = Token::new_const("robot.movement.ai");
+pub const MOVEMENT_OPENCV: Token<(Movement, Instant)> = Token::new_const("robot.movement.opencv");
 #[rustfmt::skip]
-pub const MOVEMENT_DEPTH: Token<(Movement, Instant)> = Token::new_const("robot.movement.depth");
+pub const MOVEMENT_AI: Token<(Movement, Instant)> = Token::new_const("robot.movement.ai");
 #[rustfmt::skip]
 pub const DEPTH_TARGET: Token<(Meters, Instant)> = Token::new_const("robot.movement.ai.depth.target");
 #[rustfmt::skip]
@@ -67,7 +67,7 @@ pub fn generate_adaptors() -> HashMap<Key, Box<dyn TypeAdapter<BackingType> + Se
         from::<TimestampedAdapter<_>>(MOTOR_SPEED),
         from::<TimestampedAdapter<_>>(MOVEMENT_JOYSTICK),
         from::<TimestampedAdapter<_>>(MOVEMENT_OPENCV),
-        from::<TimestampedAdapter<_>>(MOVEMENT_DEPTH),
+        from::<TimestampedAdapter<_>>(MOVEMENT_AI),
         from::<TimestampedAdapter<_>>(DEPTH_TARGET),
         from::<TimestampedAdapter<_>>(MOVEMENT_CALCULATED),
         from::<TimestampedAdapter<_>>(RAW_DEPTH),

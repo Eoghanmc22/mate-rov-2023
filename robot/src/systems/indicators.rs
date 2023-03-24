@@ -113,9 +113,9 @@ impl StatusColorExt for RobotStatus {
         let color = match self {
             RobotStatus::NoPeer => {
                 let blue = RGB8::new(0, 0, 255);
-                blue * (tick_id % 4).min(1) as u8
+                blue * (tick_id % 3).min(1) as u8
             }
-            RobotStatus::Ready => RGB8::new(255, 0, 255),
+            RobotStatus::Ready => RGB8::new(0, 0, 255),
             RobotStatus::Armed => RGB8::new(0, 255, 0),
             RobotStatus::Moving(speed) => {
                 lerp_colors(RGB8::new(0, 0, 0), RGB8::new(255, 255, 255), speed.get())

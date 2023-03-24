@@ -131,7 +131,7 @@ impl System for MotorSystem {
                     tokens::ARMED.0,
                     tokens::MOVEMENT_JOYSTICK.0,
                     tokens::MOVEMENT_OPENCV.0,
-                    tokens::MOVEMENT_DEPTH.0,
+                    tokens::MOVEMENT_AI.0,
                 ]
                 .into_iter()
                 .collect();
@@ -166,7 +166,7 @@ impl System for MotorSystem {
                                                 movement += opencv;
                                             }
                                         }
-                                        if let Some(data) = store.get(&tokens::MOVEMENT_DEPTH) {
+                                        if let Some(data) = store.get(&tokens::MOVEMENT_AI) {
                                             let (depth, time_stamp) = *data;
                                             if now - time_stamp < MAX_UPDATE_AGE {
                                                 movement += depth;
