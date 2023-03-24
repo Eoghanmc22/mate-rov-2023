@@ -13,6 +13,7 @@ pub enum Event {
 
     Store(Update),
     SyncStore,
+    ResetForignStore,
 
     Error(anyhow::Error),
 }

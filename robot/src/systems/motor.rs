@@ -136,6 +136,9 @@ impl System for MotorSystem {
                         Event::SyncStore => {
                             store.refresh();
                         }
+                        Event::ResetForignStore => {
+                            store.reset_shared();
+                        }
                         Event::Store(update) => {
                             store.handle_update_shared(update);
 

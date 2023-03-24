@@ -93,7 +93,10 @@ impl<C> Store<C> {
         self.shared.clear();
     }
 
-    #[tracing::instrument(skip(self))]
+    pub fn reset_shared(&mut self) {
+        self.shared.clear();
+    }
+
     pub fn handle_update_shared(&mut self, update: &Update) {
         if self.owned.contains_key(&update.0) {
             return;
@@ -106,7 +109,6 @@ impl<C> Store<C> {
         }
     }
 
-    #[tracing::instrument(skip(self))]
     pub fn handle_update_owned(&mut self, update: &Update) {
         if self.shared.contains_key(&update.0) {
             return;

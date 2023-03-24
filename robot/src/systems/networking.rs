@@ -45,29 +45,29 @@ impl System for NetworkSystem {
                         events.send(RobotEvent::PeerConnected(addrs));
                         peers.insert(token, addrs);
                     }
-                    NetEvent::Data(token, packet) => match packet {
-                        Protocol::Log(level, msg) => match level {
-                            LogLevel::Debug => debug!("Peer logged: `{msg}`"),
-                            LogLevel::Info => info!("Peer logged: `{msg}`"),
-                            LogLevel::Warn => warn!("Peer logged: `{msg}`"),
-                            LogLevel::Error => error!("Peer logged: `{msg}`"),
-                        },
-                        Protocol::Ping(ping) => {
-                            let response = Protocol::Pong(ping, SystemTime::now());
-                            let res = messenger
-                                .send_packet(token, response)
-                                .context("Send packet");
-                            if let Err(err) = res {
-                                events.send(RobotEvent::Error(err));
+                    NetEvent::Data(token, packet) => {
+                        // TODO Should any of this happen here?
+                        match &packet {
+                            Protocol::Log(level, msg) => match level {
+                                LogLevel::Debug => debug!("Peer logged: `{msg}`"),
+                                LogLevel::Info => info!("Peer logged: `{msg}`"),
+                                LogLevel::Warn => warn!("Peer logged: `{msg}`"),
+                                LogLevel::Error => error!("Peer logged: `{msg}`"),
+                            },
+                            Protocol::Ping(ping) => {
+                                let response = Protocol::Pong(*ping, SystemTime::now());
+                                let res = messenger
+                                    .send_packet(token, response)
+                                    .context("Send packet");
+                                if let Err(err) = res {
+                                    events.send(RobotEvent::Error(err));
+                                }
                             }
+                            _ => {}
                         }
-                        Protocol::RequestSync => {
-                            events.send(RobotEvent::SyncStore);
-                        }
-                        packet => {
-                            events.send(RobotEvent::PacketRx(packet));
-                        }
-                    },
+
+                        events.send(RobotEvent::PacketRx(packet));
+                    }
                     NetEvent::Error(token, err) => {
                         // TODO filter some errors
                         if let Some(token) = token {

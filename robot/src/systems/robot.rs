@@ -25,7 +25,7 @@ impl System for StoreSystem {
 
             for event in listner.into_iter() {
                 match &*event {
-                    // Handle imbound stores
+                    // Handle inbound stores
                     Event::PacketRx(Protocol::Store(key, data)) => {
                         let key = key.to_owned().into();
                         let adapter = adapters.get(&key);
@@ -79,6 +79,15 @@ impl System for StoreSystem {
                         } else {
                             events.send(Event::Error(anyhow!("No adapter found for {key:?}")));
                         }
+                    }
+                    // Handle forign invalidation
+                    Event::PeerDisconnected(_) => {
+                        events.send(Event::ResetForignStore);
+                        events.send(Event::SyncStore);
+                    }
+                    // Handle sync requests
+                    Event::PacketRx(Protocol::RequestSync) => {
+                        events.send(Event::SyncStore);
                     }
                     _ => {}
                 }

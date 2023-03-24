@@ -23,7 +23,6 @@ impl System for StatusSystem {
             span!(Level::INFO, "Status manager");
 
             let mut store = Store::new(move |update| events.send(Event::Store(update)));
-            // let mut store = Store::new(move |update| {});
             let mut peers = 0;
             let mut last_status = None;
 
@@ -39,6 +38,14 @@ impl System for StatusSystem {
                     }
                     Event::Store(update) => {
                         store.handle_update_shared(update);
+                        true
+                    }
+                    Event::ResetForignStore => {
+                        store.reset_shared();
+                        true
+                    }
+                    Event::SyncStore => {
+                        last_status = None;
                         true
                     }
                     Event::Error(_) => {
