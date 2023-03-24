@@ -31,10 +31,10 @@
   - [ ] Use the LEDs on the navigator better
   - [ ] Make a README.md
   - [ ] Window to view and edit global store
+    - [ ] Max motor speed, 
 - [ ] Misc
   - [ ] Some calls to log_error should be replaced with proper handling and or the opposite
   - [ ] Surface network system has too much responsibility
-  - [ ] Ip resolution should not occur in the code of ConnectWindow
   - [-] Clear foreign store on disconnect
   - [-] Graceful shutdown
   - [ ] Image pi

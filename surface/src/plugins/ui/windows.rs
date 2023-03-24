@@ -22,7 +22,7 @@ impl Renderable for ConnectionWindow {
         if !ui.button("Connect").clicked() {
             return;
         }
-        // TODO this logic should be else where
+
         match (self.typed.as_str(), 44444)
             .to_socket_addrs()
             .context("Create socket addrs")
