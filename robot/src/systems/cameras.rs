@@ -16,7 +16,11 @@ use crossbeam::channel::bounded;
 use fxhash::{FxHashMap as HashMap, FxHashSet as HashSet};
 use tracing::{info, span, Level};
 
-use crate::{event::Event, events::EventHandle, systems::System};
+use crate::{
+    event::Event,
+    events::EventHandle,
+    systems::{stop, System},
+};
 
 /// Handles camera detection, starting and stopping gstreamer, and notifying the suface about
 /// available cameras
@@ -41,6 +45,13 @@ impl System for CameraSystem {
                             .log_error("Forward event to camera manager");
                     }
                     _ => {}
+                }
+
+                if stop::world_stopped() {
+                    tx.try_send(Event::Exit.into())
+                        .log_error("Forward exit to camera manager");
+
+                    return;
                 }
             }
         });
@@ -155,6 +166,19 @@ impl System for CameraSystem {
                                     .send(Event::Error(Error::new(err).context("Collect cameras")));
                             }
                         }
+                    }
+                    Event::Exit => {
+                        for (camera, (mut child, _)) in cameras.drain() {
+                            let rst = child.kill();
+
+                            if let Err(err) = rst {
+                                events.send(Event::Error(
+                                    Error::new(err).context(format!("Kill gstreamer for {camera}")),
+                                ));
+                            }
+                        }
+
+                        return;
                     }
                     _ => {}
                 }

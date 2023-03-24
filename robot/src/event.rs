@@ -16,4 +16,5 @@ pub enum Event {
     ResetForignStore,
 
     Error(anyhow::Error),
+    Exit,
 }

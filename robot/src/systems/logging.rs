@@ -1,7 +1,7 @@
 use std::thread::Scope;
 
 use common::protocol::Protocol;
-use tracing::{debug, span, Level};
+use tracing::{debug, info, span, Level};
 
 use crate::{event::Event, events::EventHandle, systems::System};
 
@@ -32,6 +32,10 @@ impl System for LogEventSystem {
                     }
                     Event::PacketRx(Protocol::Store(key, _)) => {
                         debug!("PacketRx(Store({key}, ..))");
+                    }
+                    Event::Exit => {
+                        info!("EXIT EVENT");
+                        return;
                     }
                     event => {
                         debug!("{event:?}");

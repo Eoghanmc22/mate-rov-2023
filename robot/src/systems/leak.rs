@@ -13,7 +13,7 @@ use rppal::gpio::{Gpio, Level, Trigger};
 
 use crate::event::Event;
 
-use super::System;
+use super::{stop, System};
 
 pub struct LeakSystem;
 
@@ -52,9 +52,11 @@ impl System for LeakSystem {
                 .context("Set async leak interrupt")?;
         }
 
-        // Dont drop leak pin
-        spawner.spawn(move || loop {
-            thread::sleep(Duration::MAX);
+        // Dont drop leak pin until program exit
+        spawner.spawn(move || {
+            while !stop::world_stopped() {
+                thread::sleep(Duration::MAX);
+            }
         });
 
         // Rebrodcast state when sync is requested
@@ -64,12 +66,18 @@ impl System for LeakSystem {
 
             spawner.spawn(move || {
                 for event in listener.into_iter() {
-                    if let Event::SyncStore = &*event {
-                        let update = store::create_update(
-                            &tokens::LEAK,
-                            leak_detected.load(Ordering::Relaxed),
-                        );
-                        events.send(Event::Store(update));
+                    match &*event {
+                        Event::SyncStore => {
+                            let update = store::create_update(
+                                &tokens::LEAK,
+                                leak_detected.load(Ordering::Relaxed),
+                            );
+                            events.send(Event::Store(update));
+                        }
+                        Event::Exit => {
+                            return;
+                        }
+                        _ => {}
                     }
                 }
             });

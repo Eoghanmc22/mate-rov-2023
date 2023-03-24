@@ -6,7 +6,7 @@ use std::{
 use common::store::{self, tokens};
 use tracing::{span, Level};
 
-use crate::{event::Event, events::EventHandle, peripheral::ms5937::Ms5837};
+use crate::{event::Event, events::EventHandle, peripheral::ms5937::Ms5837, systems::stop};
 
 use super::System;
 
@@ -34,7 +34,7 @@ impl System for DepthSystem {
             let interval = Duration::from_secs_f64(1.0 / 100.0);
 
             let mut deadline = Instant::now();
-            loop {
+            while !stop::world_stopped() {
                 deadline += interval;
 
                 let rst = depth.read_frame();

@@ -13,7 +13,7 @@ use sysinfo::{
 };
 use tracing::{span, Level};
 
-use crate::{event::Event, events::EventHandle};
+use crate::{event::Event, events::EventHandle, systems::stop};
 
 use super::System as RobotSystem;
 
@@ -34,7 +34,7 @@ impl RobotSystem for HwStatSystem {
             span!(Level::INFO, "Hardware monitor");
 
             let mut system = System::new();
-            loop {
+            while !stop::world_stopped() {
                 system.refresh_all();
                 system.refresh_disks_list();
                 system.refresh_disks();

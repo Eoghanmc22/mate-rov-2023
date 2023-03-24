@@ -22,6 +22,7 @@ use crate::systems::error::ErrorSystem;
 use crate::systems::logging::LogEventSystem;
 use crate::systems::robot::StoreSystem;
 use crate::systems::status::StatusSystem;
+use crate::systems::stop::StopSystem;
 use crate::systems::SystemManager;
 use crate::systems::{hw_stat::HwStatSystem, networking::NetworkSystem};
 use tracing::{info, Level};
@@ -48,6 +49,7 @@ fn main() -> anyhow::Result<()> {
     let mut systems = SystemManager::new();
 
     info!("---------- Registering systems ----------");
+    systems.add_system::<StopSystem>()?;
     systems.add_system::<LogEventSystem>()?;
     systems.add_system::<ErrorSystem>()?;
     systems.add_system::<StoreSystem>()?;

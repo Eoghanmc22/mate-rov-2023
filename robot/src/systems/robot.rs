@@ -89,6 +89,9 @@ impl System for StoreSystem {
                     Event::PacketRx(Protocol::RequestSync) => {
                         events.send(Event::SyncStore);
                     }
+                    Event::Exit => {
+                        return;
+                    }
                     _ => {}
                 }
             }

@@ -52,6 +52,9 @@ impl System for StatusSystem {
                         // TODO
                         true
                     }
+                    Event::Exit => {
+                        return;
+                    }
                     _ => false,
                 };
 

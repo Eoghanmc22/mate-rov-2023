@@ -8,12 +8,13 @@ pub mod error;
 pub mod hw_stat;
 pub mod indicators;
 pub mod inertial;
+pub mod leak;
 pub mod logging;
 pub mod motor;
 pub mod networking;
 pub mod robot;
 pub mod status;
-pub mod leak;
+pub mod stop;
 
 use std::{
     any,

@@ -2,8 +2,8 @@ use crate::event::Event as RobotEvent;
 use crate::events::EventHandle;
 use crate::systems::System;
 use anyhow::{Context, Error};
-use common::protocol::Protocol;
 use common::types::LogLevel;
+use common::{error::LogErrorExt, protocol::Protocol};
 use fxhash::FxHashMap as HashMap;
 use networking::{Event as NetEvent, Networking};
 use std::net::ToSocketAddrs;
@@ -89,13 +89,21 @@ impl System for NetworkSystem {
                 span!(Level::INFO, "Net forward thread");
 
                 for event in listner.into_iter() {
-                    if let RobotEvent::PacketTx(packet) = &*event {
-                        let res = messenger
-                            .brodcast_packet(packet.clone())
-                            .context("Brodcast Packet");
-                        if let Err(err) = res {
-                            events.send(RobotEvent::Error(err));
+                    match &*event {
+                        RobotEvent::PacketTx(packet) => {
+                            let res = messenger
+                                .brodcast_packet(packet.clone())
+                                .context("Brodcast Packet");
+                            if let Err(err) = res {
+                                events.send(RobotEvent::Error(err));
+                            }
                         }
+                        RobotEvent::Exit => {
+                            messenger.shutdown().log_error("Shutdown network worker");
+
+                            return;
+                        }
+                        _ => {}
                     }
                 }
             });

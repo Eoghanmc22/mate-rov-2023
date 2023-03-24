@@ -1,6 +1,6 @@
 use crate::events::EventHandle;
 use crate::peripheral::motor::Motor;
-use crate::systems::System;
+use crate::systems::{stop, System};
 use crate::{event::Event, peripheral::pca9685::Pca9685};
 use anyhow::anyhow;
 use common::{
@@ -56,6 +56,11 @@ impl System for MotorSystem {
                 let mut deadlines: HashMap<MotorId, Instant> = HashMap::default();
 
                 for message in rx.into_iter() {
+                    if stop::world_stopped() {
+                        // Pca9685 stops on drop
+                        return;
+                    }
+
                     match message {
                         Message::MotorSpeed(motor_id, frame, deadline) => {
                             deadlines.insert(motor_id, deadline);
@@ -196,6 +201,11 @@ impl System for MotorSystem {
                                 }
                             }
                         }
+                        Event::Exit => {
+                            tx.send(Message::CheckDeadlines)
+                                .log_error("Could not send deadline check");
+                            return;
+                        }
                         _ => {}
                     }
                 }
@@ -207,7 +217,7 @@ impl System for MotorSystem {
             spawner.spawn(move || {
                 span!(Level::INFO, "Motor deadline check thread");
 
-                loop {
+                while !stop::world_stopped() {
                     tx.send(Message::CheckDeadlines)
                         .log_error("Could not send deadline check");
 

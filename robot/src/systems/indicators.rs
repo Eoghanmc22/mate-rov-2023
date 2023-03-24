@@ -17,6 +17,7 @@ use crate::{
     event::Event,
     events::EventHandle,
     peripheral::neopixel::{self, NeoPixel},
+    systems::stop,
 };
 
 use super::System;
@@ -35,17 +36,23 @@ impl System for IndicatorsSystem {
             span!(Level::INFO, "Indicator controller");
 
             for event in listener.into_iter() {
-                if let Event::Store(update) = &*event {
-                    if let Some(status) = store::handle_update(&tokens::STATUS, update) {
-                        let rst = tx.try_send(status);
-                        match rst {
-                            Ok(()) => {}
-                            Err(TrySendError::Full(_)) => {}
-                            error @ Err(TrySendError::Disconnected(_)) => {
-                                error.log_error("Send new led state");
+                match &*event {
+                    Event::Store(update) => {
+                        if let Some(status) = store::handle_update(&tokens::STATUS, update) {
+                            let rst = tx.try_send(status);
+                            match rst {
+                                Ok(()) => {}
+                                Err(TrySendError::Full(_)) => {}
+                                error @ Err(TrySendError::Disconnected(_)) => {
+                                    error.log_error("Send new led state");
+                                }
                             }
                         }
                     }
+                    Event::Exit => {
+                        return;
+                    }
+                    _ => {}
                 }
             }
         });
@@ -65,11 +72,15 @@ impl System for IndicatorsSystem {
             let mut tick_counter = 0;
             let mut last_color = RGB8::default();
 
-            loop {
+            while !stop::world_stopped() {
                 let next_color = neopixel::correct_color(state.color(tick_counter));
 
                 if next_color != last_color {
                     for step in 0..steps {
+                        if stop::world_stopped() {
+                            return;
+                        }
+
                         let color = lerp_colors(last_color, next_color, step as f64 / steps as f64);
 
                         neopixel.write_color_raw(color).expect("Write to rgb led");
