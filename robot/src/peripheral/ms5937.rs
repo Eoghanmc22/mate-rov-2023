@@ -18,7 +18,7 @@ impl Ms5837 {
         let mut i2c = I2c::with_bus(bus).context("Open i2c")?;
 
         i2c.set_slave_address(address as u16)
-            .context("Set addres for PCA9685")?;
+            .context("Set addres for MS5837")?;
 
         let mut this = Self {
             i2c,
@@ -27,7 +27,7 @@ impl Ms5837 {
             fluid_density: 1000.0,
         };
 
-        this.initialize().context("Init PCA9685")?;
+        this.initialize().context("Init MS5837")?;
 
         Ok(this)
     }
@@ -60,7 +60,7 @@ impl Ms5837 {
     const CMD_READ_ADC: u8 = 0x00;
 
     fn initialize(&mut self) -> anyhow::Result<()> {
-        self.i2c.write(&[Self::CMD_RESET]).context("Reset ms5837")?;
+        self.i2c.write(&[Self::CMD_RESET]).context("Reset MS5837")?;
         thread::sleep(Duration::from_millis(10));
 
         for prom_addrs in 0..7 {

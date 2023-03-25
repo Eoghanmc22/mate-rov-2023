@@ -1,16 +1,26 @@
-use common::types::{MotorId, Speed};
+use common::types::{MotorId, Percent};
 use std::fmt::Debug;
 use std::time::Duration;
 
 const DEFAULT_MOTOR: Motor = Motor {
     channel: 255,
-    max_speed: Speed::new(0.5), // Full speed on all motors would blow fuse
+    max_value: Percent::new(0.5), // Full speed on all motors would blow fuse
     // Taken from basic esc spec
     reverse: Duration::from_micros(1100),
     forward: Duration::from_micros(1900),
     center: Duration::from_micros(1500),
 };
 
+const DEFAULT_SERVO: Motor = Motor {
+    channel: 255,
+    max_value: Percent::new(1.0),
+    // Taken from servo spec
+    reverse: Duration::from_micros(1100),
+    forward: Duration::from_micros(1900),
+    center: Duration::from_micros(1500),
+};
+
+// ---------- Thrusters ----------
 pub const MOTOR_FLB: Motor = Motor {
     channel: 0,
     ..DEFAULT_MOTOR
@@ -44,13 +54,31 @@ pub const MOTOR_BRT: Motor = Motor {
     ..DEFAULT_MOTOR
 };
 
+// ---------- Servos ----------
+pub const SERVO_CAM1: Motor = Motor {
+    channel: 15,
+    ..DEFAULT_SERVO
+};
+pub const SERVO_CAM2: Motor = Motor {
+    channel: 14,
+    ..DEFAULT_SERVO
+};
+pub const SERVO_CAM3: Motor = Motor {
+    channel: 13,
+    ..DEFAULT_SERVO
+};
+pub const SERVO_CAM4: Motor = Motor {
+    channel: 12,
+    ..DEFAULT_SERVO
+};
+
 #[derive(Copy, Clone, PartialEq, Debug)]
 pub struct Motor {
     /// PWM signal channel
     channel: u8,
 
     /// Speed settings, can be negative to reverse direction
-    max_speed: Speed,
+    max_value: Percent,
 
     /// PWM info
     reverse: Duration,
@@ -59,8 +87,8 @@ pub struct Motor {
 }
 
 impl Motor {
-    pub fn speed_to_pwm(&self, speed: Speed) -> Duration {
-        let speed = speed.get() * self.max_speed.get();
+    pub fn value_to_pwm(&self, speed: Percent) -> Duration {
+        let speed = speed.get() * self.max_value.get();
 
         let upper = if speed >= 0.0 {
             self.forward.as_micros()
@@ -94,6 +122,11 @@ impl From<MotorId> for Motor {
             MotorId::BaclLeftTop =>       MOTOR_BLT,
             MotorId::BackRightBottom =>   MOTOR_BRB,
             MotorId::RearRightTop =>      MOTOR_BRT,
+
+            MotorId::Camera1 =>           SERVO_CAM1,
+            MotorId::Camera2 =>           SERVO_CAM2,
+            MotorId::Camera3 =>           SERVO_CAM3,
+            MotorId::Camera4 =>           SERVO_CAM4,
         }
     }
 }

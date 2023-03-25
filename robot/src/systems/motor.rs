@@ -6,7 +6,7 @@ use anyhow::anyhow;
 use common::{
     error::LogErrorExt,
     store::{tokens, KeyImpl, Store},
-    types::{Armed, MotorFrame, MotorId, Movement, Speed},
+    types::{Armed, MotorFrame, MotorId, Movement, Percent},
 };
 use crossbeam::channel;
 use fxhash::{FxHashMap as HashMap, FxHashSet as HashSet};
@@ -66,7 +66,7 @@ impl System for MotorSystem {
                             deadlines.insert(motor_id, deadline);
 
                             let motor = Motor::from(motor_id);
-                            let pwm = motor.speed_to_pwm(frame.0);
+                            let pwm = motor.value_to_pwm(frame.0);
 
                             let rst = pwm_controller.set_pwm(motor.channel(), pwm);
                             if let Err(error) = rst {
@@ -79,7 +79,7 @@ impl System for MotorSystem {
                             for (motor_id, deadline) in &deadlines {
                                 if Instant::now() - *deadline > MAX_UPDATE_AGE {
                                     let motor = Motor::from(*motor_id);
-                                    let pwm = motor.speed_to_pwm(Speed::ZERO);
+                                    let pwm = motor.value_to_pwm(Percent::ZERO);
 
                                     let rst = pwm_controller.set_pwm(motor.channel(), pwm);
                                     if let Err(error) = rst {
@@ -248,6 +248,11 @@ pub fn mix_movement<'a>(
             MotorId::BaclLeftTop =>        mov.x - mov.y + mov.z - mov.x_rot + mov.y_rot - mov.z_rot,
             MotorId::BackRightBottom =>   -mov.x - mov.y - mov.z + mov.x_rot + mov.y_rot + mov.z_rot,
             MotorId::RearRightTop =>      -mov.x - mov.y + mov.z - mov.x_rot - mov.y_rot + mov.z_rot,
+
+            MotorId::Camera1 => mov.cam_1,
+            MotorId::Camera2 => mov.cam_2,
+            MotorId::Camera3 => mov.cam_3,
+            MotorId::Camera4 => mov.cam_4,
         };
 
         speeds.insert(*motor, MotorFrame(speed));

@@ -6,7 +6,7 @@ use bevy::{
 };
 use common::{
     store::tokens,
-    types::{Movement, Speed},
+    types::{Movement, Percent},
 };
 
 use super::robot::Updater;
@@ -91,12 +91,16 @@ fn gamepad_input(
             };
 
             let movement = Movement {
-                x: Speed::new(rx as f64),
-                y: Speed::new(ly as f64),
-                z: Speed::new(ry as f64),
-                x_rot: Speed::new(0.0),
-                y_rot: Speed::new(0.0),
-                z_rot: Speed::new(lx as f64),
+                x: Percent::new(rx as f64),
+                y: Percent::new(ly as f64),
+                z: Percent::new(ry as f64),
+                x_rot: Percent::new(0.0),
+                y_rot: Percent::new(0.0),
+                z_rot: Percent::new(lx as f64),
+                cam_1: Percent::ZERO,
+                cam_2: Percent::ZERO,
+                cam_3: Percent::ZERO,
+                cam_4: Percent::ZERO,
             };
 
             updater.emit_update(&tokens::MOVEMENT_JOYSTICK, (movement, Instant::now()));

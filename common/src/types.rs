@@ -14,13 +14,28 @@ pub struct Orientation(pub Quat);
 /// +XR: Pitch Up, +YR: Roll Clockwise, +ZR: Yaw Clockwise (top view)
 #[derive(Debug, Copy, Clone, Default, Serialize, Deserialize, PartialEq)]
 pub struct Movement {
-    pub x: Speed, // Right
-    pub y: Speed, // Forwards
-    pub z: Speed, // Up
+    /// Right
+    pub x: Percent,
+    /// Forwards
+    pub y: Percent,
+    /// Up
+    pub z: Percent,
 
-    pub x_rot: Speed, // Pitch Up
-    pub y_rot: Speed, // Roll Clockwise
-    pub z_rot: Speed, // Yaw Clockwise (top view)
+    /// Pitch Up
+    pub x_rot: Percent,
+    /// Roll Clockwise
+    pub y_rot: Percent,
+    /// Yaw Clockwise (top view)
+    pub z_rot: Percent,
+
+    /// Servo for camera 1
+    pub cam_1: Percent,
+    /// Servo for camera 2
+    pub cam_2: Percent,
+    /// Servo for camera 3
+    pub cam_3: Percent,
+    /// Servo for camera 4
+    pub cam_4: Percent,
 }
 
 impl Add for Movement {
@@ -34,6 +49,11 @@ impl Add for Movement {
             x_rot: self.x_rot + rhs.x_rot,
             y_rot: self.y_rot + rhs.y_rot,
             z_rot: self.z_rot + rhs.z_rot,
+
+            cam_1: self.cam_1 + rhs.cam_1,
+            cam_2: self.cam_2 + rhs.cam_2,
+            cam_3: self.cam_3 + rhs.cam_3,
+            cam_4: self.cam_4 + rhs.cam_4,
         }
     }
 }
@@ -54,6 +74,11 @@ pub enum MotorId {
     BaclLeftTop,
     BackRightBottom,
     RearRightTop,
+
+    Camera1,
+    Camera2,
+    Camera3,
+    Camera4,
 }
 
 // Raw Data Frames
@@ -88,7 +113,7 @@ pub struct MagFrame {
 }
 
 #[derive(Debug, Copy, Clone, Default, Serialize, Deserialize, PartialEq)]
-pub struct MotorFrame(pub Speed);
+pub struct MotorFrame(pub Percent);
 
 #[derive(Debug, Copy, Clone, Default, Serialize, Deserialize, Eq, PartialEq)]
 pub enum Armed {
@@ -172,12 +197,12 @@ impl Display for Gauss {
 }
 
 #[derive(Debug, Copy, Clone, Default, Serialize, Deserialize, PartialOrd, PartialEq)]
-pub struct Speed(f64);
+pub struct Percent(f64);
 
-impl Speed {
-    pub const MAX_VAL: Speed = Speed(1.0);
-    pub const MIN_VAL: Speed = Speed(-1.0);
-    pub const ZERO: Speed = Speed(0.0);
+impl Percent {
+    pub const MAX_VAL: Percent = Percent(1.0);
+    pub const MIN_VAL: Percent = Percent(-1.0);
+    pub const ZERO: Percent = Percent(0.0);
 
     /// Creates a new `Speed`. Input should be between -1.0 and 1.0
     pub const fn new(speed: f64) -> Self {
@@ -188,7 +213,7 @@ impl Speed {
     }
 
     /// Clamps a speed to be between `min` and `max`
-    pub const fn clamp(self, min: Speed, max: Speed) -> Speed {
+    pub const fn clamp(self, min: Percent, max: Percent) -> Percent {
         if self.0 > max.0 {
             max
         } else if self.0 < min.0 {
@@ -204,31 +229,31 @@ impl Speed {
     }
 }
 
-impl Add<Speed> for Speed {
-    type Output = Speed;
+impl Add<Percent> for Percent {
+    type Output = Percent;
 
-    fn add(self, rhs: Speed) -> Self::Output {
-        Speed::new(self.0 + rhs.0)
+    fn add(self, rhs: Percent) -> Self::Output {
+        Percent::new(self.0 + rhs.0)
     }
 }
 
-impl Sub<Speed> for Speed {
-    type Output = Speed;
+impl Sub<Percent> for Percent {
+    type Output = Percent;
 
-    fn sub(self, rhs: Speed) -> Self::Output {
-        Speed::new(self.0 - rhs.0)
+    fn sub(self, rhs: Percent) -> Self::Output {
+        Percent::new(self.0 - rhs.0)
     }
 }
 
-impl Neg for Speed {
-    type Output = Speed;
+impl Neg for Percent {
+    type Output = Percent;
 
     fn neg(self) -> Self::Output {
-        Speed(-self.0)
+        Percent(-self.0)
     }
 }
 
-impl Display for Speed {
+impl Display for Percent {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         f.pad(&format!("{:.2}%", self.0 * 100.0))
     }
@@ -332,5 +357,5 @@ pub enum RobotStatus {
     // Peer is connected and robot is armed
     Armed,
     // The robot is moving, includes speed
-    Moving(Speed),
+    Moving(Percent),
 }

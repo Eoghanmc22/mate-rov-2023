@@ -2,7 +2,7 @@ use std::{thread::Scope, time::Instant};
 
 use common::{
     store::{tokens, Store, UpdateCallback},
-    types::{Armed, RobotStatus, Speed},
+    types::{Armed, RobotStatus, Percent},
 };
 use tracing::{span, Level};
 
@@ -95,7 +95,7 @@ fn compute_status<C: UpdateCallback>(store: &Store<C>, peers: i32) -> RobotStatu
                         .map(|it| it.0.get().abs())
                         .max_by(f64::total_cmp);
                     if let Some(max_speed) = max_speed {
-                        state = RobotStatus::Moving(Speed::new(max_speed));
+                        state = RobotStatus::Moving(Percent::new(max_speed));
                     }
                 }
             }
