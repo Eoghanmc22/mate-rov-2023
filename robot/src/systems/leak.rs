@@ -1,10 +1,6 @@
-use std::{
-    sync::{
-        atomic::{AtomicBool, Ordering},
-        Arc,
-    },
-    thread,
-    time::Duration,
+use std::sync::{
+    atomic::{AtomicBool, Ordering},
+    Arc,
 };
 
 use anyhow::Context;
@@ -13,7 +9,7 @@ use rppal::gpio::{Gpio, Level, Trigger};
 
 use crate::event::Event;
 
-use super::{stop, System};
+use super::System;
 
 pub struct LeakSystem;
 
@@ -52,19 +48,15 @@ impl System for LeakSystem {
                 .context("Set async leak interrupt")?;
         }
 
-        // Dont drop leak pin until program exit
-        spawner.spawn(move || {
-            while !stop::world_stopped() {
-                thread::sleep(Duration::MAX);
-            }
-        });
-
         // Rebrodcast state when sync is requested
+        // Dont drop leak pin until program exit
         {
             let mut events = events.clone();
             let leak_detected = leak_detected.clone();
 
             spawner.spawn(move || {
+                let _leak_pin = leak_pin;
+
                 for event in listener.into_iter() {
                     match &*event {
                         Event::SyncStore => {

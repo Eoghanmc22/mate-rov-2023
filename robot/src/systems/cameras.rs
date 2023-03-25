@@ -39,19 +39,19 @@ impl System for CameraSystem {
             span!(Level::INFO, "Event filterer");
 
             for event in listner.into_iter() {
+                if stop::world_stopped() | matches!(&*event, Event::Exit) {
+                    tx.try_send(Event::Exit.into())
+                        .log_error("Forward exit to camera manager");
+
+                    return;
+                }
+
                 match &*event {
                     Event::PeerConnected(_) | Event::SyncStore => {
                         tx.try_send(event)
                             .log_error("Forward event to camera manager");
                     }
                     _ => {}
-                }
-
-                if stop::world_stopped() {
-                    tx.try_send(Event::Exit.into())
-                        .log_error("Forward exit to camera manager");
-
-                    return;
                 }
             }
         });
