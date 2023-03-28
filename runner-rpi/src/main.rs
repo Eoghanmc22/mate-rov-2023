@@ -11,7 +11,7 @@ pub fn main() -> anyhow::Result<()> {
 
     Command::new("ssh")
         .arg("pi@mate.local")
-        .arg("sudo pkill --signal SIGINT mate-exec && pwait mate-exec ; sudo pkill gst-launch-1.0")
+        .arg("sudo pkill --signal SIGINT mate-exec && sleep 0.5 ; sudo pkill gst-launch-1.0")
         .spawn()
         .context("Spawn ssh")?
         .wait()

@@ -11,6 +11,9 @@
   - [ ] Barometer
   - [ ] ADCs
   - [ ] Don't store raw frames in global store
+  - [ ] Make sure sensors power down, etc on drop
+  - [ ] Make sure sensors do a reset on init
+  - [ ] Check data ready flags in read frame code
 - [ ] Control
   - [ ] OpenCV control
   - [ ] Autonomous control

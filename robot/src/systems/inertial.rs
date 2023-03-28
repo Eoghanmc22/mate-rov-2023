@@ -6,7 +6,12 @@ use std::{
 use common::store::{self, tokens};
 use tracing::{span, Level};
 
-use crate::{event::Event, events::EventHandle, peripheral::icm20602::Icm20602, systems::stop};
+use crate::{
+    event::Event,
+    events::EventHandle,
+    peripheral::{icm20602::Icm20602, mmc5983::Mcc5983},
+    systems::stop,
+};
 
 use super::System;
 
@@ -31,8 +36,18 @@ impl System for InertialSystem {
                 }
             };
 
+            let mag = Mcc5983::new(Mcc5983::SPI_BUS, Mcc5983::SPI_SELECT, Mcc5983::SPI_CLOCK);
+            let mut mag = match mag {
+                Ok(mag) => mag,
+                Err(err) => {
+                    events.send(Event::Error(err.context("MCC5983")));
+                    return;
+                }
+            };
+
             let interval = Duration::from_secs_f64(1.0 / 1000.0);
             let imu_divisor = 1;
+            let mag_divisor = 10;
 
             let mut deadline = Instant::now();
             let mut counter = 0;
@@ -52,6 +67,23 @@ impl System for InertialSystem {
                         }
                         Err(err) => {
                             events.send(Event::Error(err.context("Could not read imu")));
+                        }
+                    }
+                }
+
+                if counter % mag_divisor == 0 {
+                    let rst = mag.read_frame();
+
+                    match rst {
+                        Ok(frame) => {
+                            let update = store::create_update(
+                                &tokens::RAW_MAGNETIC,
+                                (frame, Instant::now()),
+                            );
+                            events.send(Event::Store(update));
+                        }
+                        Err(err) => {
+                            events.send(Event::Error(err.context("Could not read mag")));
                         }
                     }
                 }

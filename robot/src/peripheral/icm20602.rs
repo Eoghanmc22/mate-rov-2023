@@ -48,12 +48,12 @@ impl Icm20602 {
         let gyro_native_y = raw_gyro_native_y as i16 as f64 / 131.0;
         let gyro_native_z = raw_gyro_native_z as i16 as f64 / 131.0;
 
-        let accel_x = accel_native_y;
-        let accel_y = accel_native_x;
+        let accel_x = -accel_native_y;
+        let accel_y = -accel_native_x;
         let accel_z = -accel_native_z;
 
-        let gyro_x = gyro_native_y;
-        let gyro_y = gyro_native_x;
+        let gyro_x = -gyro_native_y;
+        let gyro_y = -gyro_native_x;
         let gyro_z = -gyro_native_z;
 
         Ok(InertialFrame {

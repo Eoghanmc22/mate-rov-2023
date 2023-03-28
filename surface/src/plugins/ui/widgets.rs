@@ -464,6 +464,20 @@ impl<C> Widget for &mut RawSensorDataUi<'_, C> {
                     ui.label("No accelerometer data");
                 }
             });
+            ui.collapsing("Mag", |ui| {
+                if let Some(data) = self.data.get(&tokens::RAW_MAGNETIC) {
+                    let (mag, _) = &*data;
+
+                    ui.label("Mag");
+                    ui.label(format!("X: {}", mag.mag_x));
+                    ui.label(format!("Y: {}", mag.mag_y));
+                    ui.label(format!("Z: {}", mag.mag_z));
+
+                    // TODO visual
+                } else {
+                    ui.label("No magnetometer data");
+                }
+            });
             ui.collapsing("Fusion", |ui| {
                 ui.label("TODO");
             });
