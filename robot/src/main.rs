@@ -39,6 +39,8 @@ use crate::systems::inertial::InertialSystem;
 use crate::systems::leak::LeakSystem;
 #[cfg(rpi)]
 use crate::systems::motor::MotorSystem;
+#[cfg(rpi)]
+use crate::systems::orientation::OrientationSystem;
 
 fn main() -> anyhow::Result<()> {
     tracing_subscriber::fmt()
@@ -64,6 +66,8 @@ fn main() -> anyhow::Result<()> {
     systems.add_system::<LeakSystem>()?;
     #[cfg(rpi)]
     systems.add_system::<InertialSystem>()?;
+    #[cfg(rpi)]
+    systems.add_system::<OrientationSystem>()?;
     #[cfg(rpi)]
     systems.add_system::<DepthSystem>()?;
     #[cfg(rpi)]

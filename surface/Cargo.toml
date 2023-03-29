@@ -14,10 +14,12 @@ fxhash = "0.2"
 tracing = "0.1"
 tracing-subscriber = "0.3"
 
-bevy = { version = "0.10", default-features = false, features = ["wayland", "bevy_gilrs"] }
+bevy = { version = "0.10", default-features = false, features = ["wayland", "bevy_pbr", "bevy_core_pipeline"] }
 egui = "0.21"
 egui_extras = "0.21"
 bevy_egui = { version = "0.20", default-features = false }
-glam = { version = "0.23", features = ["serde"] }
+bevy_stl = "0.8"
+
+nalgebra = "0.31"
 
 opencv = "0.78"

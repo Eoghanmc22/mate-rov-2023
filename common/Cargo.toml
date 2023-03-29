@@ -7,7 +7,7 @@ edition = "2021"
 serde = { version = "1", features = ["derive"] }
 bincode = "1"
 anyhow = "1"
-glam = { version = "0.23", features = ["serde"] }
+nalgebra = { version = "0.31", features = ["serde-serialize"] }
 bitflags = "1"
 tracing = "0.1"
 networking = { path = "../networking" }

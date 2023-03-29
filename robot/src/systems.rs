@@ -15,6 +15,7 @@ pub mod networking;
 pub mod robot;
 pub mod status;
 pub mod stop;
+pub mod orientation;
 
 use std::{
     any,

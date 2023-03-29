@@ -26,6 +26,7 @@ impl System for LogEventSystem {
                     Event::PacketTx(Protocol::Store(key, _)) if key.contains("sensor") => {}
                     Event::PacketRx(Protocol::Store(key, _)) if key.contains("sensor") => {}
                     Event::Store((key, _)) if key.as_str().contains("sensor") => {}
+                    Event::SensorFrame(_) => {}
 
                     Event::PacketTx(Protocol::Store(key, _)) => {
                         debug!("PacketTx(Store({key}, ..))");

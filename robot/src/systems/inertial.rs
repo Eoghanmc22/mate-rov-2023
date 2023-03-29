@@ -3,11 +3,10 @@ use std::{
     time::{Duration, Instant},
 };
 
-use common::store::{self, tokens};
 use tracing::{span, Level};
 
 use crate::{
-    event::Event,
+    event::{Event, SensorFrame},
     events::EventHandle,
     peripheral::{icm20602::Icm20602, mmc5983::Mcc5983},
     systems::stop,
@@ -59,11 +58,7 @@ impl System for InertialSystem {
 
                     match rst {
                         Ok(frame) => {
-                            let update = store::create_update(
-                                &tokens::RAW_INERTIAL,
-                                (frame, Instant::now()),
-                            );
-                            events.send(Event::Store(update));
+                            events.send(Event::SensorFrame(SensorFrame::Imu(frame)));
                         }
                         Err(err) => {
                             events.send(Event::Error(err.context("Could not read imu")));
@@ -76,11 +71,7 @@ impl System for InertialSystem {
 
                     match rst {
                         Ok(frame) => {
-                            let update = store::create_update(
-                                &tokens::RAW_MAGNETIC,
-                                (frame, Instant::now()),
-                            );
-                            events.send(Event::Store(update));
+                            events.send(Event::SensorFrame(SensorFrame::Mag(frame)));
                         }
                         Err(err) => {
                             events.send(Event::Error(err.context("Could not read mag")));

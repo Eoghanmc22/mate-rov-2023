@@ -1,6 +1,6 @@
 //! Definitions of important types used throughout the project
 
-use glam::Quat;
+use nalgebra::UnitQuaternion;
 use serde::{Deserialize, Serialize};
 use std::fmt::{Display, Formatter};
 use std::net::SocketAddr;
@@ -8,7 +8,7 @@ use std::ops::{Add, AddAssign, Neg, Sub};
 use std::time::Duration;
 
 #[derive(Debug, Copy, Clone, Default, Serialize, Deserialize, PartialEq)]
-pub struct Orientation(pub Quat);
+pub struct Orientation(pub UnitQuaternion<f64>);
 
 /// +X: Right, +Y: Forwards, +Z: Up
 /// +XR: Pitch Up, +YR: Roll Clockwise, +ZR: Yaw Clockwise (top view)

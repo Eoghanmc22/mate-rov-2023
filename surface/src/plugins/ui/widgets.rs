@@ -6,7 +6,6 @@ use common::{
 };
 use egui::{vec2, Align, Direction, Layout, TextureId, Widget};
 use egui_extras::{Column, TableBuilder};
-use glam::EulerRot;
 
 const TABLE_ROW_HEIGHT: f32 = 15.0;
 
@@ -342,10 +341,11 @@ impl<C> Widget for &mut OrientationUi<'_, C> {
             if let Some(data) = self.data.get(&tokens::ORIENTATION) {
                 let (orientation, _) = &*data;
 
-                let (yaw, pitch, roll) = orientation.0.to_euler(EulerRot::YXZ);
-                ui.label(format!("Yaw: {yaw}"));
-                ui.label(format!("Pitch: {pitch}"));
-                ui.label(format!("Roll: {roll}"));
+                let (roll, pitch, yaw) = orientation.0.euler_angles();
+                ui.label(format!("Roll: {:.3}", roll.to_degrees()));
+                ui.label(format!("Pitch: {:.3}", pitch.to_degrees()));
+                ui.label(format!("Yaw: {:.3}", yaw.to_degrees()));
+
                 // TODO visual
             } else {
                 ui.label("No orientation data");
