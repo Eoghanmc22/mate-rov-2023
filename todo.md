@@ -8,6 +8,7 @@
   - [ ] Sensor fusion
   - [-] Leak
   - [ ] Magnetometers
+    - [ ] Calibration
   - [ ] Barometer
   - [ ] ADCs
   - [ ] Don't store raw frames in global store
@@ -25,6 +26,7 @@
   - [ ] Tests
   - [ ] Make important settings editable in real time
 - [ ] UI
+  - [ ] Reduce usage of clone
   - [ ] Better video view
   - [ ] Improve notifications
     - [ ] Animations
@@ -43,4 +45,5 @@
   - [ ] Image pi
   - [ ] Systemd service
   - [ ] Linters
+  - [ ] Surface prints errors on shutdown
 

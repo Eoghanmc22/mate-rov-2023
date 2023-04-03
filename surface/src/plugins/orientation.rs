@@ -1,4 +1,3 @@
-use bevy::asset;
 use bevy::prelude::{App, Plugin};
 
 use bevy::{
@@ -14,6 +13,7 @@ use bevy::{
 };
 use bevy_egui::EguiContexts;
 use common::store::tokens;
+use egui::TextureId;
 
 use super::robot::Robot;
 
@@ -23,23 +23,23 @@ impl Plugin for OrientationPlugin {
     fn build(&self, app: &mut App) {
         app.add_startup_system(setup);
         app.add_system(rotator_system);
-        app.add_system(draw_window);
     }
 }
 
-#[derive(Resource)]
-pub struct OrientationDisplay(pub Handle<Image>); // Marks the main pass cube, to which the texture is applied.
+#[derive(Resource, Debug, Clone)]
+pub struct OrientationDisplay(pub Handle<Image>, pub TextureId);
 
+// Marks the main pass cube, to which the texture is applied.
 #[derive(Component)]
 struct Object;
 
 // Modified from render_to_texture example
 fn setup(
     mut commands: Commands,
-    mut meshes: ResMut<Assets<Mesh>>,
     asset_server: Res<AssetServer>,
     mut materials: ResMut<Assets<StandardMaterial>>,
     mut images: ResMut<Assets<Image>>,
+    mut egui_context: EguiContexts,
 ) {
     let size = Extent3d {
         width: 512,
@@ -117,7 +117,8 @@ fn setup(
         first_pass_layer,
     ));
 
-    commands.insert_resource(OrientationDisplay(image_handle));
+    let texture = egui_context.add_image(image_handle.clone_weak());
+    commands.insert_resource(OrientationDisplay(image_handle, texture));
 }
 
 fn rotator_system(robot: Res<Robot>, mut query: Query<&mut Transform, With<Object>>) {
@@ -136,11 +137,4 @@ fn rotator_system(robot: Res<Robot>, mut query: Query<&mut Transform, With<Objec
             transform.rotation = quat;
         }
     }
-}
-
-fn draw_window(mut egui_context: EguiContexts, display: Res<OrientationDisplay>) {
-    let texture = egui_context.add_image(display.0.clone_weak());
-    let ctx = egui_context.ctx_mut();
-
-    egui::Window::new("Orientation").show(ctx, |ui| ui.image(texture, (512.0, 512.0)));
 }

@@ -1,11 +1,14 @@
-mod elements;
-pub mod widgets;
-pub mod windows;
+mod components;
+mod panes;
+mod widgets;
 
-use crate::plugins::robot::Robot;
 use bevy::prelude::*;
 use bevy_egui::{EguiContexts, EguiPlugin};
-use egui::{Id, Ui};
+use crossbeam::channel::{bounded, Receiver, Sender};
+use egui::{Context, Ui};
+use fxhash::FxHashMap as HashMap;
+use rand::{distributions::Standard, prelude::Distribution, Rng};
+use std::fmt::Debug;
 
 pub struct UiPlugin;
 
@@ -13,57 +16,149 @@ impl Plugin for UiPlugin {
     fn build(&self, app: &mut App) {
         app.add_plugin(EguiPlugin);
         // app.insert_resource(EguiSettings { scale_factor: 0.5, default_open_url_target: None });
-        app.add_system(draw_ui);
-        app.add_system(draw_windows);
+        app.init_resource::<UiMessages>();
+        app.add_system(handle_ui);
     }
 }
 
-#[derive(Component)]
-pub struct WindowComponent(String, Box<dyn Renderable + Sync + Send>);
+struct UiState(HashMap<PaneId, Pane>);
 
-impl WindowComponent {
-    pub fn new(name: String, window: impl Renderable + Send + Sync + 'static) -> Self {
-        Self(name, Box::new(window))
+impl FromWorld for UiState {
+    fn from_world(_world: &mut World) -> Self {
+        let mut panes = HashMap::default();
+
+        panes.insert(PaneId::MenuBar, panes::menu_bar());
+        panes.insert(PaneId::StatusBar, panes::status_bar());
+        panes.insert(PaneId::DataPane, panes::data_panel());
+        panes.insert(PaneId::CameraBar, panes::camera_bar());
+        panes.insert(PaneId::Video, panes::video_panel());
+        panes.insert(PaneId::Notifications, panes::notification_popup());
+
+        UiState(panes)
     }
 }
 
-pub trait Renderable {
-    fn render(&mut self, ui: &mut Ui, cmds: &mut Commands, entity: Entity);
-    fn close(&mut self, _cmds: &mut Commands, _entity: Entity) {}
+#[derive(Debug, Clone, Hash, PartialEq, Eq)]
+pub enum PaneId {
+    MenuBar,
+    StatusBar,
+    DataPane,
+    CameraBar,
+    Video,
+    Notifications,
+    Extension(ExtensionId),
 }
 
-/// Draws egui ui
-fn draw_ui(mut cmds: Commands, robot: Res<Robot>, mut egui_context: EguiContexts) {
-    let ctx = egui_context.ctx_mut();
-    let store = robot.store();
+#[derive(Debug, Copy, Clone, Hash, PartialEq, Eq)]
+pub struct ExtensionId(u128);
 
-    elements::menu_bar(ctx, &mut cmds, store);
-    elements::side_bar(ctx, &mut cmds, store);
-    elements::top_panel(ctx, &mut cmds, store);
-    // Video is rendered in video.rs
-    // Windows are rendered draw_windows function
+impl Distribution<ExtensionId> for Standard {
+    fn sample<R: Rng + ?Sized>(&self, rng: &mut R) -> ExtensionId {
+        ExtensionId(rng.gen())
+    }
 }
 
-fn draw_windows(
-    mut cmds: Commands,
-    mut egui_context: EguiContexts,
-    mut windows: Query<(Entity, &mut WindowComponent)>,
+type DynComponent = Box<dyn UiComponent + Send + Sync>;
+type DynUiConstructor =
+    Box<dyn for<'a> Fn(&mut egui::Context, Box<dyn FnMut(&mut Ui) + 'a>) + Send + Sync>;
+
+pub struct Pane {
+    components: Vec<DynComponent>,
+    constructor: DynUiConstructor,
+}
+
+impl Pane {
+    pub fn new<
+        C: for<'a> Fn(&mut egui::Context, Box<dyn FnMut(&mut Ui) + 'a>) + Send + Sync + 'static,
+    >(
+        constructor: C,
+    ) -> Self {
+        let constructor = Box::new(constructor);
+
+        Self {
+            components: Default::default(),
+            constructor,
+        }
+    }
+
+    pub fn add<C: UiComponent + Send + Sync + 'static>(&mut self, component: C) {
+        self.components.push(Box::new(component));
+    }
+
+    pub fn update(&mut self, world: &World, commands: &mut Commands) {
+        for component in &mut self.components {
+            component.pre_draw(world, commands);
+        }
+    }
+
+    pub fn render(&mut self, ctx: &mut Context, commands: &mut Commands) {
+        let renderer = |ui: &mut Ui| {
+            for component in &mut self.components {
+                component.draw(&mut *ui, commands);
+            }
+        };
+        (self.constructor)(ctx, Box::new(renderer));
+    }
+}
+
+pub trait UiComponent: Debug {
+    fn pre_draw(&mut self, _world: &World, _commands: &mut Commands) {}
+    fn draw(&mut self, ui: &mut Ui, commands: &mut Commands);
+}
+
+#[derive(Resource)]
+pub struct UiMessages(Sender<UiMessage>, Receiver<UiMessage>);
+
+impl Default for UiMessages {
+    fn default() -> Self {
+        let (tx, rx) = bounded(30);
+        UiMessages(tx, rx)
+    }
+}
+
+pub enum UiMessage {
+    OpenPanel(PaneId, Pane),
+    ClosePanel(PaneId),
+}
+
+fn handle_ui(
+    mut state: Local<UiState>,
+    mut commands: Commands,
+    messages: Res<UiMessages>,
+    mut set: ParamSet<(&World, EguiContexts)>,
 ) {
-    let ctx = egui_context.ctx_mut();
+    // Handle ui updates
+    // This should be in a seperate system but cant be due as
+    // the state is kept in a `Local<T>`
+    for message in messages.1.try_iter() {
+        match message {
+            UiMessage::OpenPanel(id, pane) => {
+                state.0.insert(id, pane);
+            }
+            UiMessage::ClosePanel(id) => {
+                state.0.remove(&id);
+            }
+        }
+    }
 
-    for (entity, mut window) in windows.iter_mut() {
-        let mut open = true;
+    // Define render order
+    let filters: &[&dyn Fn(&(&PaneId, &mut Pane)) -> bool] = &[
+        &|(id, _pane)| matches!(id, PaneId::MenuBar),
+        &|(id, _pane)| matches!(id, PaneId::StatusBar),
+        &|(id, _pane)| matches!(id, PaneId::DataPane),
+        &|(id, _pane)| matches!(id, PaneId::CameraBar),
+        &|(id, _pane)| matches!(id, PaneId::Video),
+        &|(id, _pane)| matches!(id, PaneId::Notifications),
+        &|(id, _pane)| matches!(id, PaneId::Extension(_)),
+    ];
 
-        egui::Window::new(&window.0)
-            .id(Id::new(entity))
-            .open(&mut open)
-            .show(ctx, |ui| {
-                window.1.render(ui, &mut cmds, entity);
-            });
+    // Render the ui
+    for filter in filters {
+        for (id, pane) in state.0.iter_mut().filter(filter) {
+            pane.update(set.p0(), &mut commands);
 
-        if !open {
-            window.1.close(&mut cmds, entity);
-            cmds.entity(entity).despawn_recursive();
+            let mut egui = set.p1();
+            pane.render(egui.ctx_mut(), &mut commands);
         }
     }
 }

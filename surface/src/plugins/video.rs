@@ -5,11 +5,11 @@ use std::mem;
 use bevy::{prelude::*, utils::HashMap};
 use bevy_egui::EguiContexts;
 use common::error::LogErrorExt;
-use egui::{vec2, Align, Layout, TextureId, Ui};
+use egui::TextureId;
 
 use crate::plugins::opencv::VideoMessage;
 
-use super::{opencv::VideoCaptureThread, ui::widgets};
+use super::opencv::VideoCaptureThread;
 
 pub struct VideoPlugin;
 
@@ -20,7 +20,6 @@ impl Plugin for VideoPlugin {
         app.add_system(video_add);
         app.add_system(video_remove);
         app.add_system(video_frames);
-        app.add_system(video_render.in_base_set(CoreSet::PostUpdate));
     }
 }
 
@@ -39,24 +38,24 @@ impl Video {
     }
 }
 
-#[derive(Component)]
+#[derive(Debug, Component, Clone)]
 pub struct VideoName(pub String);
-#[derive(Component)]
+#[derive(Debug, Component, Clone)]
 pub struct VideoPosition(pub Position);
-#[derive(Component)]
+#[derive(Debug, Component, Clone)]
 pub struct VideoRemove;
-#[derive(Component)]
-pub struct VideoTexture(Handle<Image>, TextureId);
-#[derive(Default, Resource)]
-struct VideoState(HashMap<Position, VideoTree>);
+#[derive(Debug, Component, Clone)]
+pub struct VideoTexture(pub Handle<Image>, pub TextureId);
+#[derive(Debug, Default, Resource, Clone)]
+pub struct VideoState(pub HashMap<Position, VideoTree>);
 
-#[derive(PartialEq, Eq, Hash, Clone, Debug)]
+#[derive(PartialEq, Eq, Hash, Clone, Copy, Debug)]
 pub enum Position {
     Center,
 }
 
-#[derive(Debug)]
-enum VideoTree {
+#[derive(Debug, Clone)]
+pub enum VideoTree {
     Node(Box<VideoTree>, Box<VideoTree>),
     Leaf(Entity),
     Empty,
@@ -124,7 +123,7 @@ fn video_add(
     cameras: Query<(Entity, &VideoPosition), Added<VideoName>>,
 ) {
     for (entity, pos) in &cameras {
-        let tree = video.0.entry(pos.0.clone()).or_default();
+        let tree = video.0.entry(pos.0).or_default();
         tree.insert(entity);
     }
 }
@@ -181,74 +180,6 @@ fn video_remove(
 
             // Despawning the entity drops the `VideoCaptureThread` component and stops the thread
             cmd.entity(entity).despawn_recursive();
-        }
-    }
-}
-
-/// Renders the video panel
-fn video_render(
-    mut cmds: Commands,
-    mut egui_context: EguiContexts,
-    video: Res<VideoState>,
-    cameras: Query<(&VideoName, Option<&VideoTexture>)>,
-) {
-    let ctx = egui_context.ctx_mut();
-
-    egui::CentralPanel::default().show(ctx, |ui| {
-        if let Some(tree) = video.0.get(&Position::Center) {
-            render(&mut cmds, ui, tree, &cameras);
-        }
-    });
-}
-
-/// Renders each node in the `VideoTree`
-fn render(
-    cmds: &mut Commands,
-    ui: &mut Ui,
-    tree: &VideoTree,
-    cameras: &Query<(&VideoName, Option<&VideoTexture>)>,
-) {
-    match tree {
-        VideoTree::Node(a, b) => {
-            let available = ui.available_size();
-            let (layout, size) = if available.x > available.y {
-                (
-                    Layout::left_to_right(Align::LEFT),
-                    vec2(available.x / 2.0, available.y),
-                )
-            } else {
-                (
-                    Layout::top_down(Align::LEFT),
-                    vec2(available.x, available.y / 2.0),
-                )
-            };
-
-            ui.with_layout(layout, |ui| {
-                ui.allocate_ui(size, |ui| {
-                    ui.set_min_size(size);
-                    render(cmds, ui, a, cameras);
-                });
-                ui.allocate_ui(size, |ui| {
-                    ui.set_min_size(size);
-                    render(cmds, ui, b, cameras);
-                });
-            });
-        }
-        VideoTree::Leaf(entity) => {
-            if let Ok((name, texture)) = cameras.get(*entity) {
-                let mut video = widgets::Video::new(&name.0, texture.map(|it| it.1));
-
-                ui.with_layout(Layout::top_down(Align::LEFT), |ui| {
-                    ui.add(&mut video);
-                });
-
-                if video.should_delete {
-                    cmds.entity(*entity).insert(VideoRemove);
-                }
-            }
-        }
-        VideoTree::Empty => {
-            ui.add_sized(ui.available_size(), |ui: &mut Ui| ui.heading("Empty"));
         }
     }
 }
