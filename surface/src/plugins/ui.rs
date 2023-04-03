@@ -60,7 +60,7 @@ impl Distribution<ExtensionId> for Standard {
 
 type DynComponent = Box<dyn UiComponent + Send + Sync>;
 type DynUiConstructor =
-    Box<dyn for<'a> Fn(&mut egui::Context, Box<dyn FnMut(&mut Ui) + 'a>) + Send + Sync>;
+    Box<dyn for<'a> Fn(&egui::Context, Box<dyn FnMut(&mut Ui) + 'a>) + Send + Sync>;
 
 pub struct Pane {
     components: Vec<DynComponent>,
@@ -69,7 +69,7 @@ pub struct Pane {
 
 impl Pane {
     pub fn new<
-        C: for<'a> Fn(&mut egui::Context, Box<dyn FnMut(&mut Ui) + 'a>) + Send + Sync + 'static,
+        C: for<'a> Fn(&egui::Context, Box<dyn FnMut(&mut Ui) + 'a>) + Send + Sync + 'static,
     >(
         constructor: C,
     ) -> Self {
@@ -91,10 +91,10 @@ impl Pane {
         }
     }
 
-    pub fn render(&mut self, ctx: &mut Context, commands: &mut Commands) {
+    pub fn render(&mut self, ctx: &Context, commands: &mut Commands) {
         let renderer = |ui: &mut Ui| {
             for component in &mut self.components {
-                component.draw(&mut *ui, commands);
+                component.draw(ctx, &mut *ui, commands);
             }
         };
         (self.constructor)(ctx, Box::new(renderer));
@@ -103,7 +103,7 @@ impl Pane {
 
 pub trait UiComponent: Debug {
     fn pre_draw(&mut self, _world: &World, _commands: &mut Commands) {}
-    fn draw(&mut self, ui: &mut Ui, commands: &mut Commands);
+    fn draw(&mut self, ctx: &Context, ui: &mut Ui, commands: &mut Commands);
 }
 
 #[derive(Resource)]

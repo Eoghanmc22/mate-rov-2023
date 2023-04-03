@@ -65,8 +65,6 @@ pub fn camera_bar() -> Pane {
 
 pub fn connect_window(id: ExtensionId, ui: Sender<UiMessage>) -> Pane {
     let mut pane = {
-        let id = id;
-
         Pane::new(move |ctx, add_contents| {
             let mut open = true;
 
@@ -108,8 +106,6 @@ pub fn notification_popup() -> Pane {
 
 pub fn orientation_display_window(id: ExtensionId, ui: Sender<UiMessage>) -> Pane {
     let mut pane = {
-        let id = id;
-
         Pane::new(move |ctx, add_contents| {
             let mut open = true;
 
@@ -126,6 +122,28 @@ pub fn orientation_display_window(id: ExtensionId, ui: Sender<UiMessage>) -> Pan
     };
 
     pane.add(components::OrientationDisplayUi::default());
+
+    pane
+}
+
+pub fn debug_egui_window(id: ExtensionId, ui: Sender<UiMessage>) -> Pane {
+    let mut pane = {
+        Pane::new(move |ctx, add_contents| {
+            let mut open = true;
+
+            egui::Window::new("Debug Egui")
+                .id(Id::new(id))
+                .open(&mut open)
+                .show(ctx, add_contents);
+
+            if !open {
+                ui.try_send(UiMessage::ClosePanel(PaneId::Extension(id)))
+                    .log_error("Close connetion window");
+            }
+        })
+    };
+
+    pane.add(components::DebugEguiUi::default());
 
     pane
 }

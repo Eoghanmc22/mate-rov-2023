@@ -7,6 +7,7 @@ use bevy::{
     app::AppExit,
     prelude::{Commands, World},
 };
+use common::types::RobotStatus;
 use common::{
     error::LogErrorExt,
     protocol::Protocol,
@@ -16,8 +17,8 @@ use common::{
         Movement, Orientation, SystemInfo,
     },
 };
-use egui::Frame;
-use egui::{vec2, Align, Layout, Ui};
+use egui::{vec2, Align, Layout};
+use egui::{Color32, Frame};
 use egui_extras::{Column, TableBuilder};
 use fxhash::FxHashMap as HashMap;
 use std::net::ToSocketAddrs;
@@ -48,7 +49,7 @@ const TABLE_ROW_HEIGHT: f32 = 15.0;
 pub struct MenuBar;
 
 impl UiComponent for MenuBar {
-    fn draw(&mut self, ui: &mut Ui, commands: &mut Commands) {
+    fn draw(&mut self, _ctx: &egui::Context, ui: &mut egui::Ui, commands: &mut Commands) {
         egui::menu::bar(ui, |ui| {
             egui::menu::menu_button(ui, "File", |ui| {
                 if ui.button("Quit").clicked() {
@@ -60,8 +61,7 @@ impl UiComponent for MenuBar {
             egui::menu::menu_button(ui, "Robot", |ui| {
                 if ui.button("Connect").clicked() {
                     commands.add(|world: &mut World| {
-                        let ui = world.get_resource::<UiMessages>();
-                        if let Some(ui) = ui {
+                        if let Some(ui) = world.get_resource::<UiMessages>() {
                             let id = rand::random();
                             ui.0.try_send(UiMessage::OpenPanel(
                                 PaneId::Extension(id),
@@ -80,8 +80,7 @@ impl UiComponent for MenuBar {
                 }
                 if ui.button("Orientation").clicked() {
                     commands.add(|world: &mut World| {
-                        let ui = world.get_resource::<UiMessages>();
-                        if let Some(ui) = ui {
+                        if let Some(ui) = world.get_resource::<UiMessages>() {
                             let id = rand::random();
                             ui.0.try_send(UiMessage::OpenPanel(
                                 PaneId::Extension(id),
@@ -94,16 +93,59 @@ impl UiComponent for MenuBar {
                     });
                 }
             });
+            egui::menu::menu_button(ui, "Debug", |ui| {
+                if ui.button("Egui Settings").clicked() {
+                    commands.add(|world: &mut World| {
+                        if let Some(ui) = world.get_resource::<UiMessages>() {
+                            let id = rand::random();
+                            ui.0.try_send(UiMessage::OpenPanel(
+                                PaneId::Extension(id),
+                                panes::debug_egui_window(id, ui.0.clone()),
+                            ))
+                            .log_error("Open egui debugger");
+                        } else {
+                            error!("No UiMessage resource found");
+                        }
+                    })
+                }
+            });
         });
     }
 }
 
 #[derive(Debug, Default)]
-pub struct StatusBar;
+pub struct StatusBar(Option<Arc<RobotStatus>>, Option<Arc<bool>>);
 
 impl UiComponent for StatusBar {
-    fn draw(&mut self, ui: &mut Ui, _commands: &mut Commands) {
-        ui.label("TODO: Display status");
+    fn pre_draw(&mut self, world: &World, _commands: &mut Commands) {
+        let Some(robot) = world.get_resource::<Robot>() else {
+            return;
+        };
+        self.0 = robot.store().get(&tokens::STATUS);
+        self.1 = robot.store().get(&tokens::LEAK);
+    }
+
+    fn draw(&mut self, _ctx: &egui::Context, ui: &mut egui::Ui, _commands: &mut Commands) {
+        ui.horizontal_wrapped(|ui| {
+            if let Some(ref status) = self.0 {
+                let status_color = match &**status {
+                    RobotStatus::Moving(_) => Color32::LIGHT_GREEN,
+                    RobotStatus::Armed => Color32::GREEN,
+                    RobotStatus::Ready => Color32::BLUE,
+                    RobotStatus::NoPeer => Color32::DARK_BLUE,
+                };
+                ui.colored_label(status_color, format!("Status: {status:?}"));
+            } else {
+                ui.label("No status data");
+            }
+
+            if let Some(ref leak) = self.1 {
+                let leak_color = if **leak { Color32::RED } else { Color32::GREEN };
+                ui.colored_label(leak_color, format!("Leak detected: {leak:?}"));
+            } else {
+                ui.label("No leak data");
+            }
+        });
     }
 }
 
@@ -118,7 +160,7 @@ impl UiComponent for CameraBar {
         self.0 = robot.store().get(&tokens::CAMERAS);
     }
 
-    fn draw(&mut self, ui: &mut Ui, commands: &mut Commands) {
+    fn draw(&mut self, _ctx: &egui::Context, ui: &mut egui::Ui, commands: &mut Commands) {
         ui.horizontal(|ui| {
             if let Some(ref cameras) = self.0 {
                 for camera in &**cameras {
@@ -146,7 +188,7 @@ impl UiComponent for RemoteSystemUi {
         self.0 = robot.store().get(&tokens::SYSTEM_INFO);
     }
 
-    fn draw(&mut self, ui: &mut egui::Ui, _commands: &mut Commands) {
+    fn draw(&mut self, _ctx: &egui::Context, ui: &mut egui::Ui, _commands: &mut Commands) {
         ui.collapsing("Remote System", |ui| {
             if let Some(ref hw_state) = self.0 {
                 ui.collapsing("CPU", |ui| {
@@ -461,7 +503,7 @@ impl UiComponent for OrientationUi {
         self.0 = robot.store().get(&tokens::ORIENTATION);
     }
 
-    fn draw(&mut self, ui: &mut egui::Ui, _commands: &mut Commands) {
+    fn draw(&mut self, _ctx: &egui::Context, ui: &mut egui::Ui, _commands: &mut Commands) {
         ui.collapsing("Orientation", |ui| {
             if let Some(ref data) = self.0 {
                 let (orientation, _) = &**data;
@@ -498,7 +540,7 @@ impl UiComponent for MovementUi {
         self.ai = robot.store().get(&tokens::MOVEMENT_AI);
     }
 
-    fn draw(&mut self, ui: &mut egui::Ui, _commands: &mut Commands) {
+    fn draw(&mut self, _ctx: &egui::Context, ui: &mut egui::Ui, _commands: &mut Commands) {
         ui.collapsing("Movement", |ui| {
             if let Some(ref data) = self.calculated {
                 let (movement, _) = &**data;
@@ -579,7 +621,7 @@ impl UiComponent for RawSensorDataUi {
         self.depth_target = robot.store().get(&tokens::DEPTH_TARGET);
     }
 
-    fn draw(&mut self, ui: &mut egui::Ui, _commands: &mut Commands) {
+    fn draw(&mut self, _ctx: &egui::Context, ui: &mut egui::Ui, _commands: &mut Commands) {
         ui.collapsing("Sensors", |ui| {
             ui.collapsing("Imu", |ui| {
                 if let Some(ref data) = self.inertial {
@@ -654,7 +696,7 @@ impl UiComponent for MotorsUi {
         self.0 = robot.store().get(&tokens::MOTOR_SPEED);
     }
 
-    fn draw(&mut self, ui: &mut egui::Ui, _commands: &mut Commands) {
+    fn draw(&mut self, _ctx: &egui::Context, ui: &mut egui::Ui, _commands: &mut Commands) {
         ui.collapsing("Motors", |ui| {
             if let Some(ref data) = self.0 {
                 let (speeds, _) = &**data;
@@ -681,7 +723,7 @@ impl UiComponent for CamerasUi {
         self.0 = robot.store().get(&tokens::CAMERAS);
     }
 
-    fn draw(&mut self, ui: &mut egui::Ui, _commands: &mut Commands) {
+    fn draw(&mut self, _ctx: &egui::Context, ui: &mut egui::Ui, _commands: &mut Commands) {
         ui.collapsing("Cameras", |ui| {
             if let Some(ref cameras) = self.0 {
                 for Camera { name, location } in &**cameras {
@@ -699,7 +741,7 @@ impl UiComponent for CamerasUi {
 pub struct RobotUi;
 
 impl UiComponent for RobotUi {
-    fn draw(&mut self, ui: &mut egui::Ui, _commands: &mut Commands) {
+    fn draw(&mut self, _ctx: &egui::Context, ui: &mut egui::Ui, _commands: &mut Commands) {
         ui.collapsing("Robot", |ui| {
             ui.label("TODO");
         });
@@ -716,7 +758,7 @@ impl ConnectUi {
 }
 
 impl UiComponent for ConnectUi {
-    fn draw(&mut self, ui: &mut egui::Ui, commands: &mut Commands) {
+    fn draw(&mut self, _ctx: &egui::Context, ui: &mut egui::Ui, commands: &mut Commands) {
         ui.text_edit_singleline(&mut self.0);
         if !ui.button("Connect").clicked() {
             return;
@@ -788,7 +830,7 @@ impl VideoUi {
         }
     }
 
-    fn render(&mut self, cmds: &mut Commands, ui: &mut Ui, tree: &VideoTree) {
+    fn render(&mut self, cmds: &mut Commands, ui: &mut egui::Ui, tree: &VideoTree) {
         match tree {
             VideoTree::Node(a, b) => {
                 let available = ui.available_size();
@@ -830,14 +872,14 @@ impl VideoUi {
                 }
             }
             VideoTree::Empty => {
-                ui.add_sized(ui.available_size(), |ui: &mut Ui| ui.heading("Empty"));
+                ui.add_sized(ui.available_size(), |ui: &mut egui::Ui| ui.heading("Empty"));
             }
         }
     }
 }
 
 impl UiComponent for VideoUi {
-    fn pre_draw(&mut self, world: &World, commands: &mut Commands) {
+    fn pre_draw(&mut self, world: &World, _commands: &mut Commands) {
         let tree = world
             .get_resource::<VideoState>()
             .and_then(|it| it.0.get(&self.position));
@@ -849,7 +891,7 @@ impl UiComponent for VideoUi {
         self.video = tree.cloned();
     }
 
-    fn draw(&mut self, ui: &mut Ui, commands: &mut Commands) {
+    fn draw(&mut self, _ctx: &egui::Context, ui: &mut egui::Ui, commands: &mut Commands) {
         if let Some(ref tree) = self.video {
             let tree = tree.to_owned();
             self.render(commands, ui, &tree);
@@ -867,7 +909,7 @@ impl UiComponent for NotificationUi {
             .map(|it| it.to_owned());
     }
 
-    fn draw(&mut self, ui: &mut egui::Ui, _commands: &mut Commands) {
+    fn draw(&mut self, _ctx: &egui::Context, ui: &mut egui::Ui, _commands: &mut Commands) {
         if let Some(ref notifs) = self.0 {
             for (notif, _) in &notifs.0 {
                 ui.allocate_space(vec2(0.0, 5.0));
@@ -891,10 +933,27 @@ impl UiComponent for OrientationDisplayUi {
             .map(|it| it.to_owned());
     }
 
-    fn draw(&mut self, ui: &mut egui::Ui, _commands: &mut Commands) {
+    fn draw(&mut self, _ctx: &egui::Context, ui: &mut egui::Ui, _commands: &mut Commands) {
         if let Some(ref texture) = self.0 {
             ui.image(texture.1, (512.0, 512.0));
         }
+    }
+}
+
+#[derive(Default, Debug)]
+pub struct DebugEguiUi;
+
+impl UiComponent for DebugEguiUi {
+    fn draw(&mut self, ctx: &egui::Context, ui: &mut egui::Ui, _commands: &mut Commands) {
+        ui.collapsing("Memory", |ui| {
+            ctx.memory_ui(ui);
+        });
+        ui.collapsing("Settings", |ui| {
+            ctx.settings_ui(ui);
+        });
+        ui.collapsing("Inspect", |ui| {
+            ctx.inspection_ui(ui);
+        });
     }
 }
 
@@ -902,7 +961,7 @@ impl UiComponent for OrientationDisplayUi {
 pub struct PreserveSize;
 
 impl UiComponent for PreserveSize {
-    fn draw(&mut self, ui: &mut egui::Ui, _commands: &mut Commands) {
+    fn draw(&mut self, _ctx: &egui::Context, ui: &mut egui::Ui, _commands: &mut Commands) {
         ui.allocate_space(ui.available_size());
     }
 }

@@ -38,6 +38,9 @@
   - [ ] Window to view and edit global store
     - [ ] Max motor speed, 
 - [ ] Misc
+  - [ ] Rename Ready to Disarmed and Armed to Ready
+  - [ ] Implement remove for global store
+    - [ ] Store timestamps is a separate map, this removes the need for 2 adapters and encodes knowledge of when an element was removed.
   - [ ] Some calls to log_error should be replaced with proper handling and or the opposite
   - [ ] Surface network system has too much responsibility
   - [-] Clear foreign store on disconnect
