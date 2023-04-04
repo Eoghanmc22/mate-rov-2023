@@ -57,7 +57,7 @@ fn setup_network(mut commands: Commands) -> anyhow::Result<()> {
                     messenger
                         .send_packet(token, Protocol::RequestSync)
                         .log_error("Could not send Message");
-                    tx.send(RobotEvent::Connected(addrs))
+                    tx.try_send(RobotEvent::Connected(addrs))
                         .log_error("Could not send RobotEvent");
                 }
                 Event::Data(token, packet) => match packet {
@@ -72,14 +72,14 @@ fn setup_network(mut commands: Commands) -> anyhow::Result<()> {
                                     let data = adapter.deserialize(&data);
 
                                     if let Some(data) = data {
-                                        tx.send(RobotEvent::Store((key, Some(data.into()))))
+                                        tx.try_send(RobotEvent::Store((key, Some(data.into()))))
                                             .log_error("Could not send RobotEvent");
                                     } else {
                                         error!("Could not deserialize for {key:?}");
                                     }
                                 }
                                 None => {
-                                    tx.send(RobotEvent::Store((key, None)))
+                                    tx.try_send(RobotEvent::Store((key, None)))
                                         .log_error("Could not send RobotEvent");
                                 }
                             }
@@ -107,7 +107,7 @@ fn setup_network(mut commands: Commands) -> anyhow::Result<()> {
                             .log_error("Could not send Message");
                     }
                     Protocol::Pong(ping, pong) => {
-                        tx.send(RobotEvent::Ping(ping, pong))
+                        tx.try_send(RobotEvent::Ping(ping, pong))
                             .log_error("Could not send RobotEvent");
                     }
                 },
@@ -115,12 +115,12 @@ fn setup_network(mut commands: Commands) -> anyhow::Result<()> {
                     let addrs = token.and_then(|token| clients.remove(&token));
                     if let Some(addrs) = addrs {
                         error!("Network error, addrs: {addrs}, {error:?}");
-                        tx.send(RobotEvent::Disconnected(addrs))
+                        tx.try_send(RobotEvent::Disconnected(addrs))
                             .log_error("Could not send RobotEvent");
                     } else {
                         error!("Network error, {error:?}");
                     }
-                    tx.send(RobotEvent::Error(error))
+                    tx.try_send(RobotEvent::Error(error))
                         .log_error("Could not send RobotEvent");
                 }
                 _ => unreachable!(),

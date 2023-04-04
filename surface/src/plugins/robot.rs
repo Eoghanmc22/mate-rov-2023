@@ -79,7 +79,7 @@ pub struct Updater(Sender<Update>);
 impl Updater {
     pub fn emit_update<V: Any + Send + Sync>(&self, token: &Token<V>, value: V) {
         let update = store::create_update(token, value);
-        self.0.send(update).log_error("Emit update failed");
+        self.0.try_send(update).log_error("Emit update failed");
     }
 }
 
@@ -200,7 +200,7 @@ pub struct NotificationHandler(Sender<Update>);
 impl UpdateCallback for NotificationHandler {
     fn call(&mut self, update: Update) {
         self.0
-            .send(update)
+            .try_send(update)
             .log_error("NotificationHandler send failed");
     }
 }
