@@ -353,9 +353,9 @@ pub enum RobotStatus {
     // No peer is connected
     NoPeer,
     // Peer is connected and robot is disarmed
-    Ready,
+    Disarmed,
     // Peer is connected and robot is armed
-    Armed,
+    Ready,
     // The robot is moving, includes speed
     Moving(Percent),
 }

@@ -2,7 +2,7 @@ use std::{thread::Scope, time::Instant};
 
 use common::{
     store::{tokens, Store, UpdateCallback},
-    types::{Armed, RobotStatus, Percent},
+    types::{Armed, Percent, RobotStatus},
 };
 use tracing::{span, Level};
 
@@ -79,12 +79,12 @@ fn compute_status<C: UpdateCallback>(store: &Store<C>, peers: i32) -> RobotStatu
         return RobotStatus::NoPeer;
     }
 
-    let mut state = RobotStatus::Ready;
+    let mut state = RobotStatus::Disarmed;
 
     let now = Instant::now();
     if let Some(armed) = store.get(&tokens::ARMED) {
         if matches!(*armed, Armed::Armed) {
-            state = RobotStatus::Armed;
+            state = RobotStatus::Ready;
 
             if let Some(data) = store.get(&tokens::MOTOR_SPEED) {
                 let (speeds, time_stamp) = &*data;

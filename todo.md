@@ -30,8 +30,10 @@
   - [ ] Tests
   - [ ] Make important settings editable in real time
 - [ ] UI
+  - [ ] Errors in uis should be handled better
   - [ ] Reduce usage of clone
   - [ ] Better video view
+  - [ ] Fix orientation ui
   - [ ] Improve notifications
     - [ ] Animations
     - [ ] Color

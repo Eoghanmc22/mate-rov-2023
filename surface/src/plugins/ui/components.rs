@@ -130,8 +130,8 @@ impl UiComponent for StatusBar {
             if let Some(ref status) = self.0 {
                 let status_color = match &**status {
                     RobotStatus::Moving(_) => Color32::LIGHT_GREEN,
-                    RobotStatus::Armed => Color32::GREEN,
-                    RobotStatus::Ready => Color32::BLUE,
+                    RobotStatus::Ready => Color32::GREEN,
+                    RobotStatus::Disarmed => Color32::BLUE,
                     RobotStatus::NoPeer => Color32::DARK_BLUE,
                 };
                 ui.colored_label(status_color, format!("Status: {status:?}"));
