@@ -4,6 +4,7 @@ use common::error::LogErrorExt;
 use common::protocol::Protocol;
 use common::store::adapters::{BackingType, TypeAdapter};
 use common::store::{self, tokens, Key, Store, Token, Update, UpdateCallback};
+use common::types::Armed;
 use crossbeam::channel::{bounded, Receiver, Sender};
 use fxhash::FxHashMap as HashMap;
 use networking::error::NetError;
@@ -34,10 +35,23 @@ impl Default for Adapters {
 }
 
 #[derive(Resource)]
-pub struct Robot(Store<NotificationHandler>, Sender<Update>, Receiver<Update>);
+pub struct Robot(
+    Store<NotificationHandler>,
+    Sender<Update>,
+    Receiver<Update>,
+    Armed,
+);
 impl Robot {
     pub fn store(&self) -> &Store<NotificationHandler> {
         &self.0
+    }
+
+    pub fn arm(&mut self) {
+        self.3 = Armed::Armed;
+    }
+
+    pub fn disarm(&mut self) {
+        self.3 = Armed::Disarmed;
     }
 }
 
@@ -45,7 +59,12 @@ impl Default for Robot {
     fn default() -> Self {
         let (tx, rx) = bounded(50);
 
-        Robot(Store::new(NotificationHandler(tx.clone())), tx, rx)
+        Robot(
+            Store::new(NotificationHandler(tx.clone())),
+            tx,
+            rx,
+            Armed::Disarmed,
+        )
     }
 }
 

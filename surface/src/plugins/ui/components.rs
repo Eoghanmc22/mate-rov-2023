@@ -92,6 +92,24 @@ impl UiComponent for MenuBar {
                         }
                     });
                 }
+                if ui.button("Arm Robot").clicked() {
+                    commands.add(|world: &mut World| {
+                        if let Some(mut robot) = world.get_resource_mut::<Robot>() {
+                            robot.arm();
+                        } else {
+                            error!("No robot resource");
+                        }
+                    });
+                }
+                if ui.button("Disarm Robot").clicked() {
+                    commands.add(|world: &mut World| {
+                        if let Some(mut robot) = world.get_resource_mut::<Robot>() {
+                            robot.disarm();
+                        } else {
+                            error!("No robot resource");
+                        }
+                    });
+                }
             });
             egui::menu::menu_button(ui, "Debug", |ui| {
                 if ui.button("Egui Settings").clicked() {
