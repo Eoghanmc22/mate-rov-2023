@@ -26,6 +26,7 @@ impl Plugin for RobotPlugin {
         app.add_system(update_robot.in_base_set(CoreSet::PreUpdate));
         app.add_system(updates_to_packets.in_base_set(CoreSet::PostUpdate));
         app.add_system(events_to_notifs.in_base_set(CoreSet::PostUpdate));
+        app.add_system(arming_system);
     }
 }
 
@@ -185,6 +186,12 @@ fn events_to_notifs(mut events: EventReader<RobotEvent>, mut notifs: EventWriter
             }
             _ => {}
         }
+    }
+}
+
+fn arming_system(mut updater: Local<Updater>, mut robot: Option<ResMut<Robot>>) {
+    if let Some(robot) = robot {
+        updater.emit_update(&tokens::ARMED, robot.3);
     }
 }
 
