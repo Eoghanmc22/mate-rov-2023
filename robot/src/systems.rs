@@ -12,10 +12,10 @@ pub mod leak;
 pub mod logging;
 pub mod motor;
 pub mod networking;
+pub mod orientation;
 pub mod robot;
 pub mod status;
 pub mod stop;
-pub mod orientation;
 
 use std::{
     any,
@@ -26,7 +26,12 @@ use tracing::info;
 use crate::events::EventHandle;
 
 /// Manages all the systems running on the robot
-pub struct SystemManager(Vec<for<'a> fn(EventHandle, &'a Scope<'a, '_>) -> anyhow::Result<()>>);
+pub struct SystemManager(
+    Vec<(
+        for<'a> fn(EventHandle, &'a Scope<'a, '_>) -> anyhow::Result<()>,
+        &'static str,
+    )>,
+);
 
 impl SystemManager {
     pub fn new() -> Self {
@@ -36,8 +41,9 @@ impl SystemManager {
     /// Registers a system
     #[tracing::instrument(skip(self))]
     pub fn add_system<S: System>(&mut self) -> anyhow::Result<()> {
-        self.0.push(S::start);
-        info!("Registered {}", any::type_name::<S>());
+        let name = any::type_name::<S>();
+        self.0.push((S::start, name));
+        info!("Registered {name}");
 
         Ok(())
     }
@@ -55,10 +61,16 @@ impl SystemManager {
             let mut event_handles = EventHandle::create(system_count);
 
             // Spawn each system on its own thread
-            for (idx, system) in systems.iter().enumerate() {
-                info!("Loading system {}/{}", idx + 1, system_count);
-
+            for (idx, (system, name)) in systems.iter().enumerate() {
                 let handle = event_handles.pop().unwrap();
+
+                info!(
+                    "Loading system {}/{}, (Peer id: {}, Name: {})",
+                    idx + 1,
+                    system_count,
+                    handle.id(),
+                    name,
+                );
 
                 spawner.spawn(|| {
                     (system)(handle, spawner).expect("Start system");
