@@ -6,6 +6,7 @@ use common::store::adapters::{BackingType, TypeAdapter};
 use common::store::{self, tokens, Key, Store, Token, Update, UpdateCallback};
 use crossbeam::channel::{bounded, Receiver, Sender};
 use fxhash::FxHashMap as HashMap;
+use networking::error::NetError;
 use std::any::Any;
 use std::net::SocketAddr;
 use std::time::SystemTime;
@@ -66,13 +67,15 @@ impl FromWorld for Updater {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub enum RobotEvent {
     Store(Update),
     Ping(SystemTime, SystemTime),
 
     Connected(SocketAddr),
     Disconnected(SocketAddr),
+
+    Error(NetError),
 }
 
 /// Handle `RobotEvent`s

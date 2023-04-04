@@ -1,5 +1,5 @@
 use crate::plugins::robot::RobotEvent;
-use anyhow::Context;
+use anyhow::{anyhow, Context};
 use bevy::prelude::*;
 use common::error::LogErrorExt;
 use common::protocol::Protocol;
@@ -121,6 +121,8 @@ fn setup_network(mut commands: Commands) -> anyhow::Result<()> {
                     } else {
                         error!("Network error, {error:?}");
                     }
+                    tx.send(RobotEvent::Error(error))
+                        .log_error("Could not send RobotEvent");
                 }
                 _ => unreachable!(),
             });
@@ -169,6 +171,12 @@ fn events_to_notifs(mut events: EventReader<RobotEvent>, mut notifs: EventWriter
                 notifs.send(Notification::Info(
                     "Robot Disconnected".to_owned(),
                     format!("Peer: {addr}"),
+                ));
+            }
+            RobotEvent::Error(error) => {
+                notifs.send(Notification::Error(
+                    "Network error".to_owned(),
+                    anyhow!("{error}"),
                 ));
             }
             _ => {}

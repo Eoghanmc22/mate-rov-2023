@@ -6,6 +6,9 @@
   - [ ] Arming
 - [ ] Sensors
   - [ ] Sensor fusion
+    - [ ] Try using a Kalman filter
+    - [ ] Way to switch implementation at runtime
+    - [ ] Use last sensor data as stating position
   - [-] Leak
   - [ ] Magnetometers
     - [ ] Calibration
@@ -18,6 +21,7 @@
 - [ ] Control
   - [ ] OpenCV control
   - [ ] Autonomous control
+    - [ ] Pid stuff
   - [ ] New gamepad setup
   - [ ] Speeds larger than 1
 - [ ] Debugging

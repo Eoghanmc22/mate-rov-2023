@@ -144,6 +144,7 @@ pub fn debug_egui_window(id: ExtensionId, ui: Sender<UiMessage>) -> Pane {
     };
 
     pane.add(components::DebugEguiUi::default());
+    pane.add(components::PreserveSize::default());
 
     pane
 }
