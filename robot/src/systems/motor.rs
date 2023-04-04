@@ -119,6 +119,14 @@ impl System for MotorSystem {
                     MotorId::BaclLeftTop,
                     MotorId::BackRightBottom,
                     MotorId::RearRightTop,
+                    MotorId::Camera1,
+                    MotorId::Camera2,
+                    MotorId::Camera3,
+                    MotorId::Camera4,
+                    MotorId::Aux1,
+                    MotorId::Aux2,
+                    MotorId::Aux3,
+                    MotorId::Aux4,
                 ];
                 let motors = motor_ids
                     .into_iter()
@@ -253,6 +261,11 @@ pub fn mix_movement<'a>(
             MotorId::Camera2 => mov.cam_2,
             MotorId::Camera3 => mov.cam_3,
             MotorId::Camera4 => mov.cam_4,
+
+            MotorId::Aux1 => mov.aux_1,
+            MotorId::Aux2 => mov.aux_2,
+            MotorId::Aux3 => mov.aux_3,
+            MotorId::Aux4 => mov.aux_4,
         };
 
         speeds.insert(*motor, MotorFrame(speed));

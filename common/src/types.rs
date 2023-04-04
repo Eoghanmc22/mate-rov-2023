@@ -36,6 +36,15 @@ pub struct Movement {
     pub cam_3: Percent,
     /// Servo for camera 4
     pub cam_4: Percent,
+
+    /// Auxilary control 1
+    pub aux_1: Percent,
+    /// Auxilary control 1
+    pub aux_2: Percent,
+    /// Auxilary control 1
+    pub aux_3: Percent,
+    /// Auxilary control 1
+    pub aux_4: Percent,
 }
 
 impl Add for Movement {
@@ -54,6 +63,11 @@ impl Add for Movement {
             cam_2: self.cam_2 + rhs.cam_2,
             cam_3: self.cam_3 + rhs.cam_3,
             cam_4: self.cam_4 + rhs.cam_4,
+
+            aux_1: self.aux_1 + rhs.aux_1,
+            aux_2: self.aux_2 + rhs.aux_2,
+            aux_3: self.aux_3 + rhs.aux_3,
+            aux_4: self.aux_4 + rhs.aux_4,
         }
     }
 }
@@ -79,6 +93,11 @@ pub enum MotorId {
     Camera2,
     Camera3,
     Camera4,
+
+    Aux1,
+    Aux2,
+    Aux3,
+    Aux4,
 }
 
 // Raw Data Frames

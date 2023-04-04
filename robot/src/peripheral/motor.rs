@@ -54,7 +54,7 @@ pub const MOTOR_BRT: Motor = Motor {
     ..DEFAULT_MOTOR
 };
 
-// ---------- Servos ----------
+// ---------- Camera Servos ----------
 pub const SERVO_CAM1: Motor = Motor {
     channel: 15,
     ..DEFAULT_SERVO
@@ -69,6 +69,24 @@ pub const SERVO_CAM3: Motor = Motor {
 };
 pub const SERVO_CAM4: Motor = Motor {
     channel: 12,
+    ..DEFAULT_SERVO
+};
+
+// ---------- Auxiliary Servos ----------
+pub const SERVO_AUX1: Motor = Motor {
+    channel: 11,
+    ..DEFAULT_SERVO
+};
+pub const SERVO_AUX2: Motor = Motor {
+    channel: 10,
+    ..DEFAULT_SERVO
+};
+pub const SERVO_AUX3: Motor = Motor {
+    channel: 9,
+    ..DEFAULT_SERVO
+};
+pub const SERVO_AUX4: Motor = Motor {
+    channel: 8,
     ..DEFAULT_SERVO
 };
 
@@ -127,6 +145,11 @@ impl From<MotorId> for Motor {
             MotorId::Camera2 =>           SERVO_CAM2,
             MotorId::Camera3 =>           SERVO_CAM3,
             MotorId::Camera4 =>           SERVO_CAM4,
+
+            MotorId::Aux1 =>              SERVO_AUX1,
+            MotorId::Aux2 =>              SERVO_AUX2,
+            MotorId::Aux3 =>              SERVO_AUX3,
+            MotorId::Aux4 =>              SERVO_AUX4,
         }
     }
 }

@@ -52,14 +52,14 @@ fn main() -> anyhow::Result<()> {
 
     info!("---------- Registering systems ----------");
     systems.add_system::<StopSystem>()?;
-    systems.add_system::<LogEventSystem>()?;
+    // systems.add_system::<LogEventSystem>()?;
     systems.add_system::<ErrorSystem>()?;
     systems.add_system::<StoreSystem>()?;
     systems.add_system::<NetworkSystem>()?;
     systems.add_system::<HwStatSystem>()?;
     systems.add_system::<StatusSystem>()?;
-    // #[cfg(rpi)]
-    // systems.add_system::<MotorSystem>()?;
+    #[cfg(rpi)]
+    systems.add_system::<MotorSystem>()?;
     #[cfg(rpi)]
     systems.add_system::<IndicatorsSystem>()?;
     #[cfg(rpi)]
