@@ -1,5 +1,5 @@
 use crate::plugins::robot::RobotEvent;
-use anyhow::{anyhow, Context};
+use anyhow::Context;
 use bevy::prelude::*;
 use common::error::LogErrorExt;
 use common::protocol::Protocol;
@@ -12,7 +12,7 @@ use std::net::SocketAddr;
 use std::thread;
 use std::time::SystemTime;
 
-use super::notification::{create_error_handler, Notification};
+use super::notification::create_error_handler;
 
 pub struct NetworkPlugin;
 
@@ -21,7 +21,6 @@ impl Plugin for NetworkPlugin {
         app.add_event::<NetworkEvent>();
         app.add_startup_system(setup_network.pipe(create_error_handler("Setup network error")));
         app.add_system(updates_to_events.in_base_set(CoreSet::PreUpdate));
-        app.add_system(events_to_notifs.after(updates_to_events));
         app.add_system(events_to_packets.in_base_set(CoreSet::PostUpdate));
     }
 }
@@ -152,34 +151,6 @@ fn events_to_packets(mut events: EventReader<NetworkEvent>, net_link: Res<Networ
             NetworkEvent::ConnectTo(peer) => {
                 net_link.0.connect_to(peer).log_error("Connect to failed");
             }
-        }
-    }
-}
-
-/// Generate notifications for some robot events
-// TODO this should be in robot.rs
-fn events_to_notifs(mut events: EventReader<RobotEvent>, mut notifs: EventWriter<Notification>) {
-    for event in events.iter() {
-        match event {
-            RobotEvent::Connected(addr) => {
-                notifs.send(Notification::Info(
-                    "Robot Connected".to_owned(),
-                    format!("Peer: {addr}"),
-                ));
-            }
-            RobotEvent::Disconnected(addr) => {
-                notifs.send(Notification::Info(
-                    "Robot Disconnected".to_owned(),
-                    format!("Peer: {addr}"),
-                ));
-            }
-            RobotEvent::Error(error) => {
-                notifs.send(Notification::Error(
-                    "Network error".to_owned(),
-                    anyhow!("{error}"),
-                ));
-            }
-            _ => {}
         }
     }
 }

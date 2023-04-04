@@ -1,4 +1,5 @@
 use crate::plugins::networking::NetworkEvent;
+use anyhow::anyhow;
 use bevy::prelude::*;
 use common::error::LogErrorExt;
 use common::protocol::Protocol;
@@ -12,6 +13,8 @@ use std::any::Any;
 use std::net::SocketAddr;
 use std::time::SystemTime;
 
+use super::notification::Notification;
+
 pub struct RobotPlugin;
 
 impl Plugin for RobotPlugin {
@@ -22,6 +25,7 @@ impl Plugin for RobotPlugin {
         app.init_resource::<Adapters>();
         app.add_system(update_robot.in_base_set(CoreSet::PreUpdate));
         app.add_system(updates_to_packets.in_base_set(CoreSet::PostUpdate));
+        app.add_system(events_to_notifs.in_base_set(CoreSet::PostUpdate));
     }
 }
 
@@ -143,6 +147,43 @@ fn updates_to_packets(
                     net.send(NetworkEvent::SendPacket(Protocol::Store(key.into(), None)));
                 }
             }
+        }
+    }
+}
+
+/// Generate notifications for some robot events
+fn events_to_notifs(mut events: EventReader<RobotEvent>, mut notifs: EventWriter<Notification>) {
+    for event in events.iter() {
+        match event {
+            RobotEvent::Connected(addr) => {
+                notifs.send(Notification::Info(
+                    "Robot Connected".to_owned(),
+                    format!("Peer: {addr}"),
+                ));
+            }
+            RobotEvent::Disconnected(addr) => {
+                notifs.send(Notification::Info(
+                    "Robot Disconnected".to_owned(),
+                    format!("Peer: {addr}"),
+                ));
+            }
+            RobotEvent::Error(error) => {
+                notifs.send(Notification::Error(
+                    "Network error".to_owned(),
+                    anyhow!("{error}"),
+                ));
+            }
+            RobotEvent::Store(store) => {
+                if let Some(leak) = store::handle_update(&tokens::LEAK, store) {
+                    if *leak {
+                        notifs.send(Notification::Info(
+                            "Leak Detected!".to_owned(),
+                            "Take robot to surface!".to_owned(),
+                        ));
+                    }
+                }
+            }
+            _ => {}
         }
     }
 }
