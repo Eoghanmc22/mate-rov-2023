@@ -44,6 +44,7 @@
   - [ ] Window to view and edit global store
     - [ ] Max motor speed, 
 - [ ] Misc
+  - [ ] Investigate high cpu usage on pi
   - [ ] Rename Ready to Disarmed and Armed to Ready
   - [ ] Implement remove for global store
     - [ ] Store timestamps is a separate map, this removes the need for 2 adapters and encodes knowledge of when an element was removed.

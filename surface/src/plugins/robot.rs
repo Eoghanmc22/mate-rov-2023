@@ -26,7 +26,7 @@ impl Plugin for RobotPlugin {
         app.add_system(update_robot.in_base_set(CoreSet::PreUpdate));
         app.add_system(updates_to_packets.in_base_set(CoreSet::PostUpdate));
         app.add_system(events_to_notifs.in_base_set(CoreSet::PostUpdate));
-        app.add_system(arming_system);
+        app.add_system(arming_system.in_schedule(CoreSchedule::FixedUpdate));
     }
 }
 
