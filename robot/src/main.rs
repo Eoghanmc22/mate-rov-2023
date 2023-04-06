@@ -1,6 +1,6 @@
 //! Robot Code for the MATE Sea Owls Team
 #![feature(slice_as_chunks)]
-#![warn(meta_variable_misuse, clippy::pedantic, clippy::nursery)]
+#![warn(meta_variable_misuse)]
 
 pub mod event;
 pub mod events;

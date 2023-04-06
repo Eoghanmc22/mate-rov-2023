@@ -170,7 +170,7 @@ fn video_capture_thread(
                 to_reuse.push(mats);
             }
             VideoMessage::ConnectTo(camera) => {
-                *src.borrow_mut() = Some(camera::camera_source(camera).unwrap())
+                *src.borrow_mut() = Some(camera::camera_source(camera).unwrap());
             }
             VideoMessage::Pipeline(proto_pipeline, mat) => {
                 pipeline.clear();

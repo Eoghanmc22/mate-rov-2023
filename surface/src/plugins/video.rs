@@ -30,7 +30,7 @@ pub struct Video {
 }
 
 impl Video {
-    pub fn new(name: String, pos: Position) -> Self {
+    pub const fn new(name: String, pos: Position) -> Self {
         Self {
             name: VideoName(name),
             position: VideoPosition(pos),
@@ -73,10 +73,7 @@ impl VideoTree {
                 }
             }
             Self::Leaf(cur) => {
-                *self = Self::Node(
-                    Box::new(Self::Leaf(*cur)),
-                    Box::new(Self::Leaf(entity)),
-                );
+                *self = Self::Node(Box::new(Self::Leaf(*cur)), Box::new(Self::Leaf(entity)));
             }
             Self::Empty => {
                 *self = Self::Leaf(entity);

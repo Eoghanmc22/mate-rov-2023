@@ -79,7 +79,7 @@ impl System for NetworkSystem {
                         ));
                     }
                     _ => unreachable!(),
-                })
+                });
             });
         }
 

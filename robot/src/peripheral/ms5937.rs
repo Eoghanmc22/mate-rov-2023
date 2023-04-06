@@ -188,9 +188,9 @@ fn crc4(mut data: [u16; 8]) -> u8 {
 
         for _ in 0..8 {
             if n_rem & 0x8000 != 0 {
-                n_rem = (n_rem << 1) ^ 0x3000
+                n_rem = (n_rem << 1) ^ 0x3000;
             } else {
-                n_rem <<= 1
+                n_rem <<= 1;
             }
         }
     }

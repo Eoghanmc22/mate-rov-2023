@@ -231,7 +231,7 @@ fn camera_list(cameras: &HashMap<String, (Child, SocketAddr)>) -> Vec<Camera> {
         list.push(Camera {
             name: name.clone(),
             location: *location,
-        })
+        });
     }
 
     list

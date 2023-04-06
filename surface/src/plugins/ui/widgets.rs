@@ -8,7 +8,7 @@ pub struct Video<'a> {
 }
 
 impl<'a> Video<'a> {
-    pub fn new(name: &'a str, texture: Option<TextureId>) -> Self {
+    pub const fn new(name: &'a str, texture: Option<TextureId>) -> Self {
         Self {
             name,
             texture,

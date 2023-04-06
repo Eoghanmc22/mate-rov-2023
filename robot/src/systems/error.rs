@@ -25,7 +25,7 @@ impl System for ErrorSystem {
                         events.send(Event::PacketTx(Protocol::Log(
                             LogLevel::Error,
                             format!("Robot encountered error: {err}"),
-                        )))
+                        )));
                     }
                     Event::Exit => {
                         return;

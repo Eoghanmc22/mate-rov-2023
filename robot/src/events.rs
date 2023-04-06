@@ -14,7 +14,8 @@ pub struct EventHandle {
 }
 
 impl EventHandle {
-    #[must_use] pub fn create(count: usize) -> Vec<Self> {
+    #[must_use]
+    pub fn create(count: usize) -> Vec<Self> {
         let mut peers = Vec::new();
         let mut listners = Vec::new();
 
@@ -45,7 +46,7 @@ impl EventHandle {
             if let Err(err) = ret {
                 match err {
                     TrySendError::Full(_) => {
-                        error!("Message channel full, event dropped. Peer id: {id}")
+                        error!("Message channel full, event dropped. Peer id: {id}");
                     }
                     TrySendError::Disconnected(_) => {
                         dropped_peers.push(idx);
@@ -59,7 +60,8 @@ impl EventHandle {
         }
     }
 
-    #[must_use] pub fn listner(&self) -> Option<&Receiver<Arc<Event>>> {
+    #[must_use]
+    pub const fn listner(&self) -> Option<&Receiver<Arc<Event>>> {
         self.listner.as_ref()
     }
 
@@ -67,7 +69,8 @@ impl EventHandle {
         self.listner.take()
     }
 
-    #[must_use] pub fn id(&self) -> usize {
+    #[must_use]
+    pub const fn id(&self) -> usize {
         self.id
     }
 }

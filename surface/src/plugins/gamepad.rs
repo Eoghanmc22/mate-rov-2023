@@ -200,7 +200,7 @@ impl InputState {
                 }
             }
         } else {
-            println!("Bad input")
+            println!("Bad input");
         }
     }
 }
@@ -304,10 +304,10 @@ fn gamepad_connections(
                             &mut commands,
                         );
                     } else {
-                        println!("Bad pad")
+                        println!("Bad pad");
                     }
                 } else {
-                    println!("no pad")
+                    println!("no pad");
                 }
             }
             GamepadEvent::Axis(event) => {

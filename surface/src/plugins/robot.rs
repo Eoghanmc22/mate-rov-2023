@@ -47,7 +47,7 @@ pub struct Robot(
     Armed,
 );
 impl Robot {
-    pub fn store(&self) -> &Store<NotificationHandler> {
+    pub const fn store(&self) -> &Store<NotificationHandler> {
         &self.0
     }
 

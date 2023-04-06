@@ -43,11 +43,11 @@ impl Pca9685 {
     }
 
     pub fn output_enable(&mut self) {
-        self.output_enable.set_low()
+        self.output_enable.set_low();
     }
 
     pub fn output_disable(&mut self) {
-        self.output_enable.set_high()
+        self.output_enable.set_high();
     }
 
     pub fn set_pwm(&mut self, channel: u8, pwm: Duration) -> anyhow::Result<()> {
@@ -175,11 +175,11 @@ fn calc_prescale(period: Duration) -> u8 {
     ((Pca9685::EXT_CLOCK / (4096.0 * update_rate)).round() - 1.0) as u8
 }
 
-fn pwm_to_raw(pwm: Duration, period: Duration) -> u16 {
+const fn pwm_to_raw(pwm: Duration, period: Duration) -> u16 {
     pwm.as_micros() as u16 * 4096 / period.as_micros() as u16 - 1
 }
 
-fn channel_to_reg(channel: u8) -> u8 {
+const fn channel_to_reg(channel: u8) -> u8 {
     assert!(channel < 16);
     Pca9685::REG_LED0_OFF_L + (4 * channel)
 }

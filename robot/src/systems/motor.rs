@@ -153,7 +153,7 @@ impl System for MotorSystem {
                 ];
                 let motors = motor_ids
                     .into_iter()
-                    .map(|it| (it, Default::default()))
+                    .map(|it| (it, MotorFrame::default()))
                     .collect();
 
                 store.insert(&tokens::MOTOR_SPEED, (motors, Instant::now()));

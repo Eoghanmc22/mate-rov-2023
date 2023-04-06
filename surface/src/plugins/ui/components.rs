@@ -55,7 +55,7 @@ impl UiComponent for MenuBar {
                 if ui.button("Quit").clicked() {
                     commands.add(|world: &mut World| {
                         world.send_event(AppExit);
-                    })
+                    });
                 }
             });
             egui::menu::menu_button(ui, "Robot", |ui| {
@@ -124,7 +124,7 @@ impl UiComponent for MenuBar {
                         } else {
                             error!("No UiMessage resource found");
                         }
-                    })
+                    });
                 }
             });
         });
@@ -798,7 +798,7 @@ impl UiComponent for ConnectUi {
                         .resource::<UiMessages>()
                         .0
                         .try_send(UiMessage::ClosePanel(PaneId::Extension(id)))
-                        .log_error("Close connetion window")
+                        .log_error("Close connetion window");
                 });
             }
             Err(error) => {

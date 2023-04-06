@@ -1,4 +1,4 @@
-#![warn(meta_variable_misuse, clippy::nursery)]
+#![warn(meta_variable_misuse)]
 
 mod plugins;
 

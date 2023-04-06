@@ -34,7 +34,7 @@ pub struct SystemManager(
 );
 
 impl SystemManager {
-    pub fn new() -> Self {
+    pub const fn new() -> Self {
         Self(Vec::new())
     }
 
