@@ -47,6 +47,56 @@ pub struct Movement {
     pub aux_4: Percent,
 }
 
+impl Movement {
+    pub fn get_by_id(&self, id: MotorId) -> Percent {
+        match id {
+            MotorId::FrontLeftBottom
+            | MotorId::FrontLeftTop
+            | MotorId::FrontRightBottom
+            | MotorId::FrontRightTop
+            | MotorId::BackLeftBottom
+            | MotorId::BaclLeftTop
+            | MotorId::BackRightBottom
+            | MotorId::RearRightTop => {
+                unimplemented!()
+            }
+
+            MotorId::Camera1 => self.cam_1,
+            MotorId::Camera2 => self.cam_2,
+            MotorId::Camera3 => self.cam_3,
+            MotorId::Camera4 => self.cam_4,
+            MotorId::Aux1 => self.aux_1,
+            MotorId::Aux2 => self.aux_2,
+            MotorId::Aux3 => self.aux_3,
+            MotorId::Aux4 => self.aux_4,
+        }
+    }
+
+    pub fn set_by_id(&mut self, id: MotorId, value: Percent) {
+        match id {
+            MotorId::FrontLeftBottom
+            | MotorId::FrontLeftTop
+            | MotorId::FrontRightBottom
+            | MotorId::FrontRightTop
+            | MotorId::BackLeftBottom
+            | MotorId::BaclLeftTop
+            | MotorId::BackRightBottom
+            | MotorId::RearRightTop => {
+                unimplemented!()
+            }
+
+            MotorId::Camera1 => self.cam_1 = value,
+            MotorId::Camera2 => self.cam_2 = value,
+            MotorId::Camera3 => self.cam_3 = value,
+            MotorId::Camera4 => self.cam_4 = value,
+            MotorId::Aux1 => self.aux_1 = value,
+            MotorId::Aux2 => self.aux_2 = value,
+            MotorId::Aux3 => self.aux_3 = value,
+            MotorId::Aux4 => self.aux_4 = value,
+        }
+    }
+}
+
 impl Add for Movement {
     type Output = Movement;
 
