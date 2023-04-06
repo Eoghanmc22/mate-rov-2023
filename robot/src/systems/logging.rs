@@ -19,7 +19,7 @@ impl System for LogEventSystem {
         spawner.spawn(move || {
             span!(Level::DEBUG, "Event logger");
 
-            for event in listner.into_iter() {
+            for event in listner {
                 match &*event {
                     // The sensors emit thousands of events per second
                     // Hide this

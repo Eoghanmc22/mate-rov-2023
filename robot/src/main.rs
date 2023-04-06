@@ -1,17 +1,6 @@
 //! Robot Code for the MATE Sea Owls Team
 #![feature(slice_as_chunks)]
-#![warn(
-    meta_variable_misuse,
-    //missing_debug_implementations,
-    //missing_docs,
-    //unsafe_code,
-    //unused_results,
-    //unreachable_pub,
-    //clippy::pedantic,
-    //clippy::nursery,
-    //clippy::unwrap_used,
-    //clippy::expect_used
-)]
+#![warn(meta_variable_misuse, clippy::pedantic, clippy::nursery)]
 
 pub mod event;
 pub mod events;
@@ -19,7 +8,7 @@ pub mod peripheral;
 mod systems;
 
 use crate::systems::error::ErrorSystem;
-use crate::systems::logging::LogEventSystem;
+
 use crate::systems::robot::StoreSystem;
 use crate::systems::status::StatusSystem;
 use crate::systems::stop::StopSystem;

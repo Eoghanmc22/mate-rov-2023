@@ -911,7 +911,7 @@ impl UiComponent for VideoUi {
 
     fn draw(&mut self, _ctx: &egui::Context, ui: &mut egui::Ui, commands: &mut Commands) {
         if let Some(ref tree) = self.video {
-            let tree = tree.to_owned();
+            let tree = tree.clone();
             self.render(commands, ui, &tree);
         }
     }
@@ -922,9 +922,7 @@ pub struct NotificationUi(Option<NotificationResource>);
 
 impl UiComponent for NotificationUi {
     fn pre_draw(&mut self, world: &World, _commands: &mut Commands) {
-        self.0 = world
-            .get_resource::<NotificationResource>()
-            .map(|it| it.to_owned());
+        self.0 = world.get_resource::<NotificationResource>().cloned();
     }
 
     fn draw(&mut self, _ctx: &egui::Context, ui: &mut egui::Ui, _commands: &mut Commands) {

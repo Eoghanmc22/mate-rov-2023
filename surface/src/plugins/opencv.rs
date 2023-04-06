@@ -95,7 +95,7 @@ fn update_pipelines(
 fn video_capture_thread(
     msg_receiver: Receiver<VideoMessage>,
     image_sender: Sender<Image>,
-    move_sender: Sender<Movement>,
+    _move_sender: Sender<Movement>,
 ) {
     span!(Level::INFO, "Video capture thread");
     let mut mats = Mats::default();

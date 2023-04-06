@@ -2,20 +2,21 @@
 
 - [ ] Motors
   - [ ] Test
-  - [ ] Servos
-  - [ ] Arming
+  - [-] Servos
+  - [x] Arming
 - [ ] Sensors
   - [ ] Way to disable validating writes?
-  - [ ] Sensor fusion
+  - [-] Sensor fusion
     - [ ] Try using a Kalman filter
     - [ ] Way to switch implementation at runtime
     - [ ] Use last sensor data as stating position
   - [-] Leak
-  - [ ] Magnetometers
+  - [-] Magnetometers
+    - [ ] Other compass as well
     - [ ] Calibration
   - [ ] Barometer
   - [ ] ADCs
-  - [ ] Don't store raw frames in global store
+  - [x] Don't store raw frames in global store
   - [ ] Make sure sensors power down, etc on drop
   - [ ] Make sure sensors do a reset on init
   - [ ] Check data ready flags in read frame code
@@ -23,7 +24,7 @@
   - [ ] OpenCV control
   - [ ] Autonomous control
     - [ ] Pid stuff
-  - [ ] New gamepad setup
+  - [-] New gamepad setup
   - [ ] Speeds larger than 1
 - [ ] Debugging
   - [ ] Better logging

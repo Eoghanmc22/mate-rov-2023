@@ -35,7 +35,7 @@ impl System for IndicatorsSystem {
         spawner.spawn(move || {
             span!(Level::INFO, "Indicator controller");
 
-            for event in listener.into_iter() {
+            for event in listener {
                 match &*event {
                     Event::Store(update) => {
                         if let Some(status) = store::handle_update(&tokens::STATUS, update) {
@@ -111,13 +111,13 @@ trait StatusColorExt {
 impl StatusColorExt for RobotStatus {
     fn color(&self, tick_id: usize) -> RGB8 {
         let color = match self {
-            RobotStatus::NoPeer => {
+            Self::NoPeer => {
                 let blue = RGB8::new(0, 0, 255);
                 blue * (tick_id % 3).min(1) as u8
             }
-            RobotStatus::Disarmed => RGB8::new(0, 0, 255),
-            RobotStatus::Ready => RGB8::new(0, 255, 0),
-            RobotStatus::Moving(speed) => {
+            Self::Disarmed => RGB8::new(0, 0, 255),
+            Self::Ready => RGB8::new(0, 255, 0),
+            Self::Moving(speed) => {
                 lerp_colors(RGB8::new(0, 0, 0), RGB8::new(255, 255, 255), speed.get())
             }
         };

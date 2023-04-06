@@ -14,7 +14,7 @@ pub struct EventHandle {
 }
 
 impl EventHandle {
-    pub fn create(count: usize) -> Vec<EventHandle> {
+    #[must_use] pub fn create(count: usize) -> Vec<Self> {
         let mut peers = Vec::new();
         let mut listners = Vec::new();
 
@@ -27,7 +27,7 @@ impl EventHandle {
         listners
             .into_iter()
             .enumerate()
-            .map(|(id, listner)| EventHandle {
+            .map(|(id, listner)| Self {
                 peers: peers.clone(),
                 listner: Some(listner),
                 id,
@@ -59,7 +59,7 @@ impl EventHandle {
         }
     }
 
-    pub fn listner(&self) -> Option<&Receiver<Arc<Event>>> {
+    #[must_use] pub fn listner(&self) -> Option<&Receiver<Arc<Event>>> {
         self.listner.as_ref()
     }
 
@@ -67,7 +67,7 @@ impl EventHandle {
         self.listner.take()
     }
 
-    pub fn id(&self) -> usize {
+    #[must_use] pub fn id(&self) -> usize {
         self.id
     }
 }

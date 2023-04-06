@@ -56,7 +56,7 @@ impl System for MotorSystem {
 
                 let mut deadlines: HashMap<MotorId, Instant> = HashMap::default();
 
-                for message in rx.into_iter() {
+                for message in rx {
                     if stop::world_stopped() {
                         // Pca9685 stops on drop
                         return;
@@ -167,7 +167,7 @@ impl System for MotorSystem {
                 .into_iter()
                 .collect();
 
-                for event in listner.into_iter() {
+                for event in listner {
                     match &*event {
                         Event::SyncStore => {
                             store.refresh();
@@ -255,7 +255,7 @@ impl System for MotorSystem {
         }
 
         {
-            let tx = tx.clone();
+            let tx = tx;
             spawner.spawn(move || {
                 span!(Level::INFO, "Motor deadline check thread");
 

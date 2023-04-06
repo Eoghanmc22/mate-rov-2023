@@ -1,3 +1,5 @@
+#![warn(meta_variable_misuse, clippy::nursery)]
+
 mod plugins;
 
 use crate::plugins::MatePlugins;

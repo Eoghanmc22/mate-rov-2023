@@ -36,7 +36,7 @@ impl System for OrientationSystem {
             spawner.spawn(move || {
                 span!(Level::INFO, "Sensor watcher thread");
 
-                for event in listner.into_iter() {
+                for event in listner {
                     match &*event {
                         Event::SensorFrame(frame) => {
                             tx.send(OrientationEvent::SensorFrame(*frame))
@@ -53,7 +53,7 @@ impl System for OrientationSystem {
         }
 
         {
-            let tx = tx.clone();
+            let tx = tx;
             spawner.spawn(move || {
                 span!(Level::INFO, "Sensor tick thread");
 
@@ -76,7 +76,7 @@ impl System for OrientationSystem {
         }
 
         {
-            let rx = rx.clone();
+            let rx = rx;
             spawner.spawn(move || {
                 span!(Level::INFO, "Sensor fusion thread");
 
@@ -90,7 +90,7 @@ impl System for OrientationSystem {
 
                 let mut madgwick_filter = Madgwick::new(0.001, 0.041);
 
-                for event in rx.into_iter() {
+                for event in rx {
                     match event {
                         OrientationEvent::SensorFrame(frame) => match frame {
                             SensorFrame::Imu(imu) => imu_frame = Some(imu),

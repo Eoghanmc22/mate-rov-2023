@@ -88,7 +88,7 @@ impl System for NetworkSystem {
             spawner.spawn(move || {
                 span!(Level::INFO, "Net forward thread");
 
-                for event in listner.into_iter() {
+                for event in listner {
                     match &*event {
                         RobotEvent::PacketTx(packet) => {
                             let res = messenger

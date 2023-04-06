@@ -105,7 +105,7 @@ pub struct Motor {
 }
 
 impl Motor {
-    pub fn value_to_pwm(&self, speed: Percent) -> Duration {
+    #[must_use] pub fn value_to_pwm(&self, speed: Percent) -> Duration {
         let speed = speed.get() * self.max_value.get();
 
         let upper = if speed >= 0.0 {
@@ -123,7 +123,7 @@ impl Motor {
         Duration::from_micros(pulse as u64)
     }
 
-    pub fn channel(&self) -> u8 {
+    #[must_use] pub fn channel(&self) -> u8 {
         self.channel
     }
 }

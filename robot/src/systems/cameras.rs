@@ -1,5 +1,6 @@
 use core::str;
 use std::{
+    borrow::ToOwned,
     io,
     net::{IpAddr, SocketAddr},
     process::{Child, Command},
@@ -38,7 +39,7 @@ impl System for CameraSystem {
         spawner.spawn(move || {
             span!(Level::INFO, "Event filterer");
 
-            for event in listner.into_iter() {
+            for event in listner {
                 if stop::world_stopped() | matches!(&*event, Event::Exit) {
                     tx.try_send(Event::Exit.into())
                         .log_error("Forward exit to camera manager");
@@ -64,7 +65,7 @@ impl System for CameraSystem {
             let mut target_ip = None;
             let mut port = 1024u16;
 
-            for event in rx.into_iter() {
+            for event in rx {
                 match &*event {
                     // Respawns all instances of gstreamer and points the new ones towards the new peer
                     Event::PeerConnected(addrs) => {
@@ -114,7 +115,7 @@ impl System for CameraSystem {
                                 match str::from_utf8(&output.stdout) {
                                     Ok(data) => {
                                         let next_cameras: HashSet<String> =
-                                            data.lines().map(|it| it.to_owned()).collect();
+                                            data.lines().map(ToOwned::to_owned).collect();
 
                                         for old_camera in next_cameras.difference(&last_cameras) {
                                             if let Some(mut child) = cameras.remove(old_camera) {
@@ -228,8 +229,8 @@ fn camera_list(cameras: &HashMap<String, (Child, SocketAddr)>) -> Vec<Camera> {
 
     for (name, (_, location)) in cameras {
         list.push(Camera {
-            name: name.to_owned(),
-            location: location.to_owned(),
+            name: name.clone(),
+            location: *location,
         })
     }
 

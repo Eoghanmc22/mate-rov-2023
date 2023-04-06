@@ -23,11 +23,11 @@ impl System for StoreSystem {
 
             let adapters = tokens::generate_adaptors();
 
-            for event in listner.into_iter() {
+            for event in listner {
                 match &*event {
                     // Handle inbound stores
                     Event::PacketRx(Protocol::Store(key, data)) => {
-                        let key = key.to_owned().into();
+                        let key = key.clone().into();
                         let adapter = adapters.get(&key);
 
                         if let Some(adapter) = adapter {

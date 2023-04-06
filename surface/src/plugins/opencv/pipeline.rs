@@ -18,7 +18,7 @@ pub enum MatId {
 impl Display for MatId {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         let name = match self {
-            MatId::Raw => "Raw",
+            Self::Raw => "Raw",
         };
 
         write!(f, "{name}")
@@ -31,8 +31,6 @@ pub enum PipelineStage {}
 
 impl PipelineStage {
     pub fn construct(&self) -> ProcessorFn {
-        match self {
-            _ => todo!(),
-        }
+        todo!()
     }
 }

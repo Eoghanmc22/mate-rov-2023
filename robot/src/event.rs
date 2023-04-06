@@ -3,7 +3,7 @@ use std::net::SocketAddr;
 use common::{
     protocol::Protocol,
     store::Update,
-    types::{DepthFrame, InertialFrame, MagFrame},
+    types::{InertialFrame, MagFrame},
 };
 
 /// Repersents a message a system can brodcast

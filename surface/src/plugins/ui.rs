@@ -34,7 +34,7 @@ impl FromWorld for UiState {
         panes.insert(PaneId::Video, panes::video_panel());
         panes.insert(PaneId::Notifications, panes::notification_popup());
 
-        UiState(panes)
+        Self(panes)
     }
 }
 
@@ -112,7 +112,7 @@ pub struct UiMessages(Sender<UiMessage>, Receiver<UiMessage>);
 impl Default for UiMessages {
     fn default() -> Self {
         let (tx, rx) = bounded(30);
-        UiMessages(tx, rx)
+        Self(tx, rx)
     }
 }
 
@@ -154,7 +154,7 @@ fn handle_ui(
 
     // Render the ui
     for filter in filters {
-        for (id, pane) in state.0.iter_mut().filter(filter) {
+        for (_id, pane) in state.0.iter_mut().filter(filter) {
             pane.update(set.p0(), &mut commands);
 
             let mut egui = set.p1();

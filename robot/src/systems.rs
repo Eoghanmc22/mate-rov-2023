@@ -51,7 +51,7 @@ impl SystemManager {
     /// Starts all the systems
     #[tracing::instrument(skip(self))]
     pub fn start(self) {
-        let SystemManager(systems) = self;
+        let Self(systems) = self;
 
         info!("---------- Starting systems ----------");
 

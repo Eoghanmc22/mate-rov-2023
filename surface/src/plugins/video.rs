@@ -64,44 +64,44 @@ pub enum VideoTree {
 impl VideoTree {
     pub fn insert(&mut self, entity: Entity) {
         match self {
-            VideoTree::Node(a, b) => {
+            Self::Node(a, b) => {
                 // TODO better balancing
-                if let VideoTree::Node(_, _) = **b {
+                if let Self::Node(_, _) = **b {
                     a.insert(entity);
                 } else {
                     b.insert(entity);
                 }
             }
-            VideoTree::Leaf(cur) => {
-                *self = VideoTree::Node(
-                    Box::new(VideoTree::Leaf(*cur)),
-                    Box::new(VideoTree::Leaf(entity)),
+            Self::Leaf(cur) => {
+                *self = Self::Node(
+                    Box::new(Self::Leaf(*cur)),
+                    Box::new(Self::Leaf(entity)),
                 );
             }
-            VideoTree::Empty => {
-                *self = VideoTree::Leaf(entity);
+            Self::Empty => {
+                *self = Self::Leaf(entity);
             }
         }
     }
 
     pub fn remove(&mut self, entity: Entity) {
         match self {
-            VideoTree::Node(a, b) => {
+            Self::Node(a, b) => {
                 a.remove(entity);
                 b.remove(entity);
 
-                if let VideoTree::Empty = **a {
+                if matches!(**a, Self::Empty) {
                     *self = mem::take(b);
-                } else if let VideoTree::Empty = **b {
+                } else if matches!(**b, Self::Empty) {
                     *self = mem::take(a);
                 }
             }
-            VideoTree::Leaf(it) => {
+            Self::Leaf(it) => {
                 if *it == entity {
-                    *self = VideoTree::Empty;
+                    *self = Self::Empty;
                 }
             }
-            VideoTree::Empty => {}
+            Self::Empty => {}
         }
     }
 }

@@ -64,7 +64,7 @@ impl Default for Robot {
     fn default() -> Self {
         let (tx, rx) = bounded(50);
 
-        Robot(
+        Self(
             Store::new(NotificationHandler(tx.clone())),
             tx,
             rx,
@@ -189,7 +189,7 @@ fn events_to_notifs(mut events: EventReader<RobotEvent>, mut notifs: EventWriter
     }
 }
 
-fn arming_system(mut updater: Local<Updater>, mut robot: Option<ResMut<Robot>>) {
+fn arming_system(updater: Local<Updater>, robot: Option<ResMut<Robot>>) {
     if let Some(robot) = robot {
         updater.emit_update(&tokens::ARMED, robot.3);
     }

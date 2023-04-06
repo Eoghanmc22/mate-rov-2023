@@ -87,7 +87,7 @@ fn collect_system_state(system: &System) -> anyhow::Result<SystemInfo> {
             .networks()
             .iter()
             .map(|(name, data)| Network {
-                name: name.to_owned(),
+                name: name.clone(),
                 rx_bytes: data.total_received(),
                 tx_bytes: data.total_transmitted(),
                 rx_packets: data.total_packets_received(),

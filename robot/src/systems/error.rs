@@ -18,7 +18,7 @@ impl System for ErrorSystem {
         spawner.spawn(move || {
             span!(Level::ERROR, "Error handler");
 
-            for event in listner.into_iter() {
+            for event in listner {
                 match &*event {
                     Event::Error(err) => {
                         error!("Encountered error: {err:?}");

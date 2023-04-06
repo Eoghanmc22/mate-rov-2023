@@ -26,7 +26,7 @@ impl System for StatusSystem {
             let mut peers = 0;
             let mut last_status = None;
 
-            for event in listener.into_iter() {
+            for event in listener {
                 let recompute_state = match &*event {
                     Event::PeerConnected(_) => {
                         peers += 1;

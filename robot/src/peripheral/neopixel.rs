@@ -55,7 +55,7 @@ const GAMMA8: [u8; 256] = [
     223, 225, 228, 231, 233, 236, 239, 241, 244, 247, 249, 252, 255,
 ];
 
-pub fn correct_color(color: RGB8) -> RGB8 {
+#[must_use] pub fn correct_color(color: RGB8) -> RGB8 {
     color.map(|it| GAMMA8[it as usize])
 }
 
@@ -70,8 +70,8 @@ fn color_to_data(color: RGB8) -> Vec<u8> {
 }
 
 fn byte_to_data(data: &mut Vec<u8>, byte: u8) {
-    const LED_T0: u8 = 0b11000000;
-    const LED_T1: u8 = 0b11111000;
+    const LED_T0: u8 = 0b1100_0000;
+    const LED_T1: u8 = 0b1111_1000;
 
     for bit in 0..8 {
         if byte & (0x80 >> bit) != 0 {

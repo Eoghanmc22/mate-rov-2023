@@ -52,12 +52,12 @@ impl System for LeakSystem {
         // Dont drop leak pin until program exit
         {
             let mut events = events.clone();
-            let leak_detected = leak_detected.clone();
+            let leak_detected = leak_detected;
 
             spawner.spawn(move || {
                 let _leak_pin = leak_pin;
 
-                for event in listener.into_iter() {
+                for event in listener {
                     match &*event {
                         Event::SyncStore => {
                             let update = store::create_update(
