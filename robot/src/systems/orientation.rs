@@ -113,25 +113,19 @@ impl System for OrientationSystem {
                             }
 
                             if tick_counter % brodcast_divisor == 0 {
-                                let orientation_update = store::create_update(
-                                    &tokens::ORIENTATION,
-                                    (orientation, Instant::now()),
-                                );
+                                let orientation_update =
+                                    store::create_update(&tokens::ORIENTATION, orientation);
                                 events.send(Event::Store(orientation_update));
 
                                 if let Some(imu) = imu_frame {
-                                    let imu_update = store::create_update(
-                                        &tokens::RAW_INERTIAL,
-                                        (imu, Instant::now()),
-                                    );
+                                    let imu_update =
+                                        store::create_update(&tokens::RAW_INERTIAL, imu);
                                     events.send(Event::Store(imu_update));
                                 }
 
                                 if let Some(mag) = mag_frame {
-                                    let mag_update = store::create_update(
-                                        &tokens::RAW_MAGNETIC,
-                                        (mag, Instant::now()),
-                                    );
+                                    let mag_update =
+                                        store::create_update(&tokens::RAW_MAGNETIC, mag);
                                     events.send(Event::Store(mag_update));
                                 }
                             }

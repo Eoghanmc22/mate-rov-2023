@@ -9,6 +9,7 @@ use std::{
     hash::{Hash, Hasher},
     marker::PhantomData,
     sync::Arc,
+    time::{Duration, Instant},
 };
 
 use fxhash::FxHashMap as HashMap;
@@ -34,6 +35,7 @@ impl<V> Token<V> {
 pub struct Store<C> {
     owned: HashMap<Key, Value>,
     shared: HashMap<Key, Value>,
+    timestamps: HashMap<Key, Instant>,
     callback: C,
 }
 
@@ -42,6 +44,7 @@ impl<C: UpdateCallback> Store<C> {
         Self {
             owned: Default::default(),
             shared: Default::default(),
+            timestamps: Default::default(),
             callback: update_callback,
         }
     }
@@ -55,14 +58,16 @@ impl<C: UpdateCallback> Store<C> {
 
         self.callback.call((key.0.clone(), Some(value.clone())));
         self.owned.insert(key.0.clone(), value);
+        self.timestamps.insert(key.0.clone(), Instant::now());
     }
 
-    // pub fn remove<V: Any>(&mut self, key: &Token<V>) {
-    //     debug_assert!(!self.shared.contains_key(&key.0));
-    //
-    //     (self.callback)((key.0.clone(), None));
-    //     self.owned.remove(key.0.clone());
-    // }
+    pub fn remove<V: Any>(&mut self, key: &Token<V>) {
+        debug_assert!(!self.shared.contains_key(&key.0));
+
+        self.callback.call((key.0.clone(), None));
+        self.owned.remove(&key.0);
+        self.timestamps.insert(key.0.clone(), Instant::now());
+    }
 
     pub fn refresh(&mut self) {
         for (key, data) in &self.owned {
@@ -80,6 +85,29 @@ impl<C> Store<C> {
             .and_then(|it| it.downcast::<V>().ok())
     }
 
+    pub fn get_with_time<V: Any + Send + Sync>(
+        &self,
+        key: &Token<V>,
+    ) -> Option<(Option<Arc<V>>, Instant)> {
+        self.timestamps
+            .get(&key.0)
+            .map(|time| (self.get(key), *time))
+    }
+
+    pub fn get_alive<V: Any + Send + Sync>(
+        &self,
+        key: &Token<V>,
+        max_age: Duration,
+    ) -> Option<Arc<V>> {
+        self.get_with_time(key).and_then(|(entry, timestamp)| {
+            if timestamp.elapsed() < max_age {
+                entry
+            } else {
+                None
+            }
+        })
+    }
+
     pub fn is_owned<V: Any>(&self, key: &Token<V>) -> bool {
         self.is_owned_key(&key.0)
     }
@@ -91,6 +119,7 @@ impl<C> Store<C> {
     pub fn reset(&mut self) {
         self.owned.clear();
         self.shared.clear();
+        self.timestamps.clear();
     }
 
     pub fn reset_shared(&mut self) {
@@ -107,6 +136,8 @@ impl<C> Store<C> {
         } else {
             self.shared.remove(&update.0);
         }
+
+        self.timestamps.insert(update.0.clone(), Instant::now());
     }
 
     pub fn handle_update_owned(&mut self, update: &Update) {
@@ -119,6 +150,8 @@ impl<C> Store<C> {
         } else {
             self.owned.remove(&update.0);
         }
+
+        self.timestamps.insert(update.0.clone(), Instant::now());
     }
 }
 

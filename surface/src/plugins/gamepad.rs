@@ -1,4 +1,4 @@
-use std::{collections::HashMap, time::Instant};
+use std::collections::HashMap;
 
 use bevy::{
     input::gamepad::{GamepadConnection, GamepadEvent},
@@ -378,12 +378,9 @@ fn create_mapping() -> ControllerMappings {
 
 fn emit_updates(updater: Local<Updater>, current_gamepad: Option<ResMut<CurrentGamepad>>) {
     if let Some(CurrentGamepad(_, state)) = current_gamepad.as_deref() {
-        updater.emit_update(&tokens::MOVEMENT_JOYSTICK, (state.movement, Instant::now()));
+        updater.emit_update(&tokens::MOVEMENT_JOYSTICK, state.movement);
     } else {
-        updater.emit_update(
-            &tokens::MOVEMENT_JOYSTICK,
-            (Default::default(), Instant::now()),
-        );
+        updater.emit_update(&tokens::MOVEMENT_JOYSTICK, Default::default());
     }
 }
 

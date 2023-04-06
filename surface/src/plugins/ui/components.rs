@@ -1,4 +1,4 @@
-use std::{sync::Arc, time::Instant};
+use std::sync::Arc;
 
 use anyhow::anyhow;
 use anyhow::Context;
@@ -511,7 +511,7 @@ impl UiComponent for RemoteSystemUi {
 }
 
 #[derive(Debug, Default)]
-pub struct OrientationUi(Option<Arc<(Orientation, Instant)>>);
+pub struct OrientationUi(Option<Arc<Orientation>>);
 
 impl UiComponent for OrientationUi {
     fn pre_draw(&mut self, world: &World, _commands: &mut Commands) {
@@ -523,9 +523,7 @@ impl UiComponent for OrientationUi {
 
     fn draw(&mut self, _ctx: &egui::Context, ui: &mut egui::Ui, _commands: &mut Commands) {
         ui.collapsing("Orientation", |ui| {
-            if let Some(ref data) = self.0 {
-                let (orientation, _) = &**data;
-
+            if let Some(ref orientation) = self.0 {
                 let (roll, pitch, yaw) = orientation.0.euler_angles();
                 ui.label(format!("Roll: {:.3}", roll.to_degrees()));
                 ui.label(format!("Pitch: {:.3}", pitch.to_degrees()));
@@ -541,10 +539,10 @@ impl UiComponent for OrientationUi {
 
 #[derive(Debug, Default)]
 pub struct MovementUi {
-    calculated: Option<Arc<(Movement, Instant)>>,
-    joystick: Option<Arc<(Movement, Instant)>>,
-    opencv: Option<Arc<(Movement, Instant)>>,
-    ai: Option<Arc<(Movement, Instant)>>,
+    calculated: Option<Arc<Movement>>,
+    joystick: Option<Arc<Movement>>,
+    opencv: Option<Arc<Movement>>,
+    ai: Option<Arc<Movement>>,
 }
 
 impl UiComponent for MovementUi {
@@ -560,9 +558,7 @@ impl UiComponent for MovementUi {
 
     fn draw(&mut self, _ctx: &egui::Context, ui: &mut egui::Ui, _commands: &mut Commands) {
         ui.collapsing("Movement", |ui| {
-            if let Some(ref data) = self.calculated {
-                let (movement, _) = &**data;
-
+            if let Some(ref movement) = self.calculated {
                 ui.label(format!("X: {}", movement.x));
                 ui.label(format!("Y: {}", movement.y));
                 ui.label(format!("Z: {}", movement.z));
@@ -574,9 +570,7 @@ impl UiComponent for MovementUi {
             } else {
                 ui.label("No movement data");
             }
-            if let Some(ref data) = self.joystick {
-                let (movement, _) = &**data;
-
+            if let Some(ref movement) = self.joystick {
                 ui.collapsing("Joystick", |ui| {
                     ui.label(format!("X: {}", movement.x));
                     ui.label(format!("Y: {}", movement.y));
@@ -588,9 +582,7 @@ impl UiComponent for MovementUi {
                     // TODO visual
                 });
             }
-            if let Some(ref data) = self.opencv {
-                let (movement, _) = &**data;
-
+            if let Some(ref movement) = self.opencv {
                 ui.collapsing("Open CV", |ui| {
                     ui.label(format!("X: {}", movement.x));
                     ui.label(format!("Y: {}", movement.y));
@@ -602,9 +594,7 @@ impl UiComponent for MovementUi {
                     // TODO visual
                 });
             }
-            if let Some(ref data) = self.ai {
-                let (movement, _) = &**data;
-
+            if let Some(ref movement) = self.ai {
                 ui.collapsing("Depth Correction", |ui| {
                     ui.label(format!("X: {}", movement.x));
                     ui.label(format!("Y: {}", movement.y));
@@ -622,10 +612,10 @@ impl UiComponent for MovementUi {
 
 #[derive(Debug, Default)]
 pub struct RawSensorDataUi {
-    inertial: Option<Arc<(InertialFrame, Instant)>>,
-    magnetic: Option<Arc<(MagFrame, Instant)>>,
-    depth: Option<Arc<(DepthFrame, Instant)>>,
-    depth_target: Option<Arc<(Meters, Instant)>>,
+    inertial: Option<Arc<InertialFrame>>,
+    magnetic: Option<Arc<MagFrame>>,
+    depth: Option<Arc<DepthFrame>>,
+    depth_target: Option<Arc<Meters>>,
 }
 
 impl UiComponent for RawSensorDataUi {
@@ -642,9 +632,7 @@ impl UiComponent for RawSensorDataUi {
     fn draw(&mut self, _ctx: &egui::Context, ui: &mut egui::Ui, _commands: &mut Commands) {
         ui.collapsing("Sensors", |ui| {
             ui.collapsing("Imu", |ui| {
-                if let Some(ref data) = self.inertial {
-                    let (inertial, _) = &**data;
-
+                if let Some(ref inertial) = self.inertial {
                     ui.label("Accel");
                     ui.label(format!("X: {}", inertial.accel_x));
                     ui.label(format!("Y: {}", inertial.accel_y));
@@ -664,9 +652,7 @@ impl UiComponent for RawSensorDataUi {
                 }
             });
             ui.collapsing("Mag", |ui| {
-                if let Some(ref data) = self.magnetic {
-                    let (mag, _) = &**data;
-
+                if let Some(ref mag) = self.magnetic {
                     ui.label("Mag");
                     ui.label(format!("X: {}", mag.mag_x));
                     ui.label(format!("Y: {}", mag.mag_y));
@@ -681,9 +667,7 @@ impl UiComponent for RawSensorDataUi {
                 ui.label("TODO");
             });
             ui.collapsing("Depth", |ui| {
-                if let Some(ref data) = self.depth {
-                    let (depth, _) = &**data;
-
+                if let Some(ref depth) = self.depth {
                     ui.label(format!("Pressure: {}", depth.pressure));
                     ui.label(format!("Depth: {}", depth.depth));
                     ui.label(format!("Attitude: {}", depth.altitude));
@@ -691,9 +675,7 @@ impl UiComponent for RawSensorDataUi {
                 } else {
                     ui.label("No depth data");
                 }
-                if let Some(ref data) = self.depth_target {
-                    let (target, _) = &**data;
-
+                if let Some(ref target) = self.depth_target {
                     ui.label(format!("Depth Target: {target}"));
                 } else {
                     ui.label("Depth Target: None");
@@ -704,7 +686,7 @@ impl UiComponent for RawSensorDataUi {
 }
 
 #[derive(Debug, Default)]
-pub struct MotorsUi(Option<Arc<(HashMap<MotorId, MotorFrame>, Instant)>>);
+pub struct MotorsUi(Option<Arc<HashMap<MotorId, MotorFrame>>>);
 
 impl UiComponent for MotorsUi {
     fn pre_draw(&mut self, world: &World, _commands: &mut Commands) {
@@ -716,10 +698,8 @@ impl UiComponent for MotorsUi {
 
     fn draw(&mut self, _ctx: &egui::Context, ui: &mut egui::Ui, _commands: &mut Commands) {
         ui.collapsing("Motors", |ui| {
-            if let Some(ref data) = self.0 {
-                let (speeds, _) = &**data;
-
-                for (motor, MotorFrame(speed)) in speeds.iter() {
+            if let Some(ref speeds) = self.0 {
+                for (motor, MotorFrame(speed)) in &**speeds {
                     ui.label(format!("{motor:?}: {speed}"));
                 }
             } else {

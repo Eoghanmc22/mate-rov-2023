@@ -124,8 +124,7 @@ fn setup(
 fn rotator_system(robot: Res<Robot>, mut query: Query<&mut Transform, With<Object>>) {
     let orientation = robot.store().get(&tokens::ORIENTATION);
 
-    if let Some(data) = orientation {
-        let (orientation, _) = &*data;
+    if let Some(orientation) = orientation {
         let quat = Quat::from_xyzw(
             orientation.0.i as f32,
             orientation.0.j as f32,

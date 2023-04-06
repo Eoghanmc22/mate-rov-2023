@@ -156,7 +156,7 @@ impl System for MotorSystem {
                     .map(|it| (it, MotorFrame::default()))
                     .collect();
 
-                store.insert(&tokens::MOTOR_SPEED, (motors, Instant::now()));
+                store.insert(&tokens::MOTOR_SPEED, motors);
 
                 let listening: HashSet<KeyImpl> = vec![
                     tokens::ARMED.0,
@@ -185,23 +185,20 @@ impl System for MotorSystem {
 
                                 if let Some(armed) = store.get(&tokens::ARMED) {
                                     if matches!(*armed, Armed::Armed) {
-                                        if let Some(data) = store.get(&tokens::MOVEMENT_JOYSTICK) {
-                                            let (joystick, time_stamp) = *data;
-                                            if now - time_stamp < MAX_UPDATE_AGE {
-                                                movement += joystick;
-                                            }
+                                        if let Some(joystick) = store
+                                            .get_alive(&tokens::MOVEMENT_JOYSTICK, MAX_UPDATE_AGE)
+                                        {
+                                            movement += *joystick;
                                         }
-                                        if let Some(data) = store.get(&tokens::MOVEMENT_OPENCV) {
-                                            let (opencv, time_stamp) = *data;
-                                            if now - time_stamp < MAX_UPDATE_AGE {
-                                                movement += opencv;
-                                            }
+                                        if let Some(opencv) = store
+                                            .get_alive(&tokens::MOVEMENT_OPENCV, MAX_UPDATE_AGE)
+                                        {
+                                            movement += *opencv;
                                         }
-                                        if let Some(data) = store.get(&tokens::MOVEMENT_AI) {
-                                            let (depth, time_stamp) = *data;
-                                            if now - time_stamp < MAX_UPDATE_AGE {
-                                                movement += depth;
-                                            }
+                                        if let Some(depth) =
+                                            store.get_alive(&tokens::MOVEMENT_AI, MAX_UPDATE_AGE)
+                                        {
+                                            movement += *depth;
                                         }
                                     } else {
                                         // Disarmed
@@ -210,10 +207,10 @@ impl System for MotorSystem {
                                     // events.send(Event::Error(anyhow!("No armed token")));
                                 }
 
-                                store.insert(&tokens::MOVEMENT_CALCULATED, (movement, now));
+                                store.insert(&tokens::MOVEMENT_CALCULATED, movement);
 
                                 if let Some(motors) = store.get(&tokens::MOTOR_SPEED) {
-                                    let new_speeds = mix_movement(movement, motors.0.keys());
+                                    let new_speeds = mix_movement(movement, motors.keys());
                                     let deadline = now + MAX_UPDATE_AGE;
 
                                     // for (motor, speed) in &new_speeds {
@@ -237,7 +234,7 @@ impl System for MotorSystem {
                                         )));
                                     }
 
-                                    store.insert(&tokens::MOTOR_SPEED, (new_speeds, now));
+                                    store.insert(&tokens::MOTOR_SPEED, new_speeds);
                                 } else {
                                     events.send(Event::Error(anyhow!("No motor speed token")));
                                 }

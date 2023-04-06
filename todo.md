@@ -46,16 +46,16 @@
   - [ ] Window to view and edit global store
     - [ ] Max motor speed, 
 - [ ] Misc
+  - [ ] Remove any debugging prints
   - [ ] Investigate high cpu usage on pi
   - [ ] Rename Ready to Disarmed and Armed to Ready
-  - [ ] Implement remove for global store
-    - [ ] Store timestamps is a separate map, this removes the need for 2 adapters and encodes knowledge of when an element was removed.
+  - [x] Implement remove for global store
+    - [x] Store timestamps is a separate map, this removes the need for 2 adapters and encodes knowledge of when an element was removed.
   - [ ] Some calls to log_error should be replaced with proper handling and or the opposite
   - [ ] Surface network system has too much responsibility
   - [-] Clear foreign store on disconnect
   - [-] Graceful shutdown
   - [ ] Image pi
   - [ ] Systemd service
-  - [ ] Linters
   - [ ] Surface prints errors on shutdown
 

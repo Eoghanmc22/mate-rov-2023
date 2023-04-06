@@ -41,8 +41,7 @@ impl System for DepthSystem {
 
                 match rst {
                     Ok(frame) => {
-                        let update =
-                            store::create_update(&tokens::RAW_DEPTH, (frame, Instant::now()));
+                        let update = store::create_update(&tokens::RAW_DEPTH, frame);
                         events.send(Event::Store(update));
                     }
                     Err(err) => {
