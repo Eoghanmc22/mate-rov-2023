@@ -1,5 +1,5 @@
 use core::slice;
-use std::time::Duration;
+use std::{array, time::Duration};
 
 use anyhow::{bail, Context};
 use rppal::{
@@ -67,6 +67,33 @@ impl Pca9685 {
             .context("Validate pwm")?;
         if observed != expected {
             bail!("Attempted to set pwm to {expected:?}. Instead, {observed:?} was read");
+        }
+
+        Ok(())
+    }
+
+    pub fn set_pwms(&mut self, pwm: [Duration; 16]) -> anyhow::Result<()> {
+        let raw: [u16; 16] = array::from_fn(|idx| pwm_to_raw(pwm[idx], self.period));
+
+        let mut message: [u8; 33] = [0; 33];
+        message[0] = Self::REG_LED0_OFF_L;
+
+        for idx in 0..16 {
+            let upper = ((raw[idx] & 0x0f00) >> 8) as u8;
+            let lower = ((raw[idx] & 0x00ff) >> 0) as u8;
+
+            message[(idx << 1) + 1] = lower;
+            message[(idx << 1) + 2] = upper;
+        }
+
+        self.i2c.write(&message).context("Write pwm")?;
+
+        let mut observed = [0; 33];
+        self.i2c
+            .write_read(&[Self::REG_LED0_OFF_L], &mut observed)
+            .context("Validate pwm")?;
+        if observed != message {
+            bail!("Attempted to set pwm to {message:?}. Instead, {observed:?} was read");
         }
 
         Ok(())

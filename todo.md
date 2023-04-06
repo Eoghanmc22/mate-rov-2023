@@ -5,6 +5,7 @@
   - [ ] Servos
   - [ ] Arming
 - [ ] Sensors
+  - [ ] Way to disable validating writes?
   - [ ] Sensor fusion
     - [ ] Try using a Kalman filter
     - [ ] Way to switch implementation at runtime

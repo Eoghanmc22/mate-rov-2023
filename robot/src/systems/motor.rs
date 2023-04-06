@@ -21,6 +21,7 @@ pub const MAX_UPDATE_AGE: Duration = Duration::from_millis(250);
 pub struct MotorSystem;
 
 enum Message {
+    MotorSpeeds(HashMap<MotorId, MotorFrame>, Instant),
     MotorSpeed(MotorId, MotorFrame, Instant),
     CheckDeadlines,
 }
@@ -32,7 +33,7 @@ impl System for MotorSystem {
     ) -> anyhow::Result<()> {
         let listner = events.take_listner().unwrap();
 
-        let (tx, rx) = channel::bounded(30);
+        let (tx, rx) = channel::bounded(32);
 
         {
             let mut events = events.clone();
@@ -61,7 +62,29 @@ impl System for MotorSystem {
                         return;
                     }
 
+                    let now = Instant::now();
+
                     match message {
+                        Message::MotorSpeeds(motors, deadline) => {
+                            assert_eq!(motors.len(), 16);
+                            let mut speeds = [Duration::ZERO; 16];
+
+                            for (motor_id, frame) in motors {
+                                let motor = Motor::from(motor_id);
+                                let pwm = motor.value_to_pwm(frame.0);
+
+                                deadlines.insert(motor_id, deadline);
+
+                                speeds[motor.channel() as usize] = pwm;
+                            }
+
+                            let rst = pwm_controller.set_pwms(speeds);
+                            if let Err(error) = rst {
+                                events.send(Event::Error(
+                                    error.context("Couldn't set speeds".to_string()),
+                                ));
+                            }
+                        }
                         Message::MotorSpeed(motor_id, frame, deadline) => {
                             deadlines.insert(motor_id, deadline);
 
@@ -77,7 +100,7 @@ impl System for MotorSystem {
                         }
                         Message::CheckDeadlines => {
                             for (motor_id, deadline) in &deadlines {
-                                if Instant::now() - *deadline > MAX_UPDATE_AGE {
+                                if now - *deadline > MAX_UPDATE_AGE {
                                     let motor = Motor::from(*motor_id);
                                     let pwm = motor.value_to_pwm(Percent::ZERO);
 
@@ -193,14 +216,25 @@ impl System for MotorSystem {
                                     let new_speeds = mix_movement(movement, motors.0.keys());
                                     let deadline = now + MAX_UPDATE_AGE;
 
-                                    for (motor, speed) in &new_speeds {
-                                        let ret =
-                                            tx.send(Message::MotorSpeed(*motor, *speed, deadline));
-                                        if ret.is_err() {
-                                            events.send(Event::Error(anyhow!(
-                                                "Couldn't update new speed"
-                                            )));
-                                        }
+                                    // for (motor, speed) in &new_speeds {
+                                    //     let ret = tx.try_send(Message::MotorSpeed(
+                                    //         *motor, *speed, deadline,
+                                    //     ));
+                                    //     if let Err(error) = ret {
+                                    //         events.send(Event::Error(anyhow!(
+                                    //             "Couldn't update new speed: {error}"
+                                    //         )));
+                                    //     }
+                                    // }
+
+                                    let ret = tx.try_send(Message::MotorSpeeds(
+                                        new_speeds.clone(),
+                                        deadline,
+                                    ));
+                                    if let Err(error) = ret {
+                                        events.send(Event::Error(anyhow!(
+                                            "Couldn't update new speed: {error}"
+                                        )));
                                     }
 
                                     store.insert(&tokens::MOTOR_SPEED, (new_speeds, now));
