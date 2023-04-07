@@ -4,7 +4,7 @@ mod plugins;
 
 use crate::plugins::MatePlugins;
 use bevy::{
-    diagnostic::{DiagnosticsPlugin, FrameTimeDiagnosticsPlugin, LogDiagnosticsPlugin},
+    diagnostic::{FrameTimeDiagnosticsPlugin, LogDiagnosticsPlugin},
     prelude::*,
 };
 
