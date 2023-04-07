@@ -46,6 +46,7 @@
   - [ ] Window to view and edit global store
     - [ ] Max motor speed, 
 - [ ] Misc
+  - [ ] See if more things should in fixed update schedule
   - [ ] Remove any debugging prints
   - [ ] Investigate high cpu usage on pi
   - [ ] Rename Ready to Disarmed and Armed to Ready

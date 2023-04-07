@@ -1,7 +1,6 @@
 use bevy::prelude::{App, Plugin};
 
 use bevy::{
-    core_pipeline::clear_color::ClearColorConfig,
     prelude::*,
     render::{
         camera::RenderTarget,
@@ -31,13 +30,12 @@ pub struct OrientationDisplay(pub Handle<Image>, pub TextureId);
 
 // Marks the main pass cube, to which the texture is applied.
 #[derive(Component)]
-struct Object;
+struct Navigator;
 
 // Modified from render_to_texture example
 fn setup(
     mut commands: Commands,
     asset_server: Res<AssetServer>,
-    mut materials: ResMut<Assets<StandardMaterial>>,
     mut images: ResMut<Assets<Image>>,
     mut egui_context: EguiContexts,
 ) {
@@ -69,51 +67,51 @@ fn setup(
 
     let image_handle = images.add(image);
 
-    let cube_material_handle = materials.add(StandardMaterial {
-        base_color: Color::rgb(0.8, 0.7, 0.6),
-        reflectance: 0.02,
-        unlit: false,
-        ..default()
-    });
-
     // This specifies the layer used for the first pass, which will be attached to the first pass camera and cube.
     let first_pass_layer = RenderLayers::layer(1);
 
-    // The cube that will be rendered to the texture.
+    // object
     commands.spawn((
-        PbrBundle {
-            mesh: asset_server.load("NAVIGATOR-STACK.STL"),
-            material: cube_material_handle,
-            transform: Transform::from_translation(Vec3::new(0.0, 0.0, 1.0)),
+        SceneBundle {
+            scene: asset_server.load("NAVIGATOR-STACK.glb#Scene0"),
+            transform: Transform::from_scale(Vec3::splat(10.0)),
             ..default()
         },
-        Object,
+        Navigator,
         first_pass_layer,
     ));
 
-    // Light
-    // NOTE: Currently lights are shared between passes - see https://github.com/bevyengine/bevy/issues/3462
+    // light
     commands.spawn(PointLightBundle {
-        transform: Transform::from_translation(Vec3::new(0.0, 0.0, 10.0)),
+        point_light: PointLight {
+            intensity: 1500.0,
+            shadows_enabled: true,
+            ..default()
+        },
+        transform: Transform::from_xyz(4.0, 8.0, 4.0),
         ..default()
     });
 
-    commands.spawn((
-        Camera3dBundle {
-            camera_3d: Camera3d {
-                clear_color: ClearColorConfig::Custom(Color::WHITE),
-                ..default()
-            },
-            camera: Camera {
-                // render before the "main pass" camera
-                order: -1,
-                target: RenderTarget::Image(image_handle.clone()),
-                ..default()
-            },
-            transform: Transform::from_translation(Vec3::new(150.0, 150.0, 150.0))
-                .looking_at(Vec3::ZERO, Vec3::Z),
+    // camera
+    commands.spawn(Camera3dBundle {
+        transform: Transform::from_xyz(1.0, 1.0, 1.0).looking_at(Vec3::ZERO, Vec3::Z),
+        camera: Camera {
+            // render before the "main pass" camera
+            order: -1,
+            target: RenderTarget::Image(image_handle.clone()),
             ..default()
         },
+        ..default()
+    });
+
+    // The cube that will be rendered to the texture.
+    commands.spawn((
+        SceneBundle {
+            scene: asset_server.load("NAVIGATOR-STACK.glb"),
+            transform: Transform::from_translation(Vec3::new(0.0, 0.0, 1.0)),
+            ..default()
+        },
+        Navigator,
         first_pass_layer,
     ));
 
@@ -121,7 +119,7 @@ fn setup(
     commands.insert_resource(OrientationDisplay(image_handle, texture));
 }
 
-fn rotator_system(robot: Res<Robot>, mut query: Query<&mut Transform, With<Object>>) {
+fn rotator_system(robot: Res<Robot>, mut query: Query<&mut Transform, With<Navigator>>) {
     let orientation = robot.store().get(&tokens::ORIENTATION);
 
     if let Some(orientation) = orientation {

@@ -15,7 +15,6 @@ pub struct MatePlugins;
 impl PluginGroup for MatePlugins {
     fn build(self) -> PluginGroupBuilder {
         PluginGroupBuilder::start::<Self>()
-            .add(bevy_stl::StlPlugin)
             .add(robot::RobotPlugin)
             .add(networking::NetworkPlugin)
             .add(ui::UiPlugin)
