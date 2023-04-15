@@ -1,4 +1,3 @@
-use std::collections::BTreeMap;
 use std::sync::Arc;
 
 use anyhow::anyhow;
@@ -26,7 +25,6 @@ use std::net::ToSocketAddrs;
 use tracing::error;
 
 use crate::plugins::gamepad::CurrentGamepad;
-use crate::plugins::gamepad::Input;
 use crate::plugins::notification::NotificationResource;
 use crate::plugins::orientation::OrientationDisplay;
 use crate::plugins::video::VideoName;
@@ -214,7 +212,6 @@ impl UiComponent for RemoteSystemUi {
         ui.collapsing("Remote System", |ui| {
             if let Some(ref hw_state) = self.0 {
                 ui.collapsing("CPU", |ui| {
-                    ui.set_max_height(500.0);
                     ui.label(format!(
                         "Load avg: {:.2}, {:.2}, {:.2}",
                         hw_state.load_average.0, hw_state.load_average.1, hw_state.load_average.2,
@@ -225,7 +222,7 @@ impl UiComponent for RemoteSystemUi {
                     ));
                     TableBuilder::new(ui)
                         .striped(true)
-                        .columns(Column::remainder(), 3)
+                        .columns(Column::remainder().clip(false).resizable(true), 3)
                         .header(TABLE_ROW_HEIGHT, |mut row| {
                             row.col(|ui| {
                                 ui.label("Name");
@@ -264,12 +261,12 @@ impl UiComponent for RemoteSystemUi {
                         });
                 });
                 ui.collapsing("Processes", |ui| {
-                    ui.set_max_height(500.0);
                     TableBuilder::new(ui)
                         .striped(true)
                         .resizable(true)
+                        .max_scroll_height(500.0)
                         .column(Column::auto())
-                        .columns(Column::exact(60.0), 4)
+                        .columns(Column::remainder().clip(false).resizable(true), 4)
                         .header(TABLE_ROW_HEIGHT, |mut row| {
                             row.col(|ui| {
                                 ui.label("Name");
@@ -318,10 +315,9 @@ impl UiComponent for RemoteSystemUi {
                         });
                 });
                 ui.collapsing("Networks", |ui| {
-                    ui.set_max_height(500.0);
                     TableBuilder::new(ui)
                         .striped(true)
-                        .columns(Column::remainder(), 7)
+                        .columns(Column::remainder().clip(false).resizable(true), 7)
                         .header(20.0, |mut row| {
                             row.col(|ui| {
                                 ui.label("Name");
@@ -406,10 +402,9 @@ impl UiComponent for RemoteSystemUi {
                     ));
                 });
                 ui.collapsing("Thermals", |ui| {
-                    ui.set_max_height(500.0);
                     TableBuilder::new(ui)
                         .striped(true)
-                        .columns(Column::remainder(), 4)
+                        .columns(Column::remainder().clip(false).resizable(true), 4)
                         .header(20.0, |mut row| {
                             row.col(|ui| {
                                 ui.label("Name");
@@ -452,10 +447,9 @@ impl UiComponent for RemoteSystemUi {
                         });
                 });
                 ui.collapsing("Disks", |ui| {
-                    ui.set_max_height(500.0);
                     TableBuilder::new(ui)
                         .striped(true)
-                        .columns(Column::remainder(), 5)
+                        .columns(Column::remainder().clip(false).resizable(true), 5)
                         .header(20.0, |mut row| {
                             row.col(|ui| {
                                 ui.label("Name");
@@ -675,9 +669,32 @@ impl UiComponent for MotorsUi {
     fn draw(&mut self, _ctx: &egui::Context, ui: &mut egui::Ui, _commands: &mut Commands) {
         ui.collapsing("Motors", |ui| {
             if let Some(ref speeds) = self.0 {
-                for (motor, MotorFrame(speed)) in &**speeds {
-                    ui.label(format!("{motor:?}: {speed}"));
-                }
+                let mut speeds: Vec<(_, _)> = speeds.iter().collect();
+                speeds.sort_by_key(|(name, _)| format!("{name:?}"));
+
+                TableBuilder::new(ui)
+                    .striped(true)
+                    .columns(Column::remainder().clip(false).resizable(true), 2)
+                    .header(TABLE_ROW_HEIGHT, |mut row| {
+                        row.col(|ui| {
+                            ui.label("Motor");
+                        });
+                        row.col(|ui| {
+                            ui.label("Speed");
+                        });
+                    })
+                    .body(|body| {
+                        body.rows(TABLE_ROW_HEIGHT, speeds.len(), |idx, mut row| {
+                            let (name, speed) = speeds[idx];
+
+                            row.col(|ui| {
+                                ui.label(format!("{name:?}"));
+                            });
+                            row.col(|ui| {
+                                ui.label(format!("{:.2?}", speed.0.get()));
+                            });
+                        });
+                    });
             } else {
                 ui.label("No motor data");
             }
