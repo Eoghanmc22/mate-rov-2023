@@ -31,7 +31,7 @@ pub fn data_panel() -> Pane {
         egui::SidePanel::left("data_pane").show(ctx, add_contents);
     });
 
-    pane.add(components::RobotUi::default());
+    pane.add(components::InputUi::default());
     pane.add(components::OrientationUi::default());
     pane.add(components::MovementUi::default());
     pane.add(components::RawSensorDataUi::default());

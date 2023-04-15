@@ -1,3 +1,4 @@
+use std::collections::BTreeMap;
 use std::sync::Arc;
 
 use anyhow::anyhow;
@@ -24,6 +25,8 @@ use fxhash::FxHashMap as HashMap;
 use std::net::ToSocketAddrs;
 use tracing::error;
 
+use crate::plugins::gamepad::CurrentGamepad;
+use crate::plugins::gamepad::Input;
 use crate::plugins::notification::NotificationResource;
 use crate::plugins::orientation::OrientationDisplay;
 use crate::plugins::video::VideoName;
@@ -41,6 +44,7 @@ use crate::plugins::{
 };
 
 use super::widgets;
+use super::widgets::MovementWidget;
 use super::{panes, ExtensionId, PaneId, UiMessage, UiMessages};
 
 const TABLE_ROW_HEIGHT: f32 = 15.0;
@@ -559,51 +563,23 @@ impl UiComponent for MovementUi {
     fn draw(&mut self, _ctx: &egui::Context, ui: &mut egui::Ui, _commands: &mut Commands) {
         ui.collapsing("Movement", |ui| {
             if let Some(ref movement) = self.calculated {
-                ui.label(format!("X: {}", movement.x));
-                ui.label(format!("Y: {}", movement.y));
-                ui.label(format!("Z: {}", movement.z));
-                ui.add_space(5.0);
-                ui.label(format!("Yaw: {}", movement.z_rot));
-                ui.label(format!("Pitch: {}", movement.x_rot));
-                ui.label(format!("Roll: {}", movement.y_rot));
-                // TODO visual
+                ui.add(MovementWidget(movement));
             } else {
                 ui.label("No movement data");
             }
             if let Some(ref movement) = self.joystick {
                 ui.collapsing("Joystick", |ui| {
-                    ui.label(format!("X: {}", movement.x));
-                    ui.label(format!("Y: {}", movement.y));
-                    ui.label(format!("Z: {}", movement.z));
-                    ui.add_space(5.0);
-                    ui.label(format!("Yaw: {}", movement.z_rot));
-                    ui.label(format!("Pitch: {}", movement.x_rot));
-                    ui.label(format!("Roll: {}", movement.y_rot));
-                    // TODO visual
+                    ui.add(MovementWidget(movement));
                 });
             }
             if let Some(ref movement) = self.opencv {
                 ui.collapsing("Open CV", |ui| {
-                    ui.label(format!("X: {}", movement.x));
-                    ui.label(format!("Y: {}", movement.y));
-                    ui.label(format!("Z: {}", movement.z));
-                    ui.add_space(5.0);
-                    ui.label(format!("Yaw: {}", movement.z_rot));
-                    ui.label(format!("Pitch: {}", movement.x_rot));
-                    ui.label(format!("Roll: {}", movement.y_rot));
-                    // TODO visual
+                    ui.add(MovementWidget(movement));
                 });
             }
             if let Some(ref movement) = self.ai {
                 ui.collapsing("Depth Correction", |ui| {
-                    ui.label(format!("X: {}", movement.x));
-                    ui.label(format!("Y: {}", movement.y));
-                    ui.label(format!("Z: {}", movement.z));
-                    ui.add_space(5.0);
-                    ui.label(format!("Yaw: {}", movement.z_rot));
-                    ui.label(format!("Pitch: {}", movement.x_rot));
-                    ui.label(format!("Roll: {}", movement.y_rot));
-                    // TODO visual
+                    ui.add(MovementWidget(movement));
                 });
             }
         });
@@ -736,12 +712,73 @@ impl UiComponent for CamerasUi {
 }
 
 #[derive(Debug, Default)]
-pub struct RobotUi;
+pub struct InputUi(Option<CurrentGamepad>);
 
-impl UiComponent for RobotUi {
+impl UiComponent for InputUi {
+    fn pre_draw(&mut self, world: &World, _commands: &mut Commands) {
+        self.0 = world.get_resource::<CurrentGamepad>().cloned();
+    }
+
     fn draw(&mut self, _ctx: &egui::Context, ui: &mut egui::Ui, _commands: &mut Commands) {
-        ui.collapsing("Robot", |ui| {
-            ui.label("TODO");
+        ui.collapsing("Input", |ui| {
+            if let Some(ref gamepad) = self.0 {
+                ui.label(format!("Gamepad id: {}", gamepad.0.id));
+                ui.label(format!("Selected servo: {:?}", gamepad.1.servo));
+                ui.label(format!("Selected map: {:?}", gamepad.1.selected_map));
+                ui.label(format!("Gain: {:.2?}", gamepad.1.gain));
+                ui.label(format!("Hold: {:?}", gamepad.1.hold_axis));
+
+                ui.collapsing("Joystick Calculated", |ui| {
+                    ui.add(MovementWidget(&gamepad.1.movement));
+                    ui.group(|ui| {
+                        ui.label(format!(
+                            "Servo Normal: {:.2?}",
+                            gamepad.1.servo_position_normal
+                        ));
+                        ui.label(format!(
+                            "Servo Inverted: {:.2?}",
+                            gamepad.1.servo_position_inverted
+                        ));
+                        ui.label(format!(
+                            "Servo Calculated: {:.2?}",
+                            gamepad.1.servo_position_normal - gamepad.1.servo_position_inverted
+                        ));
+                        ui.allocate_space(vec2(ui.available_width(), 0.0));
+                    })
+                });
+                ui.collapsing("Selected Map", |ui| {
+                    if let Some(map) = gamepad.1.maps.get(gamepad.1.selected_map) {
+                        let mut mappings: Vec<(_, _)> = map.iter().collect();
+                        mappings.sort_by_key(|(button, _)| format!("{button:?}"));
+
+                        TableBuilder::new(ui)
+                            .striped(true)
+                            .columns(Column::remainder().clip(false).resizable(true), 2)
+                            .header(TABLE_ROW_HEIGHT, |mut row| {
+                                row.col(|ui| {
+                                    ui.label("Button");
+                                });
+                                row.col(|ui| {
+                                    ui.label("Action");
+                                });
+                            })
+                            .body(|body| {
+                                body.rows(TABLE_ROW_HEIGHT, mappings.len(), |idx, mut row| {
+                                    let (button, action) = mappings[idx];
+
+                                    row.col(|ui| {
+                                        ui.label(format!("{button:?}"));
+                                    });
+                                    row.col(|ui| {
+                                        ui.label(format!("{action:?}"));
+                                    });
+                                });
+                            });
+                    }
+                });
+            } else {
+                ui.label("No gamepad found");
+            }
         });
     }
 }

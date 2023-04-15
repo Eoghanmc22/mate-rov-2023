@@ -2,7 +2,7 @@ use crate::events::EventHandle;
 use crate::peripheral::motor::Motor;
 use crate::systems::{stop, System};
 use crate::{event::Event, peripheral::pca9685::Pca9685};
-use anyhow::anyhow;
+use anyhow::{anyhow, Context};
 use common::{
     error::LogErrorExt,
     store::{tokens, KeyImpl, Store},
@@ -52,6 +52,18 @@ impl System for MotorSystem {
                         return;
                     }
                 };
+
+                let init_pwms = [Duration::from_micros(1500); 16];
+                let rst = pwm_controller
+                    .set_pwms(init_pwms)
+                    .context("Set initial pwms");
+                if let Err(error) = rst {
+                    events.send(Event::Error(
+                        error.context("Couldnt set initial pwms".to_string()),
+                    ));
+                    return;
+                }
+
                 pwm_controller.output_enable();
 
                 let mut deadlines: HashMap<MotorId, Instant> = HashMap::default();

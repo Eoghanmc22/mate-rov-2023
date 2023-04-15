@@ -1,5 +1,5 @@
 use core::slice;
-use std::{array, time::Duration};
+use std::{array, thread, time::Duration};
 
 use anyhow::{bail, Context};
 use rppal::{
@@ -54,7 +54,7 @@ impl Pca9685 {
         let raw = pwm_to_raw(pwm, self.period);
         let upper = ((raw & 0x0f00) >> 8) as u8;
         let lower = ((raw & 0x00ff) >> 0) as u8;
-        let expected = [lower, upper];
+        // let expected = [lower, upper];
 
         let register = channel_to_reg(channel);
         self.i2c
@@ -75,22 +75,22 @@ impl Pca9685 {
     pub fn set_pwms(&mut self, pwm: [Duration; 16]) -> anyhow::Result<()> {
         let raw: [u16; 16] = array::from_fn(|idx| pwm_to_raw(pwm[idx], self.period));
 
-        let mut message: [u8; 33] = [0; 33];
-        message[0] = Self::REG_LED0_OFF_L;
+        let mut message: [u8; 65] = [0; 65];
+        message[0] = Self::REG_LED0_ON_L;
 
         for idx in 0..16 {
             let upper = ((raw[idx] & 0x0f00) >> 8) as u8;
             let lower = ((raw[idx] & 0x00ff) >> 0) as u8;
 
-            message[(idx << 1) + 1] = lower;
-            message[(idx << 1) + 2] = upper;
+            message[(idx << 2) + 3] = lower;
+            message[(idx << 2) + 4] = upper;
         }
 
         self.i2c.write(&message).context("Write pwm")?;
 
-        // let mut observed = [0; 32];
+        // let mut observed = [0; 64];
         // self.i2c
-        //     .write_read(&[Self::REG_LED0_OFF_L], &mut observed)
+        //     .write_read(&[Self::REG_LED0_ON_L], &mut observed)
         //     .context("Validate pwm")?;
         // if observed != message[1..] {
         //     bail!("Attempted to set pwm to {message:?}. Instead, {observed:?} was read");
@@ -104,6 +104,7 @@ impl Pca9685 {
 impl Pca9685 {
     const REG_MODE1: u8 = 0x00;
     const REG_PRESCALE: u8 = 0xfe;
+    const REG_LED0_ON_L: u8 = 0x06;
     const REG_LED0_OFF_L: u8 = 0x08;
     const REG_ALL_LED_OFF_H: u8 = 0xfd;
 
@@ -165,6 +166,10 @@ impl Pca9685 {
 impl Drop for Pca9685 {
     fn drop(&mut self) {
         let _ = self.i2c.write(&[Self::REG_ALL_LED_OFF_H, 0x08]);
+
+        // Prevent cutting the last pulse short
+        thread::sleep(Duration::from_millis(20));
+
         let _ = self.i2c.write(&[Self::REG_MODE1, Self::MODE1_SLEEP]);
         self.output_disable();
     }
@@ -176,7 +181,7 @@ fn calc_prescale(period: Duration) -> u8 {
 }
 
 const fn pwm_to_raw(pwm: Duration, period: Duration) -> u16 {
-    pwm.as_micros() as u16 * 4096 / period.as_micros() as u16 - 1
+    (pwm.as_micros() as u32 * 4096 / period.as_micros() as u32 - 1) as u16
 }
 
 const fn channel_to_reg(channel: u8) -> u8 {

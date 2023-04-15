@@ -1,7 +1,10 @@
 use std::collections::HashMap;
 
 use bevy::{
-    input::gamepad::{GamepadConnection, GamepadEvent},
+    input::gamepad::{
+        GamepadAxisChangedEvent, GamepadButtonChangedEvent, GamepadConnection,
+        GamepadConnectionEvent,
+    },
     prelude::*,
 };
 use common::{
@@ -16,25 +19,28 @@ pub struct GamepadPlugin;
 impl Plugin for GamepadPlugin {
     fn build(&self, app: &mut App) {
         app.add_system(gamepad_connections.in_base_set(CoreSet::PreUpdate));
+        app.add_system(gamepad_buttons.in_base_set(CoreSet::PreUpdate));
+        app.add_system(gamepad_axis.in_base_set(CoreSet::PreUpdate));
         app.add_system(emit_updates.in_schedule(CoreSchedule::FixedUpdate));
     }
 }
 
-#[derive(Resource)]
-struct CurrentGamepad(Gamepad, InputState);
+#[derive(Resource, Clone, Debug)]
+pub struct CurrentGamepad(pub Gamepad, pub InputState);
 
-struct InputState {
-    movement: Movement,
-    servo: MotorId,
+#[derive(Clone, Debug)]
+pub struct InputState {
+    pub movement: Movement,
+    pub servo: MotorId,
 
-    maps: ControllerMappings,
-    selected_map: &'static str,
+    pub maps: ControllerMappings,
+    pub selected_map: &'static str,
 
-    gain: f32,
-    hold_axis: bool,
+    pub gain: f32,
+    pub hold_axis: bool,
 
-    servo_position_normal: f32,
-    servo_position_inverted: f32,
+    pub servo_position_normal: f32,
+    pub servo_position_inverted: f32,
 }
 
 impl InputState {
@@ -44,6 +50,7 @@ impl InputState {
 
             return;
         };
+
         if let Some(action) = map.get(&input) {
             match action {
                 Action::Arm => {
@@ -175,32 +182,27 @@ impl InputState {
                     self.movement.z_rot = Percent::new((value * self.gain) as f64);
                 }
                 Action::Forward => {
-                    println!("a");
                     if self.hold_axis {
                         return;
                     }
 
-                    println!("HIT");
-
-                    self.movement.y_rot = Percent::new((value * self.gain) as f64);
+                    self.movement.y = Percent::new((value * self.gain) as f64);
                 }
                 Action::Lateral => {
                     if self.hold_axis {
                         return;
                     }
 
-                    self.movement.x_rot = Percent::new((value * self.gain) as f64);
+                    self.movement.x = Percent::new((value * self.gain) as f64);
                 }
                 Action::Vertical => {
                     if self.hold_axis {
                         return;
                     }
 
-                    self.movement.z_rot = Percent::new((value * self.gain) as f64);
+                    self.movement.z = Percent::new((value * self.gain) as f64);
                 }
             }
-        } else {
-            println!("Bad input");
         }
     }
 }
@@ -269,57 +271,59 @@ impl Default for InputState {
 /// Listens to the connection and disconnection of gamepads
 fn gamepad_connections(
     mut commands: Commands,
-    mut current_gamepad: Option<ResMut<CurrentGamepad>>,
-    mut gamepad_evr: EventReader<GamepadEvent>,
+    mut connections: EventReader<GamepadConnectionEvent>,
+    current_gamepad: Option<Res<CurrentGamepad>>,
 ) {
-    for event in gamepad_evr.iter() {
-        match event {
-            GamepadEvent::Connection(event) => match &event.connection {
-                GamepadConnection::Connected(info) => {
-                    info!(
-                        "New gamepad ({}) connected with ID: {:?}",
-                        info.name, event.gamepad
-                    );
+    for event in connections.iter() {
+        match &event.connection {
+            GamepadConnection::Connected(info) => {
+                info!(
+                    "New gamepad ({}) connected with ID: {:?}",
+                    info.name, event.gamepad
+                );
 
-                    if current_gamepad.is_none() {
-                        commands.insert_resource(CurrentGamepad(event.gamepad, Default::default()));
-                    }
-                }
-                GamepadConnection::Disconnected => {
-                    info!("Lost gamepad connection with ID: {:?}", event.gamepad);
-
-                    if let Some(CurrentGamepad(gamepad_lost, _)) = current_gamepad.as_deref() {
-                        if *gamepad_lost == event.gamepad {
-                            commands.remove_resource::<CurrentGamepad>();
-                        }
-                    }
-                }
-            },
-            GamepadEvent::Button(event) => {
-                if let Some(CurrentGamepad(gamepad, state)) = current_gamepad.as_deref_mut() {
-                    if event.gamepad == *gamepad {
-                        state.handle_event(
-                            Input::Button(event.button_type),
-                            event.value,
-                            &mut commands,
-                        );
-                    } else {
-                        println!("Bad pad");
-                    }
-                } else {
-                    println!("no pad");
+                if current_gamepad.is_none() {
+                    commands.insert_resource(CurrentGamepad(event.gamepad, Default::default()));
                 }
             }
-            GamepadEvent::Axis(event) => {
-                if let Some(CurrentGamepad(gamepad, state)) = current_gamepad.as_deref_mut() {
-                    if event.gamepad == *gamepad {
-                        state.handle_event(
-                            Input::Axis(event.axis_type),
-                            event.value,
-                            &mut commands,
-                        );
+            GamepadConnection::Disconnected => {
+                info!("Lost gamepad connection with ID: {:?}", event.gamepad);
+
+                if let Some(CurrentGamepad(gamepad_lost, _)) = current_gamepad.as_deref() {
+                    if *gamepad_lost == event.gamepad {
+                        commands.remove_resource::<CurrentGamepad>();
                     }
                 }
+            }
+        }
+    }
+}
+
+/// Listens to axis changes
+fn gamepad_axis(
+    mut commands: Commands,
+    mut current_gamepad: Option<ResMut<CurrentGamepad>>,
+    mut axis: EventReader<GamepadAxisChangedEvent>,
+) {
+    for event in axis.iter() {
+        if let Some(CurrentGamepad(gamepad, state)) = current_gamepad.as_deref_mut() {
+            if event.gamepad == *gamepad {
+                state.handle_event(Input::Axis(event.axis_type), event.value, &mut commands);
+            }
+        }
+    }
+}
+
+/// Listens to axis changes
+fn gamepad_buttons(
+    mut commands: Commands,
+    mut current_gamepad: Option<ResMut<CurrentGamepad>>,
+    mut axis: EventReader<GamepadButtonChangedEvent>,
+) {
+    for event in axis.iter() {
+        if let Some(CurrentGamepad(gamepad, state)) = current_gamepad.as_deref_mut() {
+            if event.gamepad == *gamepad {
+                state.handle_event(Input::Button(event.button_type), event.value, &mut commands);
             }
         }
     }
@@ -384,17 +388,17 @@ fn emit_updates(updater: Local<Updater>, current_gamepad: Option<ResMut<CurrentG
     }
 }
 
-type ControllerMapping = HashMap<Input, Action>;
-type ControllerMappings = HashMap<&'static str, ControllerMapping>;
+pub type ControllerMapping = HashMap<Input, Action>;
+pub type ControllerMappings = HashMap<&'static str, ControllerMapping>;
 
 #[derive(Hash, PartialEq, Eq, Clone, Copy, Debug)]
-enum Input {
+pub enum Input {
     Button(GamepadButtonType),
     Axis(GamepadAxisType),
 }
 
 #[derive(Clone, Copy, Debug)]
-enum Action {
+pub enum Action {
     Arm,
     Disarm,
 

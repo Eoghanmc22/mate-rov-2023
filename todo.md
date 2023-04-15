@@ -1,61 +1,53 @@
 # Mate TODO List
 
-- [ ] Motors
-  - [ ] Test
-  - [-] Servos
-  - [x] Arming
 - [ ] Sensors
-  - [ ] Way to disable validating writes?
   - [-] Sensor fusion
-    - [ ] Try using a Kalman filter
-    - [ ] Way to switch implementation at runtime
+    - [H] Use a Kalman filter
     - [ ] Use last sensor data as stating position
-  - [-] Leak
+    - [ ] Coordinate system?
   - [-] Magnetometers
     - [ ] Other compass as well
-    - [ ] Calibration
-  - [ ] Barometer
-  - [ ] ADCs
-  - [x] Don't store raw frames in global store
-  - [ ] Make sure sensors power down, etc on drop
-  - [ ] Make sure sensors do a reset on init
-  - [ ] Check data ready flags in read frame code
+    - [H] Calibration
+  - [-] Make sure sensors power down, etc on drop
+  - [-] Make sure sensors do a reset on init
+  - [?] Check data ready flags in read frame code
 - [ ] Control
   - [ ] OpenCV control
-  - [ ] Autonomous control
+  - [H] Autonomous control
     - [ ] Pid stuff
-  - [-] New gamepad setup
   - [ ] Speeds larger than 1
+  - [ ] Remap inputs to square joystick
 - [ ] Debugging
-  - [ ] Better logging
-  - [ ] Better & more error notifs in ui
-  - [ ] Tests
+  - [?] Better logging
+  - [?] Better & more error notifs in ui
+  - [?] Tests
   - [ ] Make important settings editable in real time
 - [ ] UI
+  - [H] Display gamepad state
   - [ ] Errors in uis should be handled better
   - [ ] Reduce usage of clone
   - [ ] Better video view
-  - [ ] Fix orientation ui
+  - [H] Fix orientation ui
   - [ ] Improve notifications
     - [ ] Animations
     - [ ] Color
     - [ ] Timer
   - [ ] Visualize our data
   - [ ] Use the LEDs on the navigator better
-  - [ ] Make a README.md
+  - [M] Make a README.md
   - [ ] Window to view and edit global store
     - [ ] Max motor speed, 
 - [ ] Misc
+  - [H] Focus loss breaks things
+  - [H] Decrease gyro sensitivity
+  - [H] Fix nic sleep on laptop
+  - [H] Use i2c fast mode for motor control
+  - [ ] `Updater` could be replaced with a method on `Robot` or a function of `World`
   - [ ] See if more things should in fixed update schedule
   - [ ] Remove any debugging prints
-  - [ ] Investigate high cpu usage on pi
-  - [ ] Rename Ready to Disarmed and Armed to Ready
-  - [x] Implement remove for global store
-    - [x] Store timestamps is a separate map, this removes the need for 2 adapters and encodes knowledge of when an element was removed.
+  - [M] Investigate high cpu usage on pi
   - [ ] Some calls to log_error should be replaced with proper handling and or the opposite
   - [ ] Surface network system has too much responsibility
-  - [-] Clear foreign store on disconnect
-  - [-] Graceful shutdown
   - [ ] Image pi
   - [ ] Systemd service
   - [ ] Surface prints errors on shutdown
