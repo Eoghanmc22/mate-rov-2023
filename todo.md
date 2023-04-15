@@ -38,9 +38,7 @@
     - [ ] Max motor speed, 
 - [ ] Misc
   - [H] Focus loss breaks things
-  - [H] Decrease gyro sensitivity
   - [H] Fix nic sleep on laptop
-  - [H] Use i2c fast mode for motor control
   - [ ] `Updater` could be replaced with a method on `Robot` or a function of `World`
   - [ ] See if more things should in fixed update schedule
   - [ ] Remove any debugging prints

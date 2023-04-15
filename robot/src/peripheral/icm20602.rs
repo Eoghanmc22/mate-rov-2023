@@ -44,9 +44,9 @@ impl Icm20602 {
 
         let tempature = raw_tempature as i16 as f64 / 326.8 + 25.0;
 
-        let gyro_native_x = raw_gyro_native_x as i16 as f64 / 131.0;
-        let gyro_native_y = raw_gyro_native_y as i16 as f64 / 131.0;
-        let gyro_native_z = raw_gyro_native_z as i16 as f64 / 131.0;
+        let gyro_native_x = raw_gyro_native_x as i16 as f64 / 65.5;
+        let gyro_native_y = raw_gyro_native_y as i16 as f64 / 65.5;
+        let gyro_native_z = raw_gyro_native_z as i16 as f64 / 65.5;
 
         let accel_x = -accel_native_y;
         let accel_y = -accel_native_x;
@@ -98,9 +98,9 @@ impl Icm20602 {
             .write(&[Self::REG_CONFIG, 0x1])
             .context("Setup lowpass filter")?;
 
-        // 250 deg range, lowpass filter
+        // 500 deg range, lowpass filter
         self.spi
-            .write(&[Self::REG_GYRO_CONFIG, 0x0])
+            .write(&[Self::REG_GYRO_CONFIG, 0x0 | 0b01 << 3])
             .context("Setup gyro")?;
 
         // 2g range
