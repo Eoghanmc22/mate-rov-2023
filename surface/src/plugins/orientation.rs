@@ -1,5 +1,6 @@
 use bevy::prelude::{App, Plugin};
 
+use bevy::scene::SceneInstance;
 use bevy::{
     prelude::*,
     render::{
@@ -21,6 +22,7 @@ pub struct OrientationPlugin;
 impl Plugin for OrientationPlugin {
     fn build(&self, app: &mut App) {
         app.add_startup_system(setup);
+        app.add_system(add_scene_to_render_layer);
         app.add_system(rotator_system);
     }
 }
@@ -28,15 +30,19 @@ impl Plugin for OrientationPlugin {
 #[derive(Resource, Debug, Clone)]
 pub struct OrientationDisplay(pub Handle<Image>, pub TextureId);
 
-// Marks the main pass cube, to which the texture is applied.
 #[derive(Component)]
-struct Navigator;
+struct NavigatorMarker;
+
+#[derive(Component)]
+struct RenderLayerAdded;
 
 // Modified from render_to_texture example
 fn setup(
     mut commands: Commands,
     asset_server: Res<AssetServer>,
     mut images: ResMut<Assets<Image>>,
+    mut materials: ResMut<Assets<StandardMaterial>>,
+    mut meshes: ResMut<Assets<Mesh>>,
     mut egui_context: EguiContexts,
 ) {
     let size = Extent3d {
@@ -77,41 +83,64 @@ fn setup(
             transform: Transform::from_scale(Vec3::splat(10.0)),
             ..default()
         },
-        Navigator,
+        NavigatorMarker,
+        first_pass_layer,
+    ));
+
+    commands.spawn((
+        PbrBundle {
+            mesh: meshes.add(shape::Box::new(1.0, 0.1, 0.1).into()),
+            material: materials.add(Color::rgb(1.0, 0.0, 0.0).into()),
+            transform: Transform::from_xyz(0.5, 0.0, 0.0),
+            ..default()
+        },
+        first_pass_layer,
+    ));
+    commands.spawn((
+        PbrBundle {
+            mesh: meshes.add(shape::Box::new(0.1, 1.0, 0.1).into()),
+            material: materials.add(Color::rgb(0.0, 1.0, 0.0).into()),
+            transform: Transform::from_xyz(0.0, 0.5, 0.0),
+            ..default()
+        },
+        first_pass_layer,
+    ));
+    commands.spawn((
+        PbrBundle {
+            mesh: meshes.add(shape::Box::new(0.1, 0.1, 1.0).into()),
+            material: materials.add(Color::rgb(0.0, 0.0, 1.0).into()),
+            transform: Transform::from_xyz(0.0, 0.0, 0.5),
+            ..default()
+        },
         first_pass_layer,
     ));
 
     // light
-    commands.spawn(PointLightBundle {
-        point_light: PointLight {
-            intensity: 1500.0,
-            shadows_enabled: true,
+    commands.spawn((
+        PointLightBundle {
+            point_light: PointLight {
+                intensity: 4000.0,
+                shadows_enabled: true,
+                ..default()
+            },
+            transform: Transform::from_xyz(4.0, 4.0, 8.0),
             ..default()
         },
-        transform: Transform::from_xyz(4.0, 8.0, 4.0),
-        ..default()
-    });
+        first_pass_layer,
+    ));
 
     // camera
-    commands.spawn(Camera3dBundle {
-        transform: Transform::from_xyz(1.0, 1.0, 1.0).looking_at(Vec3::ZERO, Vec3::Z),
-        camera: Camera {
-            // render before the "main pass" camera
-            order: -1,
-            target: RenderTarget::Image(image_handle.clone()),
-            ..default()
-        },
-        ..default()
-    });
-
-    // The cube that will be rendered to the texture.
     commands.spawn((
-        SceneBundle {
-            scene: asset_server.load("NAVIGATOR-STACK.glb"),
-            transform: Transform::from_translation(Vec3::new(0.0, 0.0, 1.0)),
+        Camera3dBundle {
+            transform: Transform::from_xyz(2.0, -2.0, 2.0).looking_at(Vec3::ZERO, Vec3::Z),
+            camera: Camera {
+                // render before the "main pass" camera
+                order: -1,
+                target: RenderTarget::Image(image_handle.clone()),
+                ..default()
+            },
             ..default()
         },
-        Navigator,
         first_pass_layer,
     ));
 
@@ -119,7 +148,31 @@ fn setup(
     commands.insert_resource(OrientationDisplay(image_handle, texture));
 }
 
-fn rotator_system(robot: Res<Robot>, mut query: Query<&mut Transform, With<Navigator>>) {
+fn add_scene_to_render_layer(
+    mut commands: Commands,
+    scenes: Res<SceneSpawner>,
+    query: Query<(Entity, &SceneInstance), (With<SceneInstance>, Without<RenderLayerAdded>)>,
+) {
+    for (entity, instance) in query.iter() {
+        info!("Exec");
+
+        if scenes.instance_is_ready(**instance) {
+            info!("Ready");
+
+            let first_pass_layer = RenderLayers::layer(1);
+
+            for entity in scenes.iter_instance_entities(**instance) {
+                commands.entity(entity).insert(first_pass_layer);
+            }
+
+            commands.entity(entity).insert(RenderLayerAdded);
+        } else {
+            info!("Not Ready")
+        }
+    }
+}
+
+fn rotator_system(robot: Res<Robot>, mut query: Query<&mut Transform, With<NavigatorMarker>>) {
     let orientation = robot.store().get(&tokens::ORIENTATION);
 
     if let Some(orientation) = orientation {
