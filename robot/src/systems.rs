@@ -1,7 +1,3 @@
-// TODO mag
-// TODO depth
-// TODO fusion
-// TODO ai
 pub mod cameras;
 pub mod depth;
 pub mod error;
@@ -9,6 +5,7 @@ pub mod hw_stat;
 pub mod indicators;
 pub mod inertial;
 pub mod leak;
+pub mod leveling;
 pub mod logging;
 pub mod motor;
 pub mod networking;
