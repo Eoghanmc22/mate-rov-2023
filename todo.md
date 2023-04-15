@@ -23,7 +23,6 @@
   - [?] Tests
   - [ ] Make important settings editable in real time
 - [ ] UI
-  - [H] Display gamepad state
   - [ ] Errors in uis should be handled better
   - [ ] Reduce usage of clone
   - [ ] Better video view

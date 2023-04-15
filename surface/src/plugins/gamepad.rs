@@ -139,6 +139,10 @@ impl InputState {
                     }
 
                     self.hold_axis = !self.hold_axis;
+
+                    if !self.hold_axis {
+                        self.movement = Default::default();
+                    }
                 }
                 Action::RotateServo => {
                     self.servo_position_normal = value;
