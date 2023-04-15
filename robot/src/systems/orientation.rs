@@ -104,7 +104,8 @@ impl System for OrientationSystem {
                                     Vector3::new(imu.accel_x.0, imu.accel_y.0, imu.accel_z.0);
                                 let mag = Vector3::new(mag.mag_x.0, mag.mag_y.0, mag.mag_y.0);
 
-                                let rst = madgwick_filter.update(&gyro, &accel, &mag);
+                                let rst = madgwick_filter.update_imu(&gyro, &accel);
+                                // let rst = madgwick_filter.update(&gyro, &accel, &mag);
 
                                 match rst {
                                     Ok(quat) => orientation = Orientation(*quat),
