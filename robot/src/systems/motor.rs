@@ -174,7 +174,8 @@ impl System for MotorSystem {
                     tokens::ARMED.0,
                     tokens::MOVEMENT_JOYSTICK.0,
                     tokens::MOVEMENT_OPENCV.0,
-                    tokens::MOVEMENT_AI.0,
+                    tokens::MOVEMENT_DEPTH.0,
+                    tokens::MOVEMENT_LEVELING.0,
                 ]
                 .into_iter()
                 .collect();
@@ -207,8 +208,13 @@ impl System for MotorSystem {
                                         {
                                             movement += *opencv;
                                         }
+                                        if let Some(leveling) = store
+                                            .get_alive(&tokens::MOVEMENT_LEVELING, MAX_UPDATE_AGE)
+                                        {
+                                            movement += *leveling;
+                                        }
                                         if let Some(depth) =
-                                            store.get_alive(&tokens::MOVEMENT_AI, MAX_UPDATE_AGE)
+                                            store.get_alive(&tokens::MOVEMENT_DEPTH, MAX_UPDATE_AGE)
                                         {
                                             movement += *depth;
                                         }

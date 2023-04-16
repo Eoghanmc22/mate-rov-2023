@@ -13,8 +13,9 @@
   - [?] Check data ready flags in read frame code
 - [ ] Control
   - [ ] OpenCV control
-  - [H] Autonomous control
+  - [H] Leveling control
     - [ ] Pid stuff
+  - [ ] Depth control
   - [ ] Speeds larger than 1
   - [ ] Remap inputs to square joystick
 - [ ] Debugging
@@ -23,6 +24,8 @@
   - [?] Tests
   - [ ] Make important settings editable in real time
 - [ ] UI
+  - [ ] Leveling ui
+    - [ ] pid editing
   - [ ] Errors in uis should be handled better
   - [ ] Reduce usage of clone
   - [ ] Better video view

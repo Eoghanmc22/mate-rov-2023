@@ -1053,7 +1053,7 @@ dependencies = [
  "bincode",
  "bitflags",
  "fxhash",
- "nalgebra",
+ "mint",
  "networking",
  "serde",
  "tracing",
@@ -1520,6 +1520,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "8e4afd9ad95555081e109fe1d21f2a30c691b5f0919c67dfa690a2e1eb6bd51c"
 dependencies = [
  "bytemuck",
+ "mint",
  "serde",
 ]
 
@@ -1965,6 +1966,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "mint"
+version = "0.5.9"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "e53debba6bda7a793e5f99b8dacf19e626084f525f7829104ba9898f367d85ff"
+dependencies = [
+ "serde",
+]
+
+[[package]]
 name = "mio"
 version = "0.8.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2006,11 +2016,11 @@ checksum = "20bd243ab3dbb395b39ee730402d2e5405e448c75133ec49cc977762c4cba3d1"
 dependencies = [
  "approx",
  "matrixmultiply",
+ "mint",
  "nalgebra-macros",
  "num-complex",
  "num-rational",
  "num-traits",
- "serde",
  "simba",
  "typenum",
 ]
@@ -2165,7 +2175,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "02e0d21255c828d6f128a1e41534206671e8c3ea0c62f32291e808dc82cff17d"
 dependencies = [
  "num-traits",
- "serde",
 ]
 
 [[package]]
@@ -2583,6 +2592,8 @@ dependencies = [
  "crossbeam",
  "ctrlc",
  "fxhash",
+ "glam",
+ "mint",
  "nalgebra",
  "networking",
  "paste",
@@ -2836,7 +2847,7 @@ dependencies = [
  "egui",
  "egui_extras",
  "fxhash",
- "nalgebra",
+ "glam",
  "networking",
  "opencv",
  "rand",

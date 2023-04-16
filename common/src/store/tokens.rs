@@ -4,8 +4,8 @@ use crate::{
     store::adapters::{Adapter, BackingType, TypeAdapter},
     store::{Key, Token},
     types::{
-        Armed, Camera, DepthFrame, InertialFrame, MagFrame, Meters, MotorFrame, MotorId, Movement,
-        Orientation, RobotStatus, SystemInfo,
+        Armed, Camera, DepthFrame, InertialFrame, LevelingCorrection, LevelingMode, MagFrame,
+        Meters, MotorFrame, MotorId, Movement, Orientation, PidConfig, RobotStatus, SystemInfo,
     },
 };
 use fxhash::FxHashMap as HashMap;
@@ -30,11 +30,20 @@ pub const ARMED: Token<Armed> = Token::new_const("robot.motors.armed");
 pub const MOTOR_SPEED: Token<HashMap<MotorId, MotorFrame>> = Token::new_const("robot.motors.speed");
 
 #[rustfmt::skip]
+pub const LEVELING_MODE: Token<LevelingMode> = Token::new_const("robot.leveling.mode");
+#[rustfmt::skip]
+pub const LEVELING_PID: Token<PidConfig> = Token::new_const("robot.leveling.pid");
+#[rustfmt::skip]
+pub const LEVELING_CORRECTION: Token<LevelingCorrection> = Token::new_const("robot.leveling.correction");
+
+#[rustfmt::skip]
 pub const MOVEMENT_JOYSTICK: Token<Movement> = Token::new_const("robot.movement.joystick");
 #[rustfmt::skip]
 pub const MOVEMENT_OPENCV: Token<Movement> = Token::new_const("robot.movement.opencv");
 #[rustfmt::skip]
-pub const MOVEMENT_AI: Token<Movement> = Token::new_const("robot.movement.ai");
+pub const MOVEMENT_LEVELING: Token<Movement> = Token::new_const("robot.movement.leveling");
+#[rustfmt::skip]
+pub const MOVEMENT_DEPTH: Token<Movement> = Token::new_const("robot.movement.depth");
 #[rustfmt::skip]
 pub const DEPTH_TARGET: Token<Meters> = Token::new_const("robot.movement.ai.depth.target");
 #[rustfmt::skip]
@@ -66,9 +75,13 @@ pub fn generate_adaptors() -> HashMap<Key, Box<dyn TypeAdapter<BackingType> + Se
         from(CAMERAS),
         from(ARMED),
         from(MOTOR_SPEED),
+        from(LEVELING_MODE),
+        from(LEVELING_PID),
+        from(LEVELING_CORRECTION),
         from(MOVEMENT_JOYSTICK),
         from(MOVEMENT_OPENCV),
-        from(MOVEMENT_AI),
+        from(MOVEMENT_LEVELING),
+        from(MOVEMENT_DEPTH),
         from(DEPTH_TARGET),
         from(MOVEMENT_CALCULATED),
         from(RAW_DEPTH),

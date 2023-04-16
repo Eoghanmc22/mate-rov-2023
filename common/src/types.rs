@@ -1,14 +1,20 @@
 //! Definitions of important types used throughout the project
 
-use nalgebra::UnitQuaternion;
+use mint::Quaternion;
 use serde::{Deserialize, Serialize};
 use std::fmt::{Display, Formatter};
 use std::net::SocketAddr;
 use std::ops::{Add, AddAssign, Neg, Sub};
 use std::time::Duration;
 
-#[derive(Debug, Copy, Clone, Default, Serialize, Deserialize, PartialEq)]
-pub struct Orientation(pub UnitQuaternion<f64>);
+#[derive(Debug, Copy, Clone, Serialize, Deserialize, PartialEq)]
+pub struct Orientation(pub Quaternion<f32>);
+
+impl Default for Orientation {
+    fn default() -> Self {
+        Self(Quaternion::from([0.0, 0.0, 0.0, 1.0]))
+    }
+}
 
 /// +X: Right, +Y: Forwards, +Z: Up
 /// +XR: Pitch Up, +YR: Roll Clockwise, +ZR: Yaw Clockwise (top view)
@@ -427,4 +433,63 @@ pub enum RobotStatus {
     Ready,
     // The robot is moving, includes speed
     Moving(Percent),
+}
+
+#[derive(Default, Clone, Copy)]
+pub struct PidController {
+    last_error: Option<f32>,
+    integral: f32,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
+pub struct PidConfig {
+    pub k_p: f32,
+    pub k_i: f32,
+    pub k_d: f32,
+
+    pub max_integral: f32,
+
+    pub clamp_p: f32,
+    pub clamp_i: f32,
+    pub clamp_d: f32,
+
+    pub clamp_total: f32,
+}
+
+impl PidController {
+    pub fn update(&mut self, error: f32, config: PidConfig) -> f32 {
+        let p = error;
+
+        self.integral = clamp(self.integral + error, config.max_integral);
+        let i = self.integral;
+
+        let d = if let Some(last_error) = self.last_error {
+            error - last_error
+        } else {
+            0.0
+        };
+        self.last_error = Some(error);
+
+        let p = clamp(p * config.k_p, config.clamp_p);
+        let i = clamp(i * config.k_i, config.clamp_i);
+        let d = clamp(d * config.k_d, config.clamp_d);
+
+        clamp(p + i + d, config.clamp_total)
+    }
+}
+
+fn clamp(val: f32, range: f32) -> f32 {
+    val.clamp(-range, range)
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
+pub enum LevelingMode {
+    Enabled(f32, f32),
+    Disabled,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
+pub struct LevelingCorrection {
+    pub pitch: f32,
+    pub roll: f32,
 }

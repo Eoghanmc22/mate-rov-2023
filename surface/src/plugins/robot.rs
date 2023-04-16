@@ -142,12 +142,16 @@ fn updates_to_packets(
                             key.into(),
                             Some(data),
                         )));
+                    } else {
+                        error!("Could not encode {}", key.as_str());
                     }
                 }
                 None => {
                     net.send(NetworkEvent::SendPacket(Protocol::Store(key.into(), None)));
                 }
             }
+        } else {
+            error!("No adapter found for {}", key.as_str());
         }
     }
 }

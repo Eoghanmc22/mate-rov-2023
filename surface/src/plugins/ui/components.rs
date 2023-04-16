@@ -21,6 +21,8 @@ use egui::{vec2, Align, Layout};
 use egui::{Color32, Frame};
 use egui_extras::{Column, TableBuilder};
 use fxhash::FxHashMap as HashMap;
+use glam::EulerRot;
+use glam::Quat;
 use std::net::ToSocketAddrs;
 use tracing::error;
 
@@ -522,10 +524,11 @@ impl UiComponent for OrientationUi {
     fn draw(&mut self, _ctx: &egui::Context, ui: &mut egui::Ui, _commands: &mut Commands) {
         ui.collapsing("Orientation", |ui| {
             if let Some(ref orientation) = self.0 {
-                let (roll, pitch, yaw) = orientation.0.euler_angles();
-                ui.label(format!("Roll: {:.3}", roll.to_degrees()));
-                ui.label(format!("Pitch: {:.3}", pitch.to_degrees()));
+                let orientation = Quat::from(orientation.0);
+                let (yaw, pitch, roll) = orientation.to_euler(EulerRot::ZXY);
                 ui.label(format!("Yaw: {:.3}", yaw.to_degrees()));
+                ui.label(format!("Pitch: {:.3}", pitch.to_degrees()));
+                ui.label(format!("Roll: {:.3}", roll.to_degrees()));
 
                 // TODO visual
             } else {
@@ -540,7 +543,8 @@ pub struct MovementUi {
     calculated: Option<Arc<Movement>>,
     joystick: Option<Arc<Movement>>,
     opencv: Option<Arc<Movement>>,
-    ai: Option<Arc<Movement>>,
+    leveling: Option<Arc<Movement>>,
+    depth: Option<Arc<Movement>>,
 }
 
 impl UiComponent for MovementUi {
@@ -551,7 +555,8 @@ impl UiComponent for MovementUi {
         self.calculated = robot.store().get(&tokens::MOVEMENT_CALCULATED);
         self.joystick = robot.store().get(&tokens::MOVEMENT_JOYSTICK);
         self.opencv = robot.store().get(&tokens::MOVEMENT_OPENCV);
-        self.ai = robot.store().get(&tokens::MOVEMENT_AI);
+        self.leveling = robot.store().get(&tokens::MOVEMENT_LEVELING);
+        self.depth = robot.store().get(&tokens::MOVEMENT_DEPTH);
     }
 
     fn draw(&mut self, _ctx: &egui::Context, ui: &mut egui::Ui, _commands: &mut Commands) {
@@ -571,7 +576,12 @@ impl UiComponent for MovementUi {
                     ui.add(MovementWidget(movement));
                 });
             }
-            if let Some(ref movement) = self.ai {
+            if let Some(ref movement) = self.leveling {
+                ui.collapsing("Leveling Correction", |ui| {
+                    ui.add(MovementWidget(movement));
+                });
+            }
+            if let Some(ref movement) = self.depth {
                 ui.collapsing("Depth Correction", |ui| {
                     ui.add(MovementWidget(movement));
                 });

@@ -9,7 +9,7 @@ use bevy::{
 };
 use common::{
     store::tokens,
-    types::{MotorId, Movement, Percent},
+    types::{LevelingMode, MotorId, Movement, Percent},
 };
 
 use super::robot::{Robot, Updater};
@@ -206,6 +206,25 @@ impl InputState {
 
                     self.movement.z = Percent::new((value * self.gain) as f64);
                 }
+                Action::ToggleLeveling => {
+                    if value == 0.0 {
+                        return;
+                    }
+
+                    commands.add(|world: &mut World| {
+                        if let Some(robot) = world.get_resource::<Robot>() {
+                            let old_mode = robot.store().get(&tokens::LEVELING_MODE).map(|it| *it);
+                            let new_mode = match old_mode {
+                                Some(LevelingMode::Enabled(_, _)) => LevelingMode::Disabled,
+                                _ => LevelingMode::Enabled(0.0, 0.0),
+                            };
+                            Updater::from_world(world)
+                                .emit_update(&tokens::LEVELING_MODE, new_mode);
+                        } else {
+                            error!("No robot resource");
+                        }
+                    })
+                }
             }
         }
     }
@@ -346,6 +365,7 @@ fn create_mapping() -> ControllerMappings {
         (Input::Button(GamepadButtonType::DPadLeft), Action::SelectServoDecrement),
         (Input::Button(GamepadButtonType::Mode), Action::SetControlMapping("pitch and roll")),
         // (Input::Button(GamepadButtonType::South), Action::SetControlMapping("trim")),
+        (Input::Button(GamepadButtonType::East), Action::ToggleLeveling),
         (Input::Button(GamepadButtonType::LeftTrigger2), Action::RotateServoInverted),
         (Input::Button(GamepadButtonType::RightTrigger2), Action::RotateServo),
         (Input::Axis(GamepadAxisType::LeftStickX), Action::Lateral),
@@ -418,6 +438,7 @@ pub enum Action {
     DecreaseGain,
     ResetGain,
 
+    ToggleLeveling,
     TrimPitch,
     TrimPitchInverted,
     TrimRoll,

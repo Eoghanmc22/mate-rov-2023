@@ -154,11 +154,7 @@ fn add_scene_to_render_layer(
     query: Query<(Entity, &SceneInstance), (With<SceneInstance>, Without<RenderLayerAdded>)>,
 ) {
     for (entity, instance) in query.iter() {
-        info!("Exec");
-
         if scenes.instance_is_ready(**instance) {
-            info!("Ready");
-
             let first_pass_layer = RenderLayers::layer(1);
 
             for entity in scenes.iter_instance_entities(**instance) {
@@ -166,8 +162,6 @@ fn add_scene_to_render_layer(
             }
 
             commands.entity(entity).insert(RenderLayerAdded);
-        } else {
-            info!("Not Ready")
         }
     }
 }
@@ -176,15 +170,8 @@ fn rotator_system(robot: Res<Robot>, mut query: Query<&mut Transform, With<Navig
     let orientation = robot.store().get(&tokens::ORIENTATION);
 
     if let Some(orientation) = orientation {
-        let quat = Quat::from_xyzw(
-            orientation.0.i as f32,
-            orientation.0.j as f32,
-            orientation.0.k as f32,
-            orientation.0.w as f32,
-        );
-
         for mut transform in &mut query {
-            transform.rotation = quat;
+            transform.rotation = orientation.0.into();
         }
     }
 }

@@ -6,15 +6,27 @@ use std::{
 
 use common::{
     error::LogErrorExt,
-    store::{self, tokens, Store, Update},
-    types::Orientation,
+    store::{tokens, Store},
+    types::{LevelingCorrection, LevelingMode, Movement, Percent, PidConfig, PidController},
 };
 use crossbeam::channel::bounded;
-use tracing::{span, warn, Level};
+use glam::{EulerRot, Quat};
+use tracing::{info, span, warn, Level};
 
 use crate::{event::Event, events::EventHandle, systems::stop};
 
 use super::System;
+
+const PID_CONFIG: PidConfig = PidConfig {
+    k_p: 0.05,
+    k_i: 0.0,
+    k_d: 0.0,
+    max_integral: 2.0,
+    clamp_p: 0.3,
+    clamp_i: 0.3,
+    clamp_d: 0.3,
+    clamp_total: 0.2,
+};
 
 pub struct LevelingSystem;
 
@@ -25,7 +37,7 @@ impl System for LevelingSystem {
     ) -> anyhow::Result<()> {
         let listner = events.take_listner().unwrap();
 
-        let (tx, rx) = bounded(10);
+        let (tx, rx) = bounded(30);
 
         {
             let tx = tx.clone();
@@ -36,7 +48,7 @@ impl System for LevelingSystem {
                     match &*event {
                         Event::Store(_) | Event::SyncStore | Event::ResetForignStore => {
                             tx.try_send(LevelingEvent::Event(event))
-                                .log_error("Send Exit");
+                                .log_error("Send Event");
                         }
                         Event::Exit => {
                             tx.try_send(LevelingEvent::Exit).log_error("Send Exit");
@@ -101,7 +113,57 @@ impl System for LevelingSystem {
                             _ => unreachable!(),
                         },
                         LevelingEvent::Tick => {
-                            todo!()
+                            if let Some((mode, orientation)) = Option::zip(
+                                store.get(&tokens::LEVELING_MODE),
+                                store.get(&tokens::ORIENTATION),
+                            ) {
+                                let orientation = Quat::from(orientation.0);
+
+                                if let LevelingMode::Enabled(pitch_target, roll_target) = *mode {
+                                    let (pitch_target, roll_target) =
+                                        (pitch_target.to_radians(), roll_target.to_radians());
+                                    let (_, pitch_observed, roll_observed) =
+                                        orientation.to_euler(EulerRot::ZXY);
+
+                                    let (pitch_error, roll_error) = (
+                                        pitch_target - pitch_observed,
+                                        roll_target - roll_observed,
+                                    );
+
+                                    let config = store
+                                        .get(&tokens::LEVELING_PID)
+                                        .map(|it| *it)
+                                        .unwrap_or(PID_CONFIG);
+                                    let pitch_correction =
+                                        pitch_controller.update(pitch_error, config);
+                                    let roll_correction =
+                                        roll_controller.update(roll_error, config);
+
+                                    store.insert(
+                                        &tokens::LEVELING_CORRECTION,
+                                        LevelingCorrection {
+                                            pitch: pitch_correction,
+                                            roll: roll_correction,
+                                        },
+                                    );
+                                    store.insert(
+                                        &tokens::MOVEMENT_LEVELING,
+                                        Movement {
+                                            x_rot: Percent::new(pitch_correction as f64),
+                                            y_rot: Percent::new(roll_correction as f64),
+                                            ..Movement::default()
+                                        },
+                                    );
+                                } else {
+                                    pitch_controller = Default::default();
+                                    roll_controller = Default::default();
+                                    store.remove(&tokens::MOVEMENT_LEVELING);
+                                }
+                            } else {
+                                pitch_controller = Default::default();
+                                roll_controller = Default::default();
+                                store.remove(&tokens::MOVEMENT_LEVELING);
+                            }
                         }
                         LevelingEvent::Exit => {
                             return;
@@ -119,66 +181,4 @@ enum LevelingEvent {
     Event(Arc<Event>),
     Tick,
     Exit,
-}
-
-#[derive(Default, Clone, Copy)]
-struct PidController {
-    last_error: Option<f32>,
-    integral: f32,
-}
-
-#[derive(Clone, Copy)]
-struct PidConfig {
-    k_p: f32,
-    k_i: f32,
-    k_d: f32,
-
-    max_integral: f32,
-
-    clamp_p: f32,
-    clamp_i: f32,
-    clamp_d: f32,
-
-    clamp_total: f32,
-}
-
-impl PidController {
-    pub fn update(&mut self, error: f32, config: PidConfig) -> f32 {
-        let p = error;
-
-        self.integral = clamp(self.integral + error, config.max_integral);
-        let i = self.integral;
-
-        let d = if let Some(last_error) = self.last_error {
-            error - last_error
-        } else {
-            0.0
-        };
-        self.last_error = Some(error);
-
-        let p = clamp(p * config.k_p, config.clamp_p);
-        let i = clamp(i * config.k_i, config.clamp_i);
-        let d = clamp(d * config.k_d, config.clamp_d);
-
-        clamp(p + i + d, config.clamp_total)
-    }
-}
-
-impl Default for PidConfig {
-    fn default() -> Self {
-        Self {
-            k_p: 0.05,
-            k_i: 0.0,
-            k_d: 0.0,
-            max_integral: 2.0,
-            clamp_p: 0.3,
-            clamp_i: 0.3,
-            clamp_d: 0.3,
-            clamp_total: 0.2,
-        }
-    }
-}
-
-fn clamp(val: f32, range: f32) -> f32 {
-    val.clamp(-range, range)
 }

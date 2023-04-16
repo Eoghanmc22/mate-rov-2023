@@ -108,7 +108,7 @@ impl System for OrientationSystem {
                                 // let rst = madgwick_filter.update(&gyro, &accel, &mag);
 
                                 match rst {
-                                    Ok(quat) => orientation = Orientation(*quat),
+                                    Ok(quat) => orientation = Orientation(quat.cast().into()),
                                     err => err.log_error("Update orientation"),
                                 }
                             }
