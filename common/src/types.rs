@@ -448,16 +448,23 @@ pub struct PidConfig {
     pub k_d: f32,
 
     pub max_integral: f32,
+}
 
-    pub clamp_p: f32,
-    pub clamp_i: f32,
-    pub clamp_d: f32,
+#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
+pub struct PidResult {
+    pub p: f32,
+    pub i: f32,
+    pub d: f32,
+}
 
-    pub clamp_total: f32,
+impl PidResult {
+    pub const fn corection(&self) -> f32 {
+        self.p + self.i + self.d
+    }
 }
 
 impl PidController {
-    pub fn update(&mut self, error: f32, config: PidConfig) -> f32 {
+    pub fn update(&mut self, error: f32, config: PidConfig) -> PidResult {
         let p = error;
 
         self.integral = clamp(self.integral + error, config.max_integral);
@@ -470,11 +477,7 @@ impl PidController {
         };
         self.last_error = Some(error);
 
-        let p = clamp(p * config.k_p, config.clamp_p);
-        let i = clamp(i * config.k_i, config.clamp_i);
-        let d = clamp(d * config.k_d, config.clamp_d);
-
-        clamp(p + i + d, config.clamp_total)
+        PidResult { p, i, d }
     }
 }
 

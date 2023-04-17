@@ -11,7 +11,7 @@ use common::{
 };
 use crossbeam::channel::bounded;
 use glam::{EulerRot, Quat};
-use tracing::{info, span, warn, Level};
+use tracing::{span, warn, Level};
 
 use crate::{event::Event, events::EventHandle, systems::stop};
 
@@ -22,10 +22,6 @@ const PID_CONFIG: PidConfig = PidConfig {
     k_i: 0.0,
     k_d: 0.0,
     max_integral: 2.0,
-    clamp_p: 0.3,
-    clamp_i: 0.3,
-    clamp_d: 0.3,
-    clamp_total: 0.2,
 };
 
 pub struct LevelingSystem;
@@ -134,23 +130,33 @@ impl System for LevelingSystem {
                                         .get(&tokens::LEVELING_PID)
                                         .map(|it| *it)
                                         .unwrap_or(PID_CONFIG);
-                                    let pitch_correction =
+                                    let pitch_pid_result =
                                         pitch_controller.update(pitch_error, config);
-                                    let roll_correction =
+                                    let roll_pid_result =
                                         roll_controller.update(roll_error, config);
 
+                                    let max_correction = 0.15;
+                                    let pitch_corection = pitch_pid_result
+                                        .corection()
+                                        .clamp(-max_correction, max_correction);
+                                    let roll_corection = roll_pid_result
+                                        .corection()
+                                        .clamp(-max_correction, max_correction);
+
+                                    store.insert(&tokens::LEVELING_PITCH_RESULT, pitch_pid_result);
+                                    store.insert(&tokens::LEVELING_ROLL_RESULT, roll_pid_result);
                                     store.insert(
                                         &tokens::LEVELING_CORRECTION,
                                         LevelingCorrection {
-                                            pitch: pitch_correction,
-                                            roll: roll_correction,
+                                            pitch: pitch_pid_result.corection(),
+                                            roll: roll_pid_result.corection(),
                                         },
                                     );
                                     store.insert(
                                         &tokens::MOVEMENT_LEVELING,
                                         Movement {
-                                            x_rot: Percent::new(pitch_correction as f64),
-                                            y_rot: Percent::new(roll_correction as f64),
+                                            x_rot: Percent::new(pitch_corection as f64),
+                                            y_rot: Percent::new(roll_corection as f64),
                                             ..Movement::default()
                                         },
                                     );

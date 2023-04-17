@@ -1,5 +1,6 @@
 # Queue
 
+- Fix pid
 - Leveling ui
 - Profile robot code
 - Make things customizable at run time
@@ -17,6 +18,10 @@
   - [-] Make sure sensors do a reset on init
 - [ ] Control
   - [x] Pid stuff
+    - [ ] Only integral should be clamped, total can be clamped else where
+    - [ ] setpoint - measure
+    - [ ] div derivative by period
+    - [ ] mul integral by period
   - [H] Leveling control
     - [ ] Tuning
   - [M] Depth control
@@ -29,6 +34,7 @@
   - [ ] Leveling ui
     - [ ] pid editing
     - [ ] Display automous modes in bottom status ui?
+    - [ ] Pitch/roll graph to help tune pid
   - [ ] Window to view and edit global store
     - [ ] Max motor speed, 
 - [ ] Misc

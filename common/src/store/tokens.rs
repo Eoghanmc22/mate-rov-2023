@@ -5,7 +5,8 @@ use crate::{
     store::{Key, Token},
     types::{
         Armed, Camera, DepthFrame, InertialFrame, LevelingCorrection, LevelingMode, MagFrame,
-        Meters, MotorFrame, MotorId, Movement, Orientation, PidConfig, RobotStatus, SystemInfo,
+        Meters, MotorFrame, MotorId, Movement, Orientation, PidConfig, PidResult, RobotStatus,
+        SystemInfo,
     },
 };
 use fxhash::FxHashMap as HashMap;
@@ -33,6 +34,10 @@ pub const MOTOR_SPEED: Token<HashMap<MotorId, MotorFrame>> = Token::new_const("r
 pub const LEVELING_MODE: Token<LevelingMode> = Token::new_const("robot.leveling.mode");
 #[rustfmt::skip]
 pub const LEVELING_PID: Token<PidConfig> = Token::new_const("robot.leveling.pid");
+#[rustfmt::skip]
+pub const LEVELING_PITCH_RESULT: Token<PidResult> = Token::new_const("robot.leveling.pitch");
+#[rustfmt::skip]
+pub const LEVELING_ROLL_RESULT: Token<PidResult> = Token::new_const("robot.leveling.roll");
 #[rustfmt::skip]
 pub const LEVELING_CORRECTION: Token<LevelingCorrection> = Token::new_const("robot.leveling.correction");
 
@@ -77,6 +82,8 @@ pub fn generate_adaptors() -> HashMap<Key, Box<dyn TypeAdapter<BackingType> + Se
         from(MOTOR_SPEED),
         from(LEVELING_MODE),
         from(LEVELING_PID),
+        from(LEVELING_PITCH_RESULT),
+        from(LEVELING_ROLL_RESULT),
         from(LEVELING_CORRECTION),
         from(MOVEMENT_JOYSTICK),
         from(MOVEMENT_OPENCV),
