@@ -23,6 +23,7 @@ const PID_CONFIG: PidConfig = PidConfig {
     k_d: 0.0,
     max_integral: 2.0,
 };
+const PERIOD: Duration = Duration::from_millis(20);
 
 pub struct LevelingSystem;
 
@@ -61,9 +62,7 @@ impl System for LevelingSystem {
             spawner.spawn(move || {
                 span!(Level::INFO, "Leveling tick thread");
 
-                let interval = Duration::from_millis(20);
-
-                let mut deadline = Instant::now() + interval;
+                let mut deadline = Instant::now() + PERIOD;
 
                 while !stop::world_stopped() {
                     tx.try_send(LevelingEvent::Tick).log_error("Send tick");
@@ -74,7 +73,7 @@ impl System for LevelingSystem {
                     } else {
                         warn!("Behind schedual");
                     }
-                    deadline += interval;
+                    deadline += PERIOD;
                 }
             });
         }
@@ -91,8 +90,8 @@ impl System for LevelingSystem {
                     })
                 };
 
-                let mut pitch_controller = PidController::default();
-                let mut roll_controller = PidController::default();
+                let mut pitch_controller = PidController::new(PERIOD);
+                let mut roll_controller = PidController::new(PERIOD);
 
                 for event in rx {
                     match event {
@@ -161,13 +160,13 @@ impl System for LevelingSystem {
                                         },
                                     );
                                 } else {
-                                    pitch_controller = Default::default();
-                                    roll_controller = Default::default();
+                                    pitch_controller = PidController::new(PERIOD);
+                                    roll_controller = PidController::new(PERIOD);
                                     store.remove(&tokens::MOVEMENT_LEVELING);
                                 }
                             } else {
-                                pitch_controller = Default::default();
-                                roll_controller = Default::default();
+                                pitch_controller = PidController::new(PERIOD);
+                                roll_controller = PidController::new(PERIOD);
                                 store.remove(&tokens::MOVEMENT_LEVELING);
                             }
                         }

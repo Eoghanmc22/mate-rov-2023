@@ -435,10 +435,11 @@ pub enum RobotStatus {
     Moving(Percent),
 }
 
-#[derive(Default, Clone, Copy)]
+#[derive(Clone, Copy)]
 pub struct PidController {
     last_error: Option<f32>,
     integral: f32,
+    period: Duration,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
@@ -464,14 +465,22 @@ impl PidResult {
 }
 
 impl PidController {
+    pub fn new(period: Duration) -> Self {
+        Self {
+            last_error: None,
+            integral: 0.0,
+            period,
+        }
+    }
+
     pub fn update(&mut self, error: f32, config: PidConfig) -> PidResult {
         let p = error;
 
         self.integral = clamp(self.integral + error, config.max_integral);
-        let i = self.integral;
+        let i = self.integral * self.period.as_secs_f32();
 
         let d = if let Some(last_error) = self.last_error {
-            error - last_error
+            (error - last_error) / self.period.as_secs_f32()
         } else {
             0.0
         };
