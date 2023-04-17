@@ -61,7 +61,7 @@ impl Movement {
             | MotorId::FrontRightBottom
             | MotorId::FrontRightTop
             | MotorId::BackLeftBottom
-            | MotorId::BaclLeftTop
+            | MotorId::BackLeftTop
             | MotorId::BackRightBottom
             | MotorId::RearRightTop => {
                 unimplemented!()
@@ -85,7 +85,7 @@ impl Movement {
             | MotorId::FrontRightBottom
             | MotorId::FrontRightTop
             | MotorId::BackLeftBottom
-            | MotorId::BaclLeftTop
+            | MotorId::BackLeftTop
             | MotorId::BackRightBottom
             | MotorId::RearRightTop => {
                 unimplemented!()
@@ -141,7 +141,7 @@ pub enum MotorId {
     FrontRightBottom,
     FrontRightTop,
     BackLeftBottom,
-    BaclLeftTop,
+    BackLeftTop,
     BackRightBottom,
     RearRightTop,
 

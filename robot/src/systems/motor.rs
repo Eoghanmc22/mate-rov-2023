@@ -151,7 +151,7 @@ impl System for MotorSystem {
                     MotorId::FrontRightBottom,
                     MotorId::FrontRightTop,
                     MotorId::BackLeftBottom,
-                    MotorId::BaclLeftTop,
+                    MotorId::BackLeftTop,
                     MotorId::BackRightBottom,
                     MotorId::RearRightTop,
                     MotorId::Camera1,
@@ -302,7 +302,7 @@ pub fn mix_movement<'a>(
             MotorId::FrontRightBottom =>  -mov.x + mov.y - mov.z - mov.x_rot + mov.y_rot - mov.z_rot,
             MotorId::FrontRightTop =>     -mov.x + mov.y + mov.z + mov.x_rot - mov.y_rot - mov.z_rot,
             MotorId::BackLeftBottom =>     mov.x - mov.y - mov.z + mov.x_rot - mov.y_rot - mov.z_rot,
-            MotorId::BaclLeftTop =>        mov.x - mov.y + mov.z - mov.x_rot + mov.y_rot - mov.z_rot,
+            MotorId::BackLeftTop =>        mov.x - mov.y + mov.z - mov.x_rot + mov.y_rot - mov.z_rot,
             MotorId::BackRightBottom =>   -mov.x - mov.y - mov.z + mov.x_rot + mov.y_rot + mov.z_rot,
             MotorId::RearRightTop =>      -mov.x - mov.y + mov.z - mov.x_rot - mov.y_rot + mov.z_rot,
 

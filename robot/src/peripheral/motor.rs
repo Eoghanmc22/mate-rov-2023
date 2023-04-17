@@ -139,7 +139,7 @@ impl From<MotorId> for Motor {
             MotorId::FrontRightBottom =>  MOTOR_FRB,
             MotorId::FrontRightTop =>     MOTOR_FRT,
             MotorId::BackLeftBottom =>    MOTOR_BLB,
-            MotorId::BaclLeftTop =>       MOTOR_BLT,
+            MotorId::BackLeftTop =>       MOTOR_BLT,
             MotorId::BackRightBottom =>   MOTOR_BRB,
             MotorId::RearRightTop =>      MOTOR_BRT,
 

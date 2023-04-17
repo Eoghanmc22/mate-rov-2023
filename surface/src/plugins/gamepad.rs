@@ -237,7 +237,7 @@ fn next_servo(id: MotorId) -> MotorId {
         | MotorId::FrontRightBottom
         | MotorId::FrontRightTop
         | MotorId::BackLeftBottom
-        | MotorId::BaclLeftTop
+        | MotorId::BackLeftTop
         | MotorId::BackRightBottom
         | MotorId::RearRightTop => {
             unimplemented!()
@@ -260,7 +260,7 @@ fn last_servo(id: MotorId) -> MotorId {
         | MotorId::FrontRightBottom
         | MotorId::FrontRightTop
         | MotorId::BackLeftBottom
-        | MotorId::BaclLeftTop
+        | MotorId::BackLeftTop
         | MotorId::BackRightBottom
         | MotorId::RearRightTop => {
             unimplemented!()
