@@ -7,6 +7,7 @@ use bevy::{
     app::AppExit,
     prelude::{Commands, World},
 };
+use common::types::LevelingMode;
 use common::types::RobotStatus;
 use common::{
     error::LogErrorExt,
@@ -136,7 +137,11 @@ impl UiComponent for MenuBar {
 }
 
 #[derive(Debug, Default)]
-pub struct StatusBar(Option<Arc<RobotStatus>>, Option<Arc<bool>>);
+pub struct StatusBar(
+    Option<Arc<RobotStatus>>,
+    Option<Arc<bool>>,
+    Option<Arc<LevelingMode>>,
+);
 
 impl UiComponent for StatusBar {
     fn pre_draw(&mut self, world: &World, _commands: &mut Commands) {
@@ -145,27 +150,39 @@ impl UiComponent for StatusBar {
         };
         self.0 = robot.store().get(&tokens::STATUS);
         self.1 = robot.store().get(&tokens::LEAK);
+        self.2 = robot.store().get(&tokens::LEVELING_MODE);
     }
 
     fn draw(&mut self, _ctx: &egui::Context, ui: &mut egui::Ui, _commands: &mut Commands) {
         ui.horizontal_wrapped(|ui| {
             if let Some(ref status) = self.0 {
-                let status_color = match &**status {
+                let color = match &**status {
                     RobotStatus::Moving(_) => Color32::LIGHT_GREEN,
                     RobotStatus::Ready => Color32::GREEN,
                     RobotStatus::Disarmed => Color32::RED,
                     RobotStatus::NoPeer => Color32::LIGHT_BLUE,
                 };
-                ui.colored_label(status_color, format!("Status: {status:?}"));
+                ui.colored_label(color, format!("Status: {status:?}"));
             } else {
                 ui.label("No status data");
             }
 
             if let Some(ref leak) = self.1 {
-                let leak_color = if **leak { Color32::RED } else { Color32::GREEN };
-                ui.colored_label(leak_color, format!("Leak detected: {leak:?}"));
+                let color = if **leak { Color32::RED } else { Color32::GREEN };
+                ui.colored_label(color, format!("Leak detected: {leak:?}"));
             } else {
                 ui.label("No leak data");
+            }
+
+            if let Some(ref leveling) = self.2 {
+                let color = if matches!(**leveling, LevelingMode::Enabled(_, _)) {
+                    Color32::GREEN
+                } else {
+                    Color32::BLUE
+                };
+                ui.colored_label(color, format!("Leveling: {leveling:?}"));
+            } else {
+                ui.label("No leveling data");
             }
         });
     }
