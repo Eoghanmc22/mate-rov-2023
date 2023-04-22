@@ -20,5 +20,5 @@ fn gen_src(camera: &Camera) -> String {
     let ip = camera.location.ip();
     let port = camera.location.port();
 
-    format!("udpsrc address={ip} port={port} caps=application/x-rtp,media=video,clock-rate=90000,encoding-name=H264,a-framerate=30,payload=96 ! rtph264depay ! h264parse ! avdec_h264 ! videoconvert ! video/x-raw,format=BGR ! appsink drop=1")
+    format!("udpsrc address={ip} port={port} caps=application/x-rtp,media=video,clock-rate=90000,encoding-name=H264,a-framerate=30,payload=96 ! rtph264depay ! vaapidecodebin ! video/x-raw,format=BGR ! appsink drop=1")
 }
