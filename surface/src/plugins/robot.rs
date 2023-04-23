@@ -81,6 +81,10 @@ impl Updater {
         let update = store::create_update(token, value);
         self.0.try_send(update).log_error("Emit update failed");
     }
+    pub fn emit_delete<V: Any + Send + Sync>(&self, token: &Token<V>) {
+        let update = store::create_delete(token);
+        self.0.try_send(update).log_error("Emit delete failed");
+    }
 }
 
 impl FromWorld for Updater {

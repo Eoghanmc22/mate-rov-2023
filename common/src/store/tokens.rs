@@ -33,7 +33,7 @@ pub const MOTOR_SPEED: Token<HashMap<MotorId, MotorFrame>> = Token::new_const("r
 #[rustfmt::skip]
 pub const LEVELING_MODE: Token<LevelingMode> = Token::new_const("robot.leveling.mode");
 #[rustfmt::skip]
-pub const LEVELING_PID: Token<PidConfig> = Token::new_const("robot.leveling.pid");
+pub const LEVELING_PID_OVERRIDE: Token<PidConfig> = Token::new_const("robot.leveling.pid.override");
 #[rustfmt::skip]
 pub const LEVELING_PITCH_RESULT: Token<PidResult> = Token::new_const("robot.leveling.pitch");
 #[rustfmt::skip]
@@ -81,7 +81,7 @@ pub fn generate_adaptors() -> HashMap<Key, Box<dyn TypeAdapter<BackingType> + Se
         from(ARMED),
         from(MOTOR_SPEED),
         from(LEVELING_MODE),
-        from(LEVELING_PID),
+        from(LEVELING_PID_OVERRIDE),
         from(LEVELING_PITCH_RESULT),
         from(LEVELING_ROLL_RESULT),
         from(LEVELING_CORRECTION),

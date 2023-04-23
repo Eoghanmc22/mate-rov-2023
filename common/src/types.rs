@@ -442,7 +442,7 @@ pub struct PidController {
     period: Duration,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
+#[derive(Default, Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
 pub struct PidConfig {
     pub k_p: f32,
     pub k_i: f32,

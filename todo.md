@@ -9,6 +9,8 @@
 
 # Important Things
 
+- [ ] Motors
+  - [ ] Fix drop impl
 - [ ] Sensors
   - [-] Sensor fusion
     - [H] Use last sensor data as stating position

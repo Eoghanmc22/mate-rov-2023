@@ -3,11 +3,15 @@ use std::sync::Arc;
 use anyhow::anyhow;
 use anyhow::Context;
 use bevy::prelude::Entity;
+use bevy::prelude::FromWorld;
 use bevy::{
     app::AppExit,
     prelude::{Commands, World},
 };
+use common::types::LevelingCorrection;
 use common::types::LevelingMode;
+use common::types::PidConfig;
+use common::types::PidResult;
 use common::types::RobotStatus;
 use common::{
     error::LogErrorExt,
@@ -30,6 +34,7 @@ use tracing::error;
 use crate::plugins::gamepad::CurrentGamepad;
 use crate::plugins::notification::NotificationResource;
 use crate::plugins::orientation::OrientationDisplay;
+use crate::plugins::robot::Updater;
 use crate::plugins::video::VideoName;
 use crate::plugins::video::VideoRemove;
 use crate::plugins::video::VideoState;
@@ -46,6 +51,7 @@ use crate::plugins::{
 
 use super::widgets;
 use super::widgets::MovementWidget;
+use super::widgets::PidWidget;
 use super::{panes, ExtensionId, PaneId, UiMessage, UiMessages};
 
 const TABLE_ROW_HEIGHT: f32 = 15.0;
@@ -112,6 +118,20 @@ impl UiComponent for MenuBar {
                             robot.disarm();
                         } else {
                             error!("No robot resource");
+                        }
+                    });
+                }
+                if ui.button("Tune Leveling PID").clicked() {
+                    commands.add(|world: &mut World| {
+                        if let Some(ui) = world.get_resource::<UiMessages>() {
+                            let id = rand::random();
+                            ui.0.try_send(UiMessage::OpenPanel(
+                                PaneId::Extension(id),
+                                panes::leveling_pid_window(id, ui.0.clone()),
+                            ))
+                            .log_error("Open leveling tuner");
+                        } else {
+                            error!("No UiMessage resource found");
                         }
                     });
                 }
@@ -1040,5 +1060,106 @@ pub struct PreserveSize;
 impl UiComponent for PreserveSize {
     fn draw(&mut self, _ctx: &egui::Context, ui: &mut egui::Ui, _commands: &mut Commands) {
         ui.allocate_space(ui.available_size());
+    }
+}
+
+#[derive(Default, Debug)]
+pub struct PidEditorUi(PidConfig);
+
+impl UiComponent for PidEditorUi {
+    fn draw(&mut self, _ctx: &egui::Context, ui: &mut egui::Ui, commands: &mut Commands) {
+        ui.add(PidWidget(&mut self.0));
+        ui.horizontal(|ui| {
+            if ui.button("Defaults").clicked() {
+                self.0 = Default::default();
+            }
+            if ui.button("Unset").clicked() {
+                commands.add(|world: &mut World| {
+                    Updater::from_world(world).emit_delete(&tokens::LEVELING_PID_OVERRIDE);
+                });
+            }
+            if ui.button("Apply").clicked() {
+                let config = self.0.clone();
+
+                commands.add(move |world: &mut World| {
+                    Updater::from_world(world).emit_update(&tokens::LEVELING_PID_OVERRIDE, config);
+                });
+            }
+        });
+    }
+}
+
+#[derive(Debug, Default)]
+pub struct LevelingUi {
+    mode: Option<Arc<LevelingMode>>,
+    pid_override: Option<Arc<PidConfig>>,
+    correction: Option<Arc<LevelingCorrection>>,
+    pitch: Option<Arc<PidResult>>,
+    roll: Option<Arc<PidResult>>,
+    calculated: Option<Arc<Movement>>,
+}
+
+impl UiComponent for LevelingUi {
+    fn pre_draw(&mut self, world: &World, _commands: &mut Commands) {
+        let Some(robot) = world.get_resource::<Robot>() else {
+            return;
+        };
+        self.mode = robot.store().get(&tokens::LEVELING_MODE);
+        self.pid_override = robot.store().get(&tokens::LEVELING_PID_OVERRIDE);
+        self.correction = robot.store().get(&tokens::LEVELING_CORRECTION);
+        self.pitch = robot.store().get(&tokens::LEVELING_PITCH_RESULT);
+        self.roll = robot.store().get(&tokens::LEVELING_ROLL_RESULT);
+        self.calculated = robot.store().get(&tokens::MOVEMENT_LEVELING);
+    }
+
+    fn draw(&mut self, _ctx: &egui::Context, ui: &mut egui::Ui, _commands: &mut Commands) {
+        ui.collapsing("Leveling", |ui| {
+            if let Some(ref mode) = self.mode {
+                ui.label(format!("Mode: {mode:?}"));
+            } else {
+                ui.label(format!("No mode set"));
+            }
+
+            ui.collapsing("Pid Override", |ui| {
+                if let Some(ref pid) = self.pid_override {
+                    ui.monospace(format!("{pid:#?}"));
+                } else {
+                    ui.label(format!("No pid override"));
+                }
+            });
+
+            ui.collapsing("Correction", |ui| {
+                if let Some(ref correction) = self.correction {
+                    ui.label(format!("Pitch: {}", correction.pitch));
+                    ui.label(format!("Roll: {}", correction.roll));
+                } else {
+                    ui.label(format!("No correction"));
+                }
+
+                ui.collapsing("Pitch", |ui| {
+                    if let Some(ref pitch) = self.pitch {
+                        ui.monospace(format!("{pitch:#?}"));
+                    } else {
+                        ui.label(format!("No pitch correction data"));
+                    }
+                });
+
+                ui.collapsing("Roll", |ui| {
+                    if let Some(ref roll) = self.roll {
+                        ui.monospace(format!("{roll:#?}"));
+                    } else {
+                        ui.label(format!("No roll correction data"));
+                    }
+                });
+            });
+
+            ui.collapsing("Calculated Movement", |ui| {
+                if let Some(ref calculated) = self.calculated {
+                    ui.add(MovementWidget(&calculated));
+                } else {
+                    ui.label(format!("No movement calculated"));
+                }
+            });
+        });
     }
 }

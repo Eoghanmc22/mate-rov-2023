@@ -126,7 +126,7 @@ impl System for LevelingSystem {
                                     );
 
                                     let config = store
-                                        .get(&tokens::LEVELING_PID)
+                                        .get(&tokens::LEVELING_PID_OVERRIDE)
                                         .map(|it| *it)
                                         .unwrap_or(PID_CONFIG);
                                     let pitch_pid_result =
