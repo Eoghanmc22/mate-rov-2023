@@ -1,6 +1,5 @@
 # Queue
 
-- Leveling ui
 - Profile robot code
 - Make things customizable at run time
 - Sensor fusion init
@@ -20,7 +19,7 @@
 - [ ] Control
   - [x] Pid stuff
   - [x] Leveling control
-    - [H] Tuning
+    - [x] Tuning
   - [M] Depth control
   - [ ] Speeds larger than 1
   - [ ] Remap inputs to square joystick

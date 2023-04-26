@@ -297,14 +297,14 @@ pub fn mix_movement<'a>(
     for motor in motors {
         #[rustfmt::skip]
         let speed = match motor {
-            MotorId::FrontLeftBottom =>    mov.x + mov.y - mov.z - mov.x_rot - mov.y_rot + mov.z_rot,
-            MotorId::FrontLeftTop =>       mov.x + mov.y + mov.z + mov.x_rot + mov.y_rot + mov.z_rot,
-            MotorId::FrontRightBottom =>  -mov.x + mov.y - mov.z - mov.x_rot + mov.y_rot - mov.z_rot,
-            MotorId::FrontRightTop =>     -mov.x + mov.y + mov.z + mov.x_rot - mov.y_rot - mov.z_rot,
-            MotorId::BackLeftBottom =>     mov.x - mov.y - mov.z + mov.x_rot - mov.y_rot - mov.z_rot,
-            MotorId::BackLeftTop =>        mov.x - mov.y + mov.z - mov.x_rot + mov.y_rot - mov.z_rot,
-            MotorId::BackRightBottom =>   -mov.x - mov.y - mov.z + mov.x_rot + mov.y_rot + mov.z_rot,
-            MotorId::RearRightTop =>      -mov.x - mov.y + mov.z - mov.x_rot - mov.y_rot + mov.z_rot,
+            MotorId::FrontLeftBottom =>   -mov.x - mov.y + mov.z + mov.x_rot + mov.y_rot - mov.z_rot,
+            MotorId::FrontLeftTop =>      -mov.x - mov.y - mov.z - mov.x_rot - mov.y_rot - mov.z_rot,
+            MotorId::FrontRightBottom =>   mov.x - mov.y + mov.z + mov.x_rot - mov.y_rot + mov.z_rot,
+            MotorId::FrontRightTop =>      mov.x - mov.y - mov.z - mov.x_rot + mov.y_rot + mov.z_rot,
+            MotorId::BackLeftBottom =>    -mov.x + mov.y + mov.z - mov.x_rot + mov.y_rot + mov.z_rot,
+            MotorId::BackLeftTop =>       -mov.x + mov.y - mov.z + mov.x_rot - mov.y_rot + mov.z_rot,
+            MotorId::BackRightBottom =>    mov.x + mov.y + mov.z - mov.x_rot - mov.y_rot - mov.z_rot,
+            MotorId::RearRightTop =>       mov.x + mov.y - mov.z + mov.x_rot + mov.y_rot - mov.z_rot,
 
             MotorId::Camera1 => mov.cam_1,
             MotorId::Camera2 => mov.cam_2,
