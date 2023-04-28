@@ -79,7 +79,7 @@ fn setup(
     // object
     commands.spawn((
         SceneBundle {
-            scene: asset_server.load("NAVIGATOR-STACK.glb#Scene0"),
+            scene: asset_server.load("robot.glb#Scene0"),
             transform: Transform::from_scale(Vec3::splat(10.0)),
             ..default()
         },
@@ -132,7 +132,7 @@ fn setup(
     // camera
     commands.spawn((
         Camera3dBundle {
-            transform: Transform::from_xyz(2.0, -2.0, 2.0).looking_at(Vec3::ZERO, Vec3::Z),
+            transform: Transform::from_xyz(5.0, -5.0, 5.0).looking_at(Vec3::ZERO, Vec3::Z),
             camera: Camera {
                 // render before the "main pass" camera
                 order: -1,

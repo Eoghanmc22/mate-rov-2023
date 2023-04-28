@@ -170,9 +170,11 @@ impl Drop for Pca9685 {
         // Prevent cutting the last pulse short
         thread::sleep(Duration::from_millis(20));
 
+        self.output_disable();
+        thread::sleep(Duration::from_millis(5));
+
         let _ = self.i2c.write(&[Self::REG_ALL_LED_OFF_H, 0x08]);
         let _ = self.i2c.write(&[Self::REG_MODE1, Self::MODE1_SLEEP]);
-        self.output_disable();
     }
 }
 

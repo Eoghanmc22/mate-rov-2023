@@ -2,9 +2,17 @@ use common::types::{MotorId, Percent};
 use std::fmt::Debug;
 use std::time::Duration;
 
-const DEFAULT_MOTOR: Motor = Motor {
+const DEFAULT_MOTOR_CW: Motor = Motor {
     channel: 255,
     max_value: Percent::new(0.5), // Full speed on all motors would blow fuse
+    // Taken from basic esc spec
+    reverse: Duration::from_micros(1100),
+    forward: Duration::from_micros(1900),
+    center: Duration::from_micros(1500),
+};
+const DEFAULT_MOTOR_CCW: Motor = Motor {
+    channel: 255,
+    max_value: Percent::new(-0.5), // Full speed on all motors would blow fuse
     // Taken from basic esc spec
     reverse: Duration::from_micros(1100),
     forward: Duration::from_micros(1900),
@@ -22,36 +30,36 @@ const DEFAULT_SERVO: Motor = Motor {
 
 // ---------- Thrusters ----------
 pub const MOTOR_FLB: Motor = Motor {
-    channel: 0,
-    ..DEFAULT_MOTOR
+    channel: 4,
+    ..DEFAULT_MOTOR_CW
 };
 pub const MOTOR_FLT: Motor = Motor {
-    channel: 1,
-    ..DEFAULT_MOTOR
+    channel: 0,
+    ..DEFAULT_MOTOR_CCW
 };
 pub const MOTOR_FRB: Motor = Motor {
-    channel: 2,
-    ..DEFAULT_MOTOR
+    channel: 5,
+    ..DEFAULT_MOTOR_CW
 };
 pub const MOTOR_FRT: Motor = Motor {
     channel: 3,
-    ..DEFAULT_MOTOR
+    ..DEFAULT_MOTOR_CCW
 };
 pub const MOTOR_BLB: Motor = Motor {
-    channel: 4,
-    ..DEFAULT_MOTOR
+    channel: 6,
+    ..DEFAULT_MOTOR_CCW
 };
 pub const MOTOR_BLT: Motor = Motor {
-    channel: 5,
-    ..DEFAULT_MOTOR
+    channel: 7,
+    ..DEFAULT_MOTOR_CW
 };
 pub const MOTOR_BRB: Motor = Motor {
-    channel: 6,
-    ..DEFAULT_MOTOR
+    channel: 1,
+    ..DEFAULT_MOTOR_CCW
 };
 pub const MOTOR_BRT: Motor = Motor {
-    channel: 7,
-    ..DEFAULT_MOTOR
+    channel: 2,
+    ..DEFAULT_MOTOR_CW
 };
 
 // ---------- Camera Servos ----------
@@ -141,13 +149,12 @@ impl From<MotorId> for Motor {
             MotorId::BackLeftBottom =>    MOTOR_BLB,
             MotorId::BackLeftTop =>       MOTOR_BLT,
             MotorId::BackRightBottom =>   MOTOR_BRB,
-            MotorId::RearRightTop =>      MOTOR_BRT,
+            MotorId::BackRightTop =>      MOTOR_BRT,
 
             MotorId::Camera1 =>           SERVO_CAM1,
             MotorId::Camera2 =>           SERVO_CAM2,
             MotorId::Camera3 =>           SERVO_CAM3,
             MotorId::Camera4 =>           SERVO_CAM4,
-
             MotorId::Aux1 =>              SERVO_AUX1,
             MotorId::Aux2 =>              SERVO_AUX2,
             MotorId::Aux3 =>              SERVO_AUX3,
