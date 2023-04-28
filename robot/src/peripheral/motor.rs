@@ -30,12 +30,12 @@ const DEFAULT_SERVO: Motor = Motor {
 
 // ---------- Thrusters ----------
 pub const MOTOR_FLB: Motor = Motor {
-    channel: 4,
-    ..DEFAULT_MOTOR_CW
-};
-pub const MOTOR_FLT: Motor = Motor {
     channel: 0,
     ..DEFAULT_MOTOR_CCW
+};
+pub const MOTOR_FLT: Motor = Motor {
+    channel: 4,
+    ..DEFAULT_MOTOR_CW
 };
 pub const MOTOR_FRB: Motor = Motor {
     channel: 5,
@@ -47,18 +47,18 @@ pub const MOTOR_FRT: Motor = Motor {
 };
 pub const MOTOR_BLB: Motor = Motor {
     channel: 6,
-    ..DEFAULT_MOTOR_CCW
+    ..DEFAULT_MOTOR_CW
 };
 pub const MOTOR_BLT: Motor = Motor {
     channel: 7,
-    ..DEFAULT_MOTOR_CW
+    ..DEFAULT_MOTOR_CCW
 };
 pub const MOTOR_BRB: Motor = Motor {
-    channel: 1,
+    channel: 2,
     ..DEFAULT_MOTOR_CCW
 };
 pub const MOTOR_BRT: Motor = Motor {
-    channel: 2,
+    channel: 1,
     ..DEFAULT_MOTOR_CW
 };
 
