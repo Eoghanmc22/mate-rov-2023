@@ -136,7 +136,7 @@ impl System for LevelingSystem {
                                     let roll_pid_result =
                                         roll_controller.update(roll_error, config);
 
-                                    let max_correction = 0.15;
+                                    let max_correction = 0.30;
                                     let pitch_corection = pitch_pid_result
                                         .corection()
                                         .clamp(-max_correction, max_correction);

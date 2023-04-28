@@ -4,7 +4,7 @@ use std::time::Duration;
 
 const DEFAULT_MOTOR_CW: Motor = Motor {
     channel: 255,
-    max_value: Percent::new(0.5), // Full speed on all motors would blow fuse
+    max_value: Percent::new(0.4), // Full speed on all motors would blow fuse
     // Taken from basic esc spec
     reverse: Duration::from_micros(1100),
     forward: Duration::from_micros(1900),
@@ -12,7 +12,7 @@ const DEFAULT_MOTOR_CW: Motor = Motor {
 };
 const DEFAULT_MOTOR_CCW: Motor = Motor {
     channel: 255,
-    max_value: Percent::new(-0.5), // Full speed on all motors would blow fuse
+    max_value: Percent::new(-0.4), // Full speed on all motors would blow fuse
     // Taken from basic esc spec
     reverse: Duration::from_micros(1100),
     forward: Duration::from_micros(1900),

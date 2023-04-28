@@ -313,7 +313,7 @@ impl Default for InputState {
             servo: MotorId::Camera1,
             maps: create_mapping(),
             selected_map: "default",
-            gain: 1.0,
+            gain: 0.5,
             hold_axis: false,
             servo_position_normal: 0.0,
             servo_position_inverted: 0.0,
@@ -399,9 +399,9 @@ fn create_mapping() -> ControllerMappings {
         (Input::Button(GamepadButtonType::West), Action::ToggleDepth),
         (Input::Button(GamepadButtonType::LeftTrigger2), Action::RotateServoInverted),
         (Input::Button(GamepadButtonType::RightTrigger2), Action::RotateServo),
-        (Input::Axis(GamepadAxisType::LeftStickX), Action::Lateral),
+        (Input::Axis(GamepadAxisType::LeftStickX), Action::Yaw),
         (Input::Axis(GamepadAxisType::LeftStickY), Action::Forward),
-        (Input::Axis(GamepadAxisType::RightStickX), Action::Yaw),
+        (Input::Axis(GamepadAxisType::RightStickX), Action::Lateral),
         (Input::Axis(GamepadAxisType::RightStickY), Action::Vertical),
         // TODO control modes
         // TODO Use for trigger buttons?

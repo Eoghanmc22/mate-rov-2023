@@ -21,6 +21,8 @@ use crate::systems::cameras::CameraSystem;
 #[cfg(rpi)]
 use crate::systems::depth::DepthSystem;
 #[cfg(rpi)]
+use crate::systems::depth_control::DepthControlSystem;
+#[cfg(rpi)]
 use crate::systems::indicators::IndicatorsSystem;
 #[cfg(rpi)]
 use crate::systems::inertial::InertialSystem;
@@ -59,6 +61,8 @@ fn main() -> anyhow::Result<()> {
     systems.add_system::<InertialSystem>()?;
     #[cfg(rpi)]
     systems.add_system::<OrientationSystem>()?;
+    #[cfg(rpi)]
+    systems.add_system::<DepthControlSystem>()?;
     #[cfg(rpi)]
     systems.add_system::<LevelingSystem>()?;
     #[cfg(rpi)]
