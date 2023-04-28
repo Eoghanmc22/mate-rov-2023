@@ -496,7 +496,13 @@ fn clamp(val: f32, range: f32) -> f32 {
 
 #[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
 pub enum LevelingMode {
-    Enabled(f32, f32),
+    Enabled(Degrees, Degrees),
+    Disabled,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
+pub enum DepthControlMode {
+    Enabled(Meters),
     Disabled,
 }
 
@@ -504,4 +510,9 @@ pub enum LevelingMode {
 pub struct LevelingCorrection {
     pub pitch: f32,
     pub roll: f32,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
+pub struct DepthCorrection {
+    pub depth: f32,
 }

@@ -115,8 +115,10 @@ impl System for LevelingSystem {
                                 let orientation = Quat::from(orientation.0);
 
                                 if let LevelingMode::Enabled(pitch_target, roll_target) = *mode {
-                                    let (pitch_target, roll_target) =
-                                        (pitch_target.to_radians(), roll_target.to_radians());
+                                    let (pitch_target, roll_target) = (
+                                        pitch_target.0.to_radians() as f32,
+                                        roll_target.0.to_radians() as f32,
+                                    );
                                     let (_, pitch_observed, roll_observed) =
                                         orientation.to_euler(EulerRot::ZXY);
 

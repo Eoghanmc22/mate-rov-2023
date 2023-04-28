@@ -1,4 +1,4 @@
-use common::error::LogErrorExt;
+use common::{error::LogErrorExt, store::tokens};
 use crossbeam::channel::Sender;
 use egui::{vec2, Align2, Frame, Id};
 
@@ -34,6 +34,7 @@ pub fn data_panel() -> Pane {
     pane.add(components::InputUi::default());
     pane.add(components::OrientationUi::default());
     pane.add(components::LevelingUi::default());
+    pane.add(components::DepthControlUi::default());
     pane.add(components::MovementUi::default());
     pane.add(components::RawSensorDataUi::default());
     pane.add(components::MotorsUi::default());
@@ -155,7 +156,7 @@ pub fn leveling_pid_window(id: ExtensionId, ui: Sender<UiMessage>) -> Pane {
         Pane::new(move |ctx, add_contents| {
             let mut open = true;
 
-            egui::Window::new("Debug Egui")
+            egui::Window::new("Leveling PID")
                 .id(Id::new(id))
                 .open(&mut open)
                 .show(ctx, add_contents);
@@ -167,7 +168,32 @@ pub fn leveling_pid_window(id: ExtensionId, ui: Sender<UiMessage>) -> Pane {
         })
     };
 
-    pane.add(components::PidEditorUi::default());
+    pane.add(components::PidEditorUi::new(tokens::LEVELING_PID_OVERRIDE));
+    pane.add(components::PreserveSize::default());
+
+    pane
+}
+
+pub fn depth_pid_window(id: ExtensionId, ui: Sender<UiMessage>) -> Pane {
+    let mut pane = {
+        Pane::new(move |ctx, add_contents| {
+            let mut open = true;
+
+            egui::Window::new("Depth Control PID")
+                .id(Id::new(id))
+                .open(&mut open)
+                .show(ctx, add_contents);
+
+            if !open {
+                ui.try_send(UiMessage::ClosePanel(PaneId::Extension(id)))
+                    .log_error("Close connetion window");
+            }
+        })
+    };
+
+    pane.add(components::PidEditorUi::new(
+        tokens::DEPTH_CONTROL_PID_OVERRIDE,
+    ));
     pane.add(components::PreserveSize::default());
 
     pane

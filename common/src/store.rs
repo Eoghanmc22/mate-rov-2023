@@ -19,7 +19,7 @@ pub type Key = KeyImpl;
 pub type Value = Arc<dyn Any + Send + Sync>;
 pub type Update = (Key, Option<Value>);
 
-#[derive(Debug, PartialEq, Eq, Hash)]
+#[derive(Debug, PartialEq, Eq, Hash, Clone)]
 pub struct Token<V>(pub KeyImpl, PhantomData<V>);
 
 impl<V> Token<V> {

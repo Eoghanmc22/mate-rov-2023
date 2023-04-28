@@ -9,7 +9,7 @@ use bevy::{
 };
 use common::{
     store::tokens,
-    types::{LevelingMode, MotorId, Movement, Percent},
+    types::{Degrees, DepthControlMode, LevelingMode, MotorId, Movement, Percent},
 };
 
 use super::robot::{Robot, Updater};
@@ -216,10 +216,40 @@ impl InputState {
                             let old_mode = robot.store().get(&tokens::LEVELING_MODE).map(|it| *it);
                             let new_mode = match old_mode {
                                 Some(LevelingMode::Enabled(_, _)) => LevelingMode::Disabled,
-                                _ => LevelingMode::Enabled(0.0, 0.0),
+                                _ => LevelingMode::Enabled(Degrees(0.0), Degrees(0.0)),
                             };
                             Updater::from_world(world)
                                 .emit_update(&tokens::LEVELING_MODE, new_mode);
+                        } else {
+                            error!("No robot resource");
+                        }
+                    })
+                }
+                Action::ToggleDepth => {
+                    if value == 0.0 {
+                        return;
+                    }
+
+                    commands.add(|world: &mut World| {
+                        if let Some(robot) = world.get_resource::<Robot>() {
+                            if let Some(depth) = robot.store().get(&tokens::RAW_DEPTH).map(|it| *it)
+                            {
+                                let old_mode =
+                                    robot.store().get(&tokens::DEPTH_CONTROL_MODE).map(|it| *it);
+                                let new_mode = match old_mode {
+                                    Some(DepthControlMode::Enabled(_)) => {
+                                        DepthControlMode::Disabled
+                                    }
+                                    _ => DepthControlMode::Enabled(depth.depth),
+                                };
+                                Updater::from_world(world)
+                                    .emit_update(&tokens::DEPTH_CONTROL_MODE, new_mode);
+                            } else {
+                                Updater::from_world(world).emit_update(
+                                    &tokens::DEPTH_CONTROL_MODE,
+                                    DepthControlMode::Disabled,
+                                );
+                            }
                         } else {
                             error!("No robot resource");
                         }
@@ -366,6 +396,7 @@ fn create_mapping() -> ControllerMappings {
         (Input::Button(GamepadButtonType::Mode), Action::SetControlMapping("pitch and roll")),
         // (Input::Button(GamepadButtonType::South), Action::SetControlMapping("trim")),
         (Input::Button(GamepadButtonType::East), Action::ToggleLeveling),
+        (Input::Button(GamepadButtonType::West), Action::ToggleDepth),
         (Input::Button(GamepadButtonType::LeftTrigger2), Action::RotateServoInverted),
         (Input::Button(GamepadButtonType::RightTrigger2), Action::RotateServo),
         (Input::Axis(GamepadAxisType::LeftStickX), Action::Lateral),
@@ -438,7 +469,9 @@ pub enum Action {
     DecreaseGain,
     ResetGain,
 
+    ToggleDepth,
     ToggleLeveling,
+
     TrimPitch,
     TrimPitchInverted,
     TrimRoll,

@@ -4,9 +4,9 @@ use crate::{
     store::adapters::{Adapter, BackingType, TypeAdapter},
     store::{Key, Token},
     types::{
-        Armed, Camera, DepthFrame, InertialFrame, LevelingCorrection, LevelingMode, MagFrame,
-        Meters, MotorFrame, MotorId, Movement, Orientation, PidConfig, PidResult, RobotStatus,
-        SystemInfo,
+        Armed, Camera, DepthControlMode, DepthCorrection, DepthFrame, InertialFrame,
+        LevelingCorrection, LevelingMode, MagFrame, Meters, MotorFrame, MotorId, Movement,
+        Orientation, PidConfig, PidResult, RobotStatus, SystemInfo,
     },
 };
 use fxhash::FxHashMap as HashMap;
@@ -42,6 +42,15 @@ pub const LEVELING_ROLL_RESULT: Token<PidResult> = Token::new_const("robot.level
 pub const LEVELING_CORRECTION: Token<LevelingCorrection> = Token::new_const("robot.leveling.correction");
 
 #[rustfmt::skip]
+pub const DEPTH_CONTROL_MODE: Token<DepthControlMode> = Token::new_const("robot.depth.mode");
+#[rustfmt::skip]
+pub const DEPTH_CONTROL_PID_OVERRIDE: Token<PidConfig> = Token::new_const("robot.depth.pid.override");
+#[rustfmt::skip]
+pub const DEPTH_CONTROL_RESULT: Token<PidResult> = Token::new_const("robot.depth.pitch");
+#[rustfmt::skip]
+pub const DEPTH_CONTROL_CORRECTION: Token<DepthCorrection> = Token::new_const("robot.depth.correction");
+
+#[rustfmt::skip]
 pub const MOVEMENT_JOYSTICK: Token<Movement> = Token::new_const("robot.movement.joystick");
 #[rustfmt::skip]
 pub const MOVEMENT_OPENCV: Token<Movement> = Token::new_const("robot.movement.opencv");
@@ -49,8 +58,6 @@ pub const MOVEMENT_OPENCV: Token<Movement> = Token::new_const("robot.movement.op
 pub const MOVEMENT_LEVELING: Token<Movement> = Token::new_const("robot.movement.leveling");
 #[rustfmt::skip]
 pub const MOVEMENT_DEPTH: Token<Movement> = Token::new_const("robot.movement.depth");
-#[rustfmt::skip]
-pub const DEPTH_TARGET: Token<Meters> = Token::new_const("robot.movement.ai.depth.target");
 #[rustfmt::skip]
 pub const MOVEMENT_CALCULATED: Token<Movement> = Token::new_const("robot.movement.calculated");
 
@@ -85,11 +92,14 @@ pub fn generate_adaptors() -> HashMap<Key, Box<dyn TypeAdapter<BackingType> + Se
         from(LEVELING_PITCH_RESULT),
         from(LEVELING_ROLL_RESULT),
         from(LEVELING_CORRECTION),
+        from(DEPTH_CONTROL_MODE),
+        from(DEPTH_CONTROL_PID_OVERRIDE),
+        from(DEPTH_CONTROL_RESULT),
+        from(DEPTH_CONTROL_CORRECTION),
         from(MOVEMENT_JOYSTICK),
         from(MOVEMENT_OPENCV),
         from(MOVEMENT_LEVELING),
         from(MOVEMENT_DEPTH),
-        from(DEPTH_TARGET),
         from(MOVEMENT_CALCULATED),
         from(RAW_DEPTH),
         from(RAW_INERTIAL),

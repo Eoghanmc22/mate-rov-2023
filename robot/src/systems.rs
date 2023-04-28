@@ -1,5 +1,6 @@
 pub mod cameras;
 pub mod depth;
+pub mod depth_control;
 pub mod error;
 pub mod hw_stat;
 pub mod indicators;

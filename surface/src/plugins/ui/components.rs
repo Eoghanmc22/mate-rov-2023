@@ -8,6 +8,9 @@ use bevy::{
     app::AppExit,
     prelude::{Commands, World},
 };
+use common::store::Token;
+use common::types::DepthControlMode;
+use common::types::DepthCorrection;
 use common::types::LevelingCorrection;
 use common::types::LevelingMode;
 use common::types::PidConfig;
@@ -18,8 +21,8 @@ use common::{
     protocol::Protocol,
     store::tokens,
     types::{
-        Camera, Celsius, DepthFrame, InertialFrame, MagFrame, Meters, MotorFrame, MotorId,
-        Movement, Orientation, SystemInfo,
+        Camera, Celsius, DepthFrame, InertialFrame, MagFrame, MotorFrame, MotorId, Movement,
+        Orientation, SystemInfo,
     },
 };
 use egui::{vec2, Align, Layout};
@@ -135,6 +138,20 @@ impl UiComponent for MenuBar {
                         }
                     });
                 }
+                if ui.button("Tune Depth PID").clicked() {
+                    commands.add(|world: &mut World| {
+                        if let Some(ui) = world.get_resource::<UiMessages>() {
+                            let id = rand::random();
+                            ui.0.try_send(UiMessage::OpenPanel(
+                                PaneId::Extension(id),
+                                panes::depth_pid_window(id, ui.0.clone()),
+                            ))
+                            .log_error("Open depth tuner");
+                        } else {
+                            error!("No UiMessage resource found");
+                        }
+                    });
+                }
             });
             egui::menu::menu_button(ui, "Debug", |ui| {
                 if ui.button("Egui Settings").clicked() {
@@ -157,25 +174,27 @@ impl UiComponent for MenuBar {
 }
 
 #[derive(Debug, Default)]
-pub struct StatusBar(
-    Option<Arc<RobotStatus>>,
-    Option<Arc<bool>>,
-    Option<Arc<LevelingMode>>,
-);
+pub struct StatusBar {
+    status: Option<Arc<RobotStatus>>,
+    leak: Option<Arc<bool>>,
+    leveling: Option<Arc<LevelingMode>>,
+    depth: Option<Arc<DepthControlMode>>,
+}
 
 impl UiComponent for StatusBar {
     fn pre_draw(&mut self, world: &World, _commands: &mut Commands) {
         let Some(robot) = world.get_resource::<Robot>() else {
             return;
         };
-        self.0 = robot.store().get(&tokens::STATUS);
-        self.1 = robot.store().get(&tokens::LEAK);
-        self.2 = robot.store().get(&tokens::LEVELING_MODE);
+        self.status = robot.store().get(&tokens::STATUS);
+        self.leak = robot.store().get(&tokens::LEAK);
+        self.leveling = robot.store().get(&tokens::LEVELING_MODE);
+        self.depth = robot.store().get(&tokens::DEPTH_CONTROL_MODE);
     }
 
     fn draw(&mut self, _ctx: &egui::Context, ui: &mut egui::Ui, _commands: &mut Commands) {
         ui.horizontal_wrapped(|ui| {
-            if let Some(ref status) = self.0 {
+            if let Some(ref status) = self.status {
                 let color = match &**status {
                     RobotStatus::Moving(_) => Color32::LIGHT_GREEN,
                     RobotStatus::Ready => Color32::GREEN,
@@ -187,14 +206,14 @@ impl UiComponent for StatusBar {
                 ui.label("No status data");
             }
 
-            if let Some(ref leak) = self.1 {
+            if let Some(ref leak) = self.leak {
                 let color = if **leak { Color32::RED } else { Color32::GREEN };
                 ui.colored_label(color, format!("Leak detected: {leak:?}"));
             } else {
                 ui.label("No leak data");
             }
 
-            if let Some(ref leveling) = self.2 {
+            if let Some(ref leveling) = self.leveling {
                 let color = if matches!(**leveling, LevelingMode::Enabled(_, _)) {
                     Color32::GREEN
                 } else {
@@ -203,6 +222,17 @@ impl UiComponent for StatusBar {
                 ui.colored_label(color, format!("Leveling: {leveling:?}"));
             } else {
                 ui.label("No leveling data");
+            }
+
+            if let Some(ref depth_control) = self.depth {
+                let color = if matches!(**depth_control, DepthControlMode::Enabled(_)) {
+                    Color32::GREEN
+                } else {
+                    Color32::BLUE
+                };
+                ui.colored_label(color, format!("Depth control: {depth_control:?}"));
+            } else {
+                ui.label("No depth control data");
             }
         });
     }
@@ -632,7 +662,6 @@ pub struct RawSensorDataUi {
     inertial: Option<Arc<InertialFrame>>,
     magnetic: Option<Arc<MagFrame>>,
     depth: Option<Arc<DepthFrame>>,
-    depth_target: Option<Arc<Meters>>,
 }
 
 impl UiComponent for RawSensorDataUi {
@@ -643,7 +672,6 @@ impl UiComponent for RawSensorDataUi {
         self.inertial = robot.store().get(&tokens::RAW_INERTIAL);
         self.magnetic = robot.store().get(&tokens::RAW_MAGNETIC);
         self.depth = robot.store().get(&tokens::RAW_DEPTH);
-        self.depth_target = robot.store().get(&tokens::DEPTH_TARGET);
     }
 
     fn draw(&mut self, _ctx: &egui::Context, ui: &mut egui::Ui, _commands: &mut Commands) {
@@ -691,11 +719,6 @@ impl UiComponent for RawSensorDataUi {
                     ui.label(format!("Temp: {}", depth.temperature));
                 } else {
                     ui.label("No depth data");
-                }
-                if let Some(ref target) = self.depth_target {
-                    ui.label(format!("Depth Target: {target}"));
-                } else {
-                    ui.label("Depth Target: None");
                 }
             });
         });
@@ -1063,8 +1086,14 @@ impl UiComponent for PreserveSize {
     }
 }
 
-#[derive(Default, Debug)]
-pub struct PidEditorUi(PidConfig);
+#[derive(Debug)]
+pub struct PidEditorUi(PidConfig, Token<PidConfig>);
+
+impl PidEditorUi {
+    pub fn new(token: Token<PidConfig>) -> Self {
+        Self(Default::default(), token)
+    }
+}
 
 impl UiComponent for PidEditorUi {
     fn draw(&mut self, _ctx: &egui::Context, ui: &mut egui::Ui, commands: &mut Commands) {
@@ -1074,15 +1103,18 @@ impl UiComponent for PidEditorUi {
                 self.0 = Default::default();
             }
             if ui.button("Unset").clicked() {
-                commands.add(|world: &mut World| {
-                    Updater::from_world(world).emit_delete(&tokens::LEVELING_PID_OVERRIDE);
+                let token = self.1.clone();
+
+                commands.add(move |world: &mut World| {
+                    Updater::from_world(world).emit_delete(&token);
                 });
             }
             if ui.button("Apply").clicked() {
                 let config = self.0.clone();
+                let token = self.1.clone();
 
                 commands.add(move |world: &mut World| {
-                    Updater::from_world(world).emit_update(&tokens::LEVELING_PID_OVERRIDE, config);
+                    Updater::from_world(world).emit_update(&token, config);
                 });
             }
         });
@@ -1149,6 +1181,70 @@ impl UiComponent for LevelingUi {
                         ui.monospace(format!("{roll:#?}"));
                     } else {
                         ui.label(format!("No roll correction data"));
+                    }
+                });
+            });
+
+            ui.collapsing("Calculated Movement", |ui| {
+                if let Some(ref calculated) = self.calculated {
+                    ui.add(MovementWidget(&calculated));
+                } else {
+                    ui.label(format!("No movement calculated"));
+                }
+            });
+        });
+    }
+}
+
+#[derive(Debug, Default)]
+pub struct DepthControlUi {
+    mode: Option<Arc<DepthControlMode>>,
+    pid_override: Option<Arc<PidConfig>>,
+    correction: Option<Arc<DepthCorrection>>,
+    depth: Option<Arc<PidResult>>,
+    calculated: Option<Arc<Movement>>,
+}
+
+impl UiComponent for DepthControlUi {
+    fn pre_draw(&mut self, world: &World, _commands: &mut Commands) {
+        let Some(robot) = world.get_resource::<Robot>() else {
+            return;
+        };
+        self.mode = robot.store().get(&tokens::DEPTH_CONTROL_MODE);
+        self.pid_override = robot.store().get(&tokens::DEPTH_CONTROL_PID_OVERRIDE);
+        self.correction = robot.store().get(&tokens::DEPTH_CONTROL_CORRECTION);
+        self.depth = robot.store().get(&tokens::DEPTH_CONTROL_RESULT);
+        self.calculated = robot.store().get(&tokens::MOVEMENT_DEPTH);
+    }
+
+    fn draw(&mut self, _ctx: &egui::Context, ui: &mut egui::Ui, _commands: &mut Commands) {
+        ui.collapsing("Depth Control", |ui| {
+            if let Some(ref mode) = self.mode {
+                ui.label(format!("Mode: {mode:?}"));
+            } else {
+                ui.label(format!("No mode set"));
+            }
+
+            ui.collapsing("Pid Override", |ui| {
+                if let Some(ref pid) = self.pid_override {
+                    ui.monospace(format!("{pid:#?}"));
+                } else {
+                    ui.label(format!("No pid override"));
+                }
+            });
+
+            ui.collapsing("Correction", |ui| {
+                if let Some(ref correction) = self.correction {
+                    ui.label(format!("Depth: {}", correction.depth));
+                } else {
+                    ui.label(format!("No correction"));
+                }
+
+                ui.collapsing("Depth", |ui| {
+                    if let Some(ref depth) = self.depth {
+                        ui.monospace(format!("{depth:#?}"));
+                    } else {
+                        ui.label(format!("No depth correction data"));
                     }
                 });
             });
