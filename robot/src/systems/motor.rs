@@ -6,7 +6,7 @@ use anyhow::{anyhow, Context};
 use common::{
     error::LogErrorExt,
     store::{tokens, KeyImpl, Store},
-    types::{Armed, MotorFrame, MotorId, Movement, Percent},
+    types::{Armed, MotorFrame, MotorId, Movement},
 };
 use crossbeam::channel;
 use fxhash::{FxHashMap as HashMap, FxHashSet as HashSet};
@@ -78,7 +78,6 @@ impl System for MotorSystem {
 
                     match message {
                         Message::MotorSpeeds(motors, deadline) => {
-                            assert_eq!(motors.len(), 16);
                             let mut speeds = [Duration::ZERO; 16];
 
                             for (motor_id, frame) in motors {
@@ -114,9 +113,9 @@ impl System for MotorSystem {
                             for (motor_id, deadline) in &deadlines {
                                 if now - *deadline > MAX_UPDATE_AGE {
                                     let motor = Motor::from(*motor_id);
-                                    let pwm = motor.value_to_pwm(Percent::ZERO);
 
-                                    let rst = pwm_controller.set_pwm(motor.channel(), pwm);
+                                    let rst =
+                                        pwm_controller.set_pwm(motor.channel(), Duration::ZERO);
                                     if let Err(error) = rst {
                                         events.send(Event::Error(
                                             error.context(format!(
@@ -176,6 +175,7 @@ impl System for MotorSystem {
                     tokens::MOVEMENT_OPENCV.0,
                     tokens::MOVEMENT_DEPTH.0,
                     tokens::MOVEMENT_LEVELING.0,
+                    tokens::MOVEMENT_OVERRIDE.0,
                 ]
                 .into_iter()
                 .collect();
@@ -194,68 +194,70 @@ impl System for MotorSystem {
                             // Need to recalculate motor speeds
                             if listening.contains(&update.0) {
                                 let now = Instant::now();
-                                let mut movement = Movement::default();
 
-                                if let Some(armed) = store.get(&tokens::ARMED) {
+                                let new_speeds = if let Some(armed) =
+                                    store.get_alive(&tokens::ARMED, MAX_UPDATE_AGE)
+                                {
                                     if matches!(*armed, Armed::Armed) {
-                                        if let Some(joystick) = store
-                                            .get_alive(&tokens::MOVEMENT_JOYSTICK, MAX_UPDATE_AGE)
+                                        if let Some(speed_overrides) =
+                                            store.get(&tokens::MOVEMENT_OVERRIDE)
                                         {
-                                            movement += *joystick;
-                                        }
-                                        if let Some(opencv) = store
-                                            .get_alive(&tokens::MOVEMENT_OPENCV, MAX_UPDATE_AGE)
-                                        {
-                                            movement += *opencv;
-                                        }
-                                        if let Some(leveling) = store
-                                            .get_alive(&tokens::MOVEMENT_LEVELING, MAX_UPDATE_AGE)
-                                        {
-                                            movement += *leveling;
-                                        }
-                                        if let Some(depth) =
-                                            store.get_alive(&tokens::MOVEMENT_DEPTH, MAX_UPDATE_AGE)
-                                        {
-                                            movement += *depth;
+                                            let mut new_speeds = HashMap::default();
+
+                                            for (motor, speed) in speed_overrides.iter() {
+                                                new_speeds.insert(*motor, MotorFrame(*speed));
+                                            }
+
+                                            new_speeds
+                                        } else {
+                                            let mut movement = Movement::default();
+
+                                            if let Some(joystick) = store.get_alive(
+                                                &tokens::MOVEMENT_JOYSTICK,
+                                                MAX_UPDATE_AGE,
+                                            ) {
+                                                movement += *joystick;
+                                            }
+                                            if let Some(opencv) = store
+                                                .get_alive(&tokens::MOVEMENT_OPENCV, MAX_UPDATE_AGE)
+                                            {
+                                                movement += *opencv;
+                                            }
+                                            if let Some(leveling) = store.get_alive(
+                                                &tokens::MOVEMENT_LEVELING,
+                                                MAX_UPDATE_AGE,
+                                            ) {
+                                                movement += *leveling;
+                                            }
+                                            if let Some(depth) = store
+                                                .get_alive(&tokens::MOVEMENT_DEPTH, MAX_UPDATE_AGE)
+                                            {
+                                                movement += *depth;
+                                            }
+                                            store.insert(&tokens::MOVEMENT_CALCULATED, movement);
+
+                                            mix_movement(movement, motor_ids.iter())
                                         }
                                     } else {
                                         // Disarmed
+                                        Default::default()
                                     }
                                 } else {
                                     // events.send(Event::Error(anyhow!("No armed token")));
+                                    Default::default()
+                                };
+
+                                let deadline = now + MAX_UPDATE_AGE;
+
+                                let ret =
+                                    tx.try_send(Message::MotorSpeeds(new_speeds.clone(), deadline));
+                                if let Err(error) = ret {
+                                    events.send(Event::Error(anyhow!(
+                                        "Couldn't update new speed: {error}"
+                                    )));
                                 }
 
-                                store.insert(&tokens::MOVEMENT_CALCULATED, movement);
-
-                                if let Some(motors) = store.get(&tokens::MOTOR_SPEED) {
-                                    let new_speeds = mix_movement(movement, motors.keys());
-                                    let deadline = now + MAX_UPDATE_AGE;
-
-                                    // for (motor, speed) in &new_speeds {
-                                    //     let ret = tx.try_send(Message::MotorSpeed(
-                                    //         *motor, *speed, deadline,
-                                    //     ));
-                                    //     if let Err(error) = ret {
-                                    //         events.send(Event::Error(anyhow!(
-                                    //             "Couldn't update new speed: {error}"
-                                    //         )));
-                                    //     }
-                                    // }
-
-                                    let ret = tx.try_send(Message::MotorSpeeds(
-                                        new_speeds.clone(),
-                                        deadline,
-                                    ));
-                                    if let Err(error) = ret {
-                                        events.send(Event::Error(anyhow!(
-                                            "Couldn't update new speed: {error}"
-                                        )));
-                                    }
-
-                                    store.insert(&tokens::MOTOR_SPEED, new_speeds);
-                                } else {
-                                    events.send(Event::Error(anyhow!("No motor speed token")));
-                                }
+                                store.insert(&tokens::MOTOR_SPEED, new_speeds);
                             }
                         }
                         Event::Exit => {

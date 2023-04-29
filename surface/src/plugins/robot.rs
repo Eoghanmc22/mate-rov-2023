@@ -51,6 +51,10 @@ impl Robot {
         &self.0
     }
 
+    pub fn store_mut(&mut self) -> &mut Store<NotificationHandler> {
+        &mut self.0
+    }
+
     pub fn arm(&mut self) {
         self.3 = Armed::Armed;
     }

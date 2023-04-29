@@ -46,19 +46,19 @@ pub const MOTOR_FRT: Motor = Motor {
     ..DEFAULT_MOTOR_CCW
 };
 pub const MOTOR_BLB: Motor = Motor {
-    channel: 6,
+    channel: 7,
     ..DEFAULT_MOTOR_CW
 };
 pub const MOTOR_BLT: Motor = Motor {
-    channel: 7,
+    channel: 6,
     ..DEFAULT_MOTOR_CCW
 };
 pub const MOTOR_BRB: Motor = Motor {
-    channel: 2,
+    channel: 1,
     ..DEFAULT_MOTOR_CCW
 };
 pub const MOTOR_BRT: Motor = Motor {
-    channel: 1,
+    channel: 2,
     ..DEFAULT_MOTOR_CW
 };
 

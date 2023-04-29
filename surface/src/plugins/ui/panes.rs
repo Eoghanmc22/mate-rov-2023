@@ -118,7 +118,7 @@ pub fn orientation_display_window(id: ExtensionId, ui: Sender<UiMessage>) -> Pan
 
             if !open {
                 ui.try_send(UiMessage::ClosePanel(PaneId::Extension(id)))
-                    .log_error("Close connetion window");
+                    .log_error("Close orientation window");
             }
         })
     };
@@ -140,7 +140,7 @@ pub fn debug_egui_window(id: ExtensionId, ui: Sender<UiMessage>) -> Pane {
 
             if !open {
                 ui.try_send(UiMessage::ClosePanel(PaneId::Extension(id)))
-                    .log_error("Close connetion window");
+                    .log_error("Close egui window");
             }
         })
     };
@@ -163,7 +163,7 @@ pub fn leveling_pid_window(id: ExtensionId, ui: Sender<UiMessage>) -> Pane {
 
             if !open {
                 ui.try_send(UiMessage::ClosePanel(PaneId::Extension(id)))
-                    .log_error("Close connetion window");
+                    .log_error("Close leveling window");
             }
         })
     };
@@ -186,7 +186,7 @@ pub fn depth_pid_window(id: ExtensionId, ui: Sender<UiMessage>) -> Pane {
 
             if !open {
                 ui.try_send(UiMessage::ClosePanel(PaneId::Extension(id)))
-                    .log_error("Close connetion window");
+                    .log_error("Close depth window");
             }
         })
     };
@@ -194,6 +194,29 @@ pub fn depth_pid_window(id: ExtensionId, ui: Sender<UiMessage>) -> Pane {
     pane.add(components::PidEditorUi::new(
         tokens::DEPTH_CONTROL_PID_OVERRIDE,
     ));
+    pane.add(components::PreserveSize::default());
+
+    pane
+}
+
+pub fn motor_override_window(id: ExtensionId, ui: Sender<UiMessage>) -> Pane {
+    let mut pane = {
+        Pane::new(move |ctx, add_contents| {
+            let mut open = true;
+
+            egui::Window::new("Motor Overrides")
+                .id(Id::new(id))
+                .open(&mut open)
+                .show(ctx, add_contents);
+
+            if !open {
+                ui.try_send(UiMessage::ClosePanel(PaneId::Extension(id)))
+                    .log_error("Close override window");
+            }
+        })
+    };
+
+    pane.add(components::MovementOverrideUi::default());
     pane.add(components::PreserveSize::default());
 
     pane

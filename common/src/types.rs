@@ -1,5 +1,6 @@
 //! Definitions of important types used throughout the project
 
+use fxhash::FxHashMap as HashMap;
 use mint::Quaternion;
 use serde::{Deserialize, Serialize};
 use std::fmt::{Display, Formatter};
@@ -15,6 +16,8 @@ impl Default for Orientation {
         Self(Quaternion::from([0.0, 0.0, 0.0, 1.0]))
     }
 }
+
+pub type MovementOverride = HashMap<MotorId, Percent>;
 
 /// +X: Right, +Y: Forwards, +Z: Up
 /// +XR: Pitch Up, +YR: Roll Clockwise, +ZR: Yaw Clockwise (top view)

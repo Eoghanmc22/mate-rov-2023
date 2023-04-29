@@ -13,6 +13,8 @@ use common::types::DepthControlMode;
 use common::types::DepthCorrection;
 use common::types::LevelingCorrection;
 use common::types::LevelingMode;
+use common::types::MovementOverride;
+use common::types::Percent;
 use common::types::PidConfig;
 use common::types::PidResult;
 use common::types::RobotStatus;
@@ -25,6 +27,7 @@ use common::{
         Orientation, SystemInfo,
     },
 };
+use egui::Slider;
 use egui::{vec2, Align, Layout};
 use egui::{Color32, Frame};
 use egui_extras::{Column, TableBuilder};
@@ -152,6 +155,20 @@ impl UiComponent for MenuBar {
                         }
                     });
                 }
+                if ui.button("Motor overrides").clicked() {
+                    commands.add(|world: &mut World| {
+                        if let Some(ui) = world.get_resource::<UiMessages>() {
+                            let id = rand::random();
+                            ui.0.try_send(UiMessage::OpenPanel(
+                                PaneId::Extension(id),
+                                panes::motor_override_window(id, ui.0.clone()),
+                            ))
+                            .log_error("Open motor window");
+                        } else {
+                            error!("No UiMessage resource found");
+                        }
+                    });
+                }
             });
             egui::menu::menu_button(ui, "Debug", |ui| {
                 if ui.button("Egui Settings").clicked() {
@@ -179,6 +196,7 @@ pub struct StatusBar {
     leak: Option<Arc<bool>>,
     leveling: Option<Arc<LevelingMode>>,
     depth: Option<Arc<DepthControlMode>>,
+    movement_override: Option<Arc<MovementOverride>>,
 }
 
 impl UiComponent for StatusBar {
@@ -190,6 +208,7 @@ impl UiComponent for StatusBar {
         self.leak = robot.store().get(&tokens::LEAK);
         self.leveling = robot.store().get(&tokens::LEVELING_MODE);
         self.depth = robot.store().get(&tokens::DEPTH_CONTROL_MODE);
+        self.movement_override = robot.store().get(&tokens::MOVEMENT_OVERRIDE);
     }
 
     fn draw(&mut self, _ctx: &egui::Context, ui: &mut egui::Ui, _commands: &mut Commands) {
@@ -233,6 +252,12 @@ impl UiComponent for StatusBar {
                 ui.colored_label(color, format!("Depth control: {depth_control:?}"));
             } else {
                 ui.label("No depth control data");
+            }
+
+            if let Some(_) = self.movement_override {
+                ui.colored_label(Color32::RED, format!("Movement Override is SET"));
+            } else {
+                ui.label("No movement override");
             }
         });
     }
@@ -1256,6 +1281,94 @@ impl UiComponent for DepthControlUi {
                     ui.label(format!("No movement calculated"));
                 }
             });
+        });
+    }
+}
+
+#[derive(Debug, Default)]
+pub struct MovementOverrideUi {
+    movement: Option<Arc<MovementOverride>>,
+    auto_notify: bool,
+}
+
+impl UiComponent for MovementOverrideUi {
+    fn pre_draw(&mut self, world: &World, _commands: &mut Commands) {
+        let Some(robot) = world.get_resource::<Robot>() else {
+            return;
+        };
+        self.movement = robot.store().get(&tokens::MOVEMENT_OVERRIDE);
+    }
+
+    fn draw(&mut self, _ctx: &egui::Context, ui: &mut egui::Ui, commands: &mut Commands) {
+        let motor_ids = [
+            MotorId::FrontLeftBottom,
+            MotorId::FrontLeftTop,
+            MotorId::FrontRightBottom,
+            MotorId::FrontRightTop,
+            MotorId::BackLeftBottom,
+            MotorId::BackLeftTop,
+            MotorId::BackRightBottom,
+            MotorId::BackRightTop,
+            MotorId::Camera1,
+            MotorId::Camera2,
+            MotorId::Camera3,
+            MotorId::Camera4,
+            MotorId::Aux1,
+            MotorId::Aux2,
+            MotorId::Aux3,
+            MotorId::Aux4,
+        ];
+
+        if let Some(ref speed_overrides) = self.movement {
+            let mut speed_overrides = (**speed_overrides).clone();
+
+            for motor_id in motor_ids {
+                let mut speed = speed_overrides
+                    .get(&motor_id)
+                    .cloned()
+                    .unwrap_or(Percent::ZERO)
+                    .get()
+                    * 100.0;
+
+                ui.add(
+                    Slider::new(&mut speed, -100.0..=100.0)
+                        .text(format!("{motor_id:?}"))
+                        .suffix("%"),
+                );
+
+                speed_overrides.insert(motor_id, Percent::new(speed / 100.0));
+            }
+
+            if self.auto_notify {
+                commands.add(|world: &mut World| {
+                    Updater::from_world(world)
+                        .emit_update(&tokens::MOVEMENT_OVERRIDE, speed_overrides);
+                });
+            }
+        } else {
+            ui.label("No override set");
+        }
+
+        ui.horizontal(|ui| {
+            ui.toggle_value(&mut self.auto_notify, "Auto apply");
+            if ui.button("Add override").clicked() {
+                commands.add(|world: &mut World| {
+                    Updater::from_world(world)
+                        .emit_update(&tokens::MOVEMENT_OVERRIDE, Default::default());
+                });
+                self.auto_notify = true;
+            }
+            if ui.button("Remove override").clicked() {
+                commands.add(|world: &mut World| {
+                    Updater::from_world(world).emit_delete(&tokens::MOVEMENT_OVERRIDE);
+                    let mut robot = world
+                        .get_resource_mut::<Robot>()
+                        .expect("No `Robot` resource");
+                    robot.store_mut().remove(&tokens::MOVEMENT_OVERRIDE);
+                });
+                self.movement = None;
+                self.auto_notify = false;
+            }
         });
     }
 }

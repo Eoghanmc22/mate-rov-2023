@@ -6,7 +6,7 @@ use crate::{
     types::{
         Armed, Camera, DepthControlMode, DepthCorrection, DepthFrame, InertialFrame,
         LevelingCorrection, LevelingMode, MagFrame, Meters, MotorFrame, MotorId, Movement,
-        Orientation, PidConfig, PidResult, RobotStatus, SystemInfo,
+        MovementOverride, Orientation, PidConfig, PidResult, RobotStatus, SystemInfo,
     },
 };
 use fxhash::FxHashMap as HashMap;
@@ -60,6 +60,8 @@ pub const MOVEMENT_LEVELING: Token<Movement> = Token::new_const("robot.movement.
 pub const MOVEMENT_DEPTH: Token<Movement> = Token::new_const("robot.movement.depth");
 #[rustfmt::skip]
 pub const MOVEMENT_CALCULATED: Token<Movement> = Token::new_const("robot.movement.calculated");
+#[rustfmt::skip]
+pub const MOVEMENT_OVERRIDE: Token<MovementOverride> = Token::new_const("robot.movement.override");
 
 #[rustfmt::skip]
 pub const RAW_DEPTH: Token<DepthFrame> = Token::new_const("robot.sensors.depth");
@@ -101,6 +103,7 @@ pub fn generate_adaptors() -> HashMap<Key, Box<dyn TypeAdapter<BackingType> + Se
         from(MOVEMENT_LEVELING),
         from(MOVEMENT_DEPTH),
         from(MOVEMENT_CALCULATED),
+        from(MOVEMENT_OVERRIDE),
         from(RAW_DEPTH),
         from(RAW_INERTIAL),
         from(RAW_MAGNETIC),
