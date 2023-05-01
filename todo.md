@@ -1,13 +1,19 @@
 # Queue
 
-- Profile robot code
-- Make things customizable at run time
+- Improve thermals on robot
+- Switch leveling to use vector math
 - Sensor fusion init
-- Depth control
-- Remap joysticks
+- Improve user input
+- Tune pids
+- Autonomous stuff
+- Make things customizable at run time
 
 # Important Things
 
+- [ ] Thermals
+  - [ ] System Ids and selective send
+  - [ ] Batch gyro updates
+  - [ ] Look for other systems that are doing unnecessary work
 - [ ] Motors
   - [ ] Fix drop impl
 - [ ] Sensors
@@ -19,7 +25,8 @@
 - [ ] Control
   - [x] Pid stuff
   - [x] Leveling control
-    - [x] Tuning
+    - [ ] Use vector math
+    - [ ] Tuning
   - [M] Depth control
   - [ ] Speeds larger than 1
   - [ ] Remap inputs to square joystick
@@ -28,9 +35,13 @@
   - [ ] Make important settings editable in real time
 - [ ] UI
   - [ ] Leveling ui
-    - [ ] pid editing
-    - [ ] Display automous modes in bottom status ui?
+    - [x] pid editing
+    - [x] Display automous modes in bottom status ui?
     - [ ] Pitch/roll graph to help tune pid
+  - [ ] Better pilot controls
+    - [ ] 2 controller support
+    - [ ] Dedicated controls for servo
+    - [ ] Servo velocity control
   - [ ] Window to view and edit global store
     - [ ] Max motor speed, 
 - [ ] Misc
