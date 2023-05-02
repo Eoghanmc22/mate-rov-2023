@@ -17,9 +17,9 @@ use crate::{event::Event, events::EventHandle, systems::stop};
 use super::System;
 
 const PID_CONFIG: PidConfig = PidConfig {
-    k_p: 0.05,
-    k_i: 0.0,
-    k_d: 0.0,
+    kp: 0.5,
+    ki: 0.0,
+    kd: 0.0,
     max_integral: 2.0,
 };
 const PERIOD: Duration = Duration::from_millis(100);

@@ -83,9 +83,9 @@ pub struct PidWidget<'a>(pub &'a mut PidConfig);
 impl Widget for PidWidget<'_> {
     fn ui(self, ui: &mut egui::Ui) -> egui::Response {
         ui.group(|ui| {
-            ui.add(DragValue::new(&mut self.0.k_p).speed(0.1).prefix("kp: "));
-            ui.add(DragValue::new(&mut self.0.k_i).speed(0.1).prefix("ki: "));
-            ui.add(DragValue::new(&mut self.0.k_d).speed(0.1).prefix("kd: "));
+            ui.add(DragValue::new(&mut self.0.kp).speed(0.1).prefix("kp: "));
+            ui.add(DragValue::new(&mut self.0.ki).speed(0.1).prefix("ki: "));
+            ui.add(DragValue::new(&mut self.0.kd).speed(0.1).prefix("kd: "));
             ui.add(DragValue::new(&mut self.0.max_integral).prefix("max i: "));
             ui.allocate_space(vec2(ui.available_width(), 0.0));
         })
