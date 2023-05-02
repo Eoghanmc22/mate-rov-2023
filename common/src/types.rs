@@ -442,14 +442,14 @@ pub enum RobotStatus {
 pub struct PidController {
     last_error: Option<f32>,
     integral: f32,
-    period: Duration,
+    interval: Duration,
 }
 
 #[derive(Default, Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
 pub struct PidConfig {
-    pub k_p: f32,
-    pub k_i: f32,
-    pub k_d: f32,
+    pub kp: f32,
+    pub ki: f32,
+    pub kd: f32,
 
     pub max_integral: f32,
 }
@@ -468,33 +468,33 @@ impl PidResult {
 }
 
 impl PidController {
-    pub fn new(period: Duration) -> Self {
+    pub fn new(interval: Duration) -> Self {
         Self {
             last_error: None,
             integral: 0.0,
-            period,
+            interval,
         }
     }
 
     pub fn update(&mut self, error: f32, config: PidConfig) -> PidResult {
-        let p = error;
+        let cfg = config;
+        let interval = self.interval.as_secs_f32();
 
-        self.integral = clamp(self.integral + error, config.max_integral);
-        let i = self.integral * self.period.as_secs_f32();
+        self.integral += error * interval;
+        self.integral = self.integral.clamp(-cfg.max_integral, cfg.max_integral);
 
-        let d = if let Some(last_error) = self.last_error {
-            (error - last_error) / self.period.as_secs_f32()
-        } else {
-            0.0
-        };
+        let proportional = error;
+        let integral = self.integral;
+        let derivative = (error - self.last_error.unwrap_or(error)) / interval;
+
         self.last_error = Some(error);
+
+        let p = cfg.kp * proportional;
+        let i = cfg.ki * integral;
+        let d = cfg.kd * derivative;
 
         PidResult { p, i, d }
     }
-}
-
-fn clamp(val: f32, range: f32) -> f32 {
-    val.clamp(-range, range)
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]

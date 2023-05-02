@@ -2,6 +2,7 @@
 
 - Improve thermals on robot
 - Switch leveling to use vector math
+- Motor boost
 - Sensor fusion init
 - Improve user input
 - Tune pids
@@ -16,6 +17,12 @@
   - [ ] Look for other systems that are doing unnecessary work
 - [ ] Motors
   - [ ] Fix drop impl
+  - [ ] Motor boost
+    - [ ] Prove that the motor speed values can be used as a target amperage multiplier
+      - [ ] Only works for pairs, speeds will need to be rescaled
+    - [ ] Is amperage and thrust proportional?
+    - [ ] Should we use 12v or 14v data
+    - 
 - [ ] Sensors
   - [-] Sensor fusion
     - [H] Use last sensor data as stating position
@@ -29,7 +36,6 @@
     - [ ] Tuning
   - [M] Depth control
   - [ ] Speeds larger than 1
-  - [ ] Remap inputs to square joystick
 - [ ] Debugging
   - [?] Better logging
   - [ ] Make important settings editable in real time
@@ -39,6 +45,7 @@
     - [x] Display automous modes in bottom status ui?
     - [ ] Pitch/roll graph to help tune pid
   - [ ] Better pilot controls
+    - [ ] Remap inputs to square joystick
     - [ ] 2 controller support
     - [ ] Dedicated controls for servo
     - [ ] Servo velocity control
