@@ -17,12 +17,15 @@ use crate::{
     event::{Event, SensorFrame},
     events::EventHandle,
     systems::{stop, System},
+    SystemId,
 };
 
 /// Handles error events
 pub struct OrientationSystem;
 
 impl System for OrientationSystem {
+    const ID: SystemId = SystemId::Orientation;
+
     fn start<'scope>(
         mut events: EventHandle,
         spawner: &'scope Scope<'scope, '_>,

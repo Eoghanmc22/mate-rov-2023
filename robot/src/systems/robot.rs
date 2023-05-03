@@ -4,7 +4,7 @@ use anyhow::anyhow;
 use common::{protocol::Protocol, store::tokens};
 use tracing::{span, Level};
 
-use crate::{event::Event, events::EventHandle};
+use crate::{event::Event, events::EventHandle, SystemId};
 
 use super::System;
 
@@ -12,6 +12,8 @@ use super::System;
 pub struct StoreSystem;
 
 impl System for StoreSystem {
+    const ID: SystemId = SystemId::Store;
+
     fn start<'scope>(
         mut events: EventHandle,
         spawner: &'scope Scope<'scope, '_>,

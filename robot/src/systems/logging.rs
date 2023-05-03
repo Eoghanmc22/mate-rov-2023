@@ -3,13 +3,15 @@ use std::thread::Scope;
 use common::protocol::Protocol;
 use tracing::{debug, info, span, Level};
 
-use crate::{event::Event, events::EventHandle, systems::System};
+use crate::{event::Event, events::EventHandle, systems::System, SystemId};
 
 /// System for debugging
 /// Prings all messages on the event bus
 pub struct LogEventSystem;
 
 impl System for LogEventSystem {
+    const ID: SystemId = SystemId::LogEvents;
+
     fn start<'scope>(
         mut events: EventHandle,
         spawner: &'scope Scope<'scope, '_>,

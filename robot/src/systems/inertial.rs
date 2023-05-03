@@ -10,6 +10,7 @@ use crate::{
     events::EventHandle,
     peripheral::{icm20602::Icm20602, mmc5983::Mcc5983},
     systems::stop,
+    SystemId,
 };
 
 use super::System;
@@ -17,6 +18,8 @@ use super::System;
 pub struct InertialSystem;
 
 impl System for InertialSystem {
+    const ID: SystemId = SystemId::Inertial;
+
     fn start<'scope>(
         mut events: EventHandle,
         spawner: &'scope Scope<'scope, '_>,

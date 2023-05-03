@@ -8,6 +8,7 @@
 - Tune pids
 - Autonomous stuff
 - Make things customizable at run time
+- handle more unhappy paths, especially if let statements
 
 # Important Things
 

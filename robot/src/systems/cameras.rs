@@ -21,6 +21,7 @@ use crate::{
     event::Event,
     events::EventHandle,
     systems::{stop, System},
+    SystemId,
 };
 
 /// Handles camera detection, starting and stopping gstreamer, and notifying the suface about
@@ -28,6 +29,8 @@ use crate::{
 pub struct CameraSystem;
 
 impl System for CameraSystem {
+    const ID: SystemId = SystemId::Camera;
+
     fn start<'scope>(
         mut events: EventHandle,
         spawner: &'scope Scope<'scope, '_>,

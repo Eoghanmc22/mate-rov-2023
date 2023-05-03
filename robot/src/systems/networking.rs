@@ -1,6 +1,7 @@
 use crate::event::Event as RobotEvent;
 use crate::events::EventHandle;
 use crate::systems::System;
+use crate::SystemId;
 use anyhow::{Context, Error};
 use common::types::LogLevel;
 use common::{error::LogErrorExt, protocol::Protocol};
@@ -17,6 +18,8 @@ const ADDRS: &str = "0.0.0.0:44444";
 pub struct NetworkSystem;
 
 impl System for NetworkSystem {
+    const ID: SystemId = SystemId::Network;
+
     fn start<'scope>(
         mut events: EventHandle,
         spawner: &'scope Scope<'scope, '_>,

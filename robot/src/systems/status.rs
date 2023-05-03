@@ -6,13 +6,15 @@ use common::{
 };
 use tracing::{span, Level};
 
-use crate::{event::Event, events::EventHandle};
+use crate::{event::Event, events::EventHandle, SystemId};
 
 use super::{motor, System};
 
 pub struct StatusSystem;
 
 impl System for StatusSystem {
+    const ID: SystemId = SystemId::RobotStatus;
+
     fn start<'scope>(
         mut events: EventHandle,
         spawner: &'scope Scope<'scope, '_>,

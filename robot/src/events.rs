@@ -1,37 +1,46 @@
 use std::sync::Arc;
 
 use crossbeam::channel::{Receiver, Sender, TrySendError};
+use fxhash::FxHashMap as HashMap;
 use tracing::error;
 
-use crate::event::Event;
+use crate::{event::Event, SystemId};
 
 /// Facilitates communication between systems
 #[derive(Debug, Clone)]
 pub struct EventHandle {
-    peers: Vec<(usize, Sender<Arc<Event>>)>,
+    peers: HashMap<SystemId, Sender<Arc<Event>>>,
     listner: Option<Receiver<Arc<Event>>>,
-    id: usize,
+    id: SystemId,
 }
 
 impl EventHandle {
     #[must_use]
-    pub fn create(count: usize) -> Vec<Self> {
-        let mut peers = Vec::new();
-        let mut listners = Vec::new();
+    pub fn create(ids: impl IntoIterator<Item = SystemId>) -> HashMap<SystemId, Self> {
+        let mut peers = HashMap::default();
+        let mut listners = Vec::default();
 
-        for id in 0..count {
+        for id in ids {
             let (tx, rx) = crossbeam::channel::bounded(50);
-            peers.push((id, tx));
-            listners.push(rx);
+            let preavious = peers.insert(id, tx);
+            listners.push((id, rx));
+
+            if let Some(_) = preavious {
+                panic!("Duplicate id {id:?}");
+            }
         }
 
         listners
             .into_iter()
-            .enumerate()
-            .map(|(id, listner)| Self {
-                peers: peers.clone(),
-                listner: Some(listner),
-                id,
+            .map(|(id, listner)| {
+                (
+                    id,
+                    Self {
+                        peers: peers.clone(),
+                        listner: Some(listner),
+                        id,
+                    },
+                )
             })
             .collect()
     }
@@ -41,22 +50,41 @@ impl EventHandle {
         let event = Arc::new(event);
         let mut dropped_peers = Vec::new();
 
-        for (idx, (id, peer)) in self.peers.iter().enumerate() {
+        for (id, peer) in self.peers.iter() {
             let ret = peer.try_send(event.clone());
             if let Err(err) = ret {
                 match err {
                     TrySendError::Full(_) => {
-                        error!("Message channel full, event dropped. Peer id: {id}");
+                        error!("Message channel full, event dropped. Peer id: {id:?}");
                     }
                     TrySendError::Disconnected(_) => {
-                        dropped_peers.push(idx);
+                        dropped_peers.push(*id);
                     }
                 }
             }
         }
 
         for idx in dropped_peers.into_iter().rev() {
-            self.peers.remove(idx);
+            self.peers.remove(&idx);
+        }
+    }
+
+    #[tracing::instrument]
+    pub fn send_single(&mut self, event: Event, peer_id: SystemId) {
+        let event = Arc::new(event);
+
+        if let Some(peer) = self.peers.get(&peer_id) {
+            let ret = peer.try_send(event.clone());
+            if let Err(err) = ret {
+                match err {
+                    TrySendError::Full(_) => {
+                        error!("Message channel full, event dropped. Peer id: {peer_id:?}");
+                    }
+                    TrySendError::Disconnected(_) => {
+                        self.peers.remove(&peer_id);
+                    }
+                }
+            }
         }
     }
 
@@ -70,7 +98,7 @@ impl EventHandle {
     }
 
     #[must_use]
-    pub const fn id(&self) -> usize {
+    pub const fn id(&self) -> SystemId {
         self.id
     }
 }

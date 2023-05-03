@@ -5,7 +5,7 @@ use std::{
 
 use anyhow::Context;
 
-use crate::{event::Event, events::EventHandle};
+use crate::{event::Event, events::EventHandle, SystemId};
 
 use super::System;
 
@@ -14,6 +14,8 @@ static STOP_THE_WORLD: AtomicBool = AtomicBool::new(false);
 pub struct StopSystem;
 
 impl System for StopSystem {
+    const ID: SystemId = SystemId::Stop;
+
     fn start<'scope>(
         mut events: EventHandle,
         _spawner: &'scope Scope<'scope, '_>,

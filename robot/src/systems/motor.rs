@@ -1,6 +1,7 @@
 use crate::events::EventHandle;
 use crate::peripheral::motor::Motor;
 use crate::systems::{stop, System};
+use crate::SystemId;
 use crate::{event::Event, peripheral::pca9685::Pca9685};
 use anyhow::{anyhow, Context};
 use common::{
@@ -27,6 +28,8 @@ enum Message {
 }
 
 impl System for MotorSystem {
+    const ID: SystemId = SystemId::Motor;
+
     fn start<'scope>(
         mut events: EventHandle,
         spawner: &'scope Scope<'scope, '_>,

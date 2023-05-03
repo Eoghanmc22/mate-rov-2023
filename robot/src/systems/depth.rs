@@ -6,13 +6,17 @@ use std::{
 use common::store::{self, tokens};
 use tracing::{span, Level};
 
-use crate::{event::Event, events::EventHandle, peripheral::ms5937::Ms5837, systems::stop};
+use crate::{
+    event::Event, events::EventHandle, peripheral::ms5937::Ms5837, systems::stop, SystemId,
+};
 
 use super::System;
 
 pub struct DepthSystem;
 
 impl System for DepthSystem {
+    const ID: SystemId = SystemId::Depth;
+
     fn start<'scope>(
         mut events: EventHandle,
         spawner: &'scope Scope<'scope, '_>,

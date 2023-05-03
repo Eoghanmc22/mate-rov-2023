@@ -7,13 +7,15 @@ use anyhow::Context;
 use common::store::{self, tokens};
 use rppal::gpio::{Gpio, Level, Trigger};
 
-use crate::event::Event;
+use crate::{event::Event, SystemId};
 
 use super::System;
 
 pub struct LeakSystem;
 
 impl System for LeakSystem {
+    const ID: SystemId = SystemId::Leak;
+
     fn start<'scope>(
         mut events: crate::events::EventHandle,
         spawner: &'scope std::thread::Scope<'scope, '_>,

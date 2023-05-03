@@ -13,7 +13,7 @@ use sysinfo::{
 };
 use tracing::{span, Level};
 
-use crate::{event::Event, events::EventHandle, systems::stop};
+use crate::{event::Event, events::EventHandle, systems::stop, SystemId};
 
 use super::System as RobotSystem;
 
@@ -21,6 +21,8 @@ use super::System as RobotSystem;
 pub struct HwStatSystem;
 
 impl RobotSystem for HwStatSystem {
+    const ID: SystemId = SystemId::HwStatus;
+
     fn start<'scope>(
         mut events: EventHandle,
         spawner: &'scope Scope<'scope, '_>,

@@ -13,7 +13,7 @@ use crossbeam::channel::bounded;
 use glam::{EulerRot, Quat};
 use tracing::{span, warn, Level};
 
-use crate::{event::Event, events::EventHandle, systems::stop};
+use crate::{event::Event, events::EventHandle, systems::stop, SystemId};
 
 use super::System;
 
@@ -28,6 +28,8 @@ const PERIOD: Duration = Duration::from_millis(20);
 pub struct LevelingSystem;
 
 impl System for LevelingSystem {
+    const ID: SystemId = SystemId::Leveling;
+
     fn start<'scope>(
         mut events: EventHandle,
         spawner: &'scope Scope<'scope, '_>,

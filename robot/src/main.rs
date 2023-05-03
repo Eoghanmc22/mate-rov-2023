@@ -41,7 +41,7 @@ fn main() -> anyhow::Result<()> {
         .init();
     info!("Starting robot");
 
-    let mut systems = SystemManager::new();
+    let mut systems = SystemManager::default();
 
     info!("---------- Registering systems ----------");
     systems.add_system::<StopSystem>()?;
@@ -76,4 +76,24 @@ fn main() -> anyhow::Result<()> {
     info!("Robot stopped");
 
     Ok(())
+}
+
+#[derive(Debug, Hash, PartialEq, Eq, Clone, Copy)]
+pub enum SystemId {
+    Stop,
+    LogEvents,
+    Error,
+    Store,
+    Network,
+    HwStatus,
+    RobotStatus,
+    Motor,
+    Indicators,
+    Leak,
+    Inertial,
+    Orientation,
+    DepthControl,
+    Leveling,
+    Depth,
+    Camera,
 }

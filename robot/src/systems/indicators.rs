@@ -18,6 +18,7 @@ use crate::{
     events::EventHandle,
     peripheral::neopixel::{self, NeoPixel},
     systems::stop,
+    SystemId,
 };
 
 use super::System;
@@ -25,6 +26,8 @@ use super::System;
 pub struct IndicatorsSystem;
 
 impl System for IndicatorsSystem {
+    const ID: SystemId = SystemId::Indicators;
+
     fn start<'scope>(
         mut events: EventHandle,
         spawner: &'scope Scope<'scope, '_>,
