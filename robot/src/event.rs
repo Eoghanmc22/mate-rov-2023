@@ -19,14 +19,15 @@ pub enum Event {
     SyncStore,
     ResetForignStore,
 
-    SensorFrame(SensorFrame),
+    SensorFrame(SensorBatch),
 
     Error(anyhow::Error),
     Exit,
 }
 
+// Repersents 20ms of sensor data
 #[derive(Debug, Copy, Clone)]
-pub enum SensorFrame {
-    Imu(InertialFrame),
-    Mag(MagFrame),
+pub struct SensorBatch {
+    pub inertial: [InertialFrame; 20],
+    pub mag: [MagFrame; 2],
 }

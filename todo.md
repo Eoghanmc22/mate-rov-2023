@@ -9,6 +9,7 @@
 - Autonomous stuff
 - Make things customizable at run time
 - handle more unhappy paths, especially if let statements
+- use sensor hardware fifos?
 
 # Important Things
 

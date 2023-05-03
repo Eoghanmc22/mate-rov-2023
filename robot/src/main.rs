@@ -1,5 +1,5 @@
 //! Robot Code for the MATE Sea Owls Team
-#![feature(slice_as_chunks)]
+#![feature(split_array)]
 #![warn(meta_variable_misuse)]
 
 pub mod event;

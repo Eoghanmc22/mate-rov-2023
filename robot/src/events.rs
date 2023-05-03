@@ -45,7 +45,6 @@ impl EventHandle {
             .collect()
     }
 
-    #[tracing::instrument]
     pub fn send(&mut self, event: Event) {
         let event = Arc::new(event);
         let mut dropped_peers = Vec::new();
@@ -69,19 +68,20 @@ impl EventHandle {
         }
     }
 
-    #[tracing::instrument]
-    pub fn send_single(&mut self, event: Event, peer_id: SystemId) {
+    pub fn send_to(&mut self, event: Event, peer_ids: impl IntoIterator<Item = SystemId>) {
         let event = Arc::new(event);
 
-        if let Some(peer) = self.peers.get(&peer_id) {
-            let ret = peer.try_send(event.clone());
-            if let Err(err) = ret {
-                match err {
-                    TrySendError::Full(_) => {
-                        error!("Message channel full, event dropped. Peer id: {peer_id:?}");
-                    }
-                    TrySendError::Disconnected(_) => {
-                        self.peers.remove(&peer_id);
+        for peer_id in peer_ids {
+            if let Some(peer) = self.peers.get(&peer_id) {
+                let ret = peer.try_send(event.clone());
+                if let Err(err) = ret {
+                    match err {
+                        TrySendError::Full(_) => {
+                            error!("Message channel full, event dropped. Peer id: {peer_id:?}");
+                        }
+                        TrySendError::Disconnected(_) => {
+                            self.peers.remove(&peer_id);
+                        }
                     }
                 }
             }

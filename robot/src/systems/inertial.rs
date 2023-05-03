@@ -1,4 +1,5 @@
 use std::{
+    iter,
     thread::{self, Scope},
     time::{Duration, Instant},
 };
@@ -6,7 +7,7 @@ use std::{
 use tracing::{span, Level};
 
 use crate::{
-    event::{Event, SensorFrame},
+    event::{Event, SensorBatch},
     events::EventHandle,
     peripheral::{icm20602::Icm20602, mmc5983::Mcc5983},
     systems::stop,
@@ -50,6 +51,10 @@ impl System for InertialSystem {
             let interval = Duration::from_secs_f64(1.0 / 1000.0);
             let imu_divisor = 1;
             let mag_divisor = 10;
+            let brodcast_divisor = 20;
+
+            let mut inertial_buffer = Vec::with_capacity(20);
+            let mut mag_buffer = Vec::with_capacity(2);
 
             let mut deadline = Instant::now();
             let mut counter = 0;
@@ -61,7 +66,7 @@ impl System for InertialSystem {
 
                     match rst {
                         Ok(frame) => {
-                            events.send(Event::SensorFrame(SensorFrame::Imu(frame)));
+                            inertial_buffer.push(frame);
                         }
                         Err(err) => {
                             events.send(Event::Error(err.context("Could not read imu")));
@@ -74,11 +79,28 @@ impl System for InertialSystem {
 
                     match rst {
                         Ok(frame) => {
-                            events.send(Event::SensorFrame(SensorFrame::Mag(frame)));
+                            mag_buffer.push(frame);
                         }
                         Err(err) => {
                             events.send(Event::Error(err.context("Could not read mag")));
                         }
+                    }
+                }
+
+                if counter % brodcast_divisor == 0 {
+                    if inertial_buffer.len() >= 20 && mag_buffer.len() >= 2 {
+                        let inertial_data = inertial_buffer.split_array_ref().0;
+                        let mag_data = mag_buffer.split_array_ref().0;
+
+                        let batch = SensorBatch {
+                            inertial: *inertial_data,
+                            mag: *mag_data,
+                        };
+                        events
+                            .send_to(Event::SensorFrame(batch), iter::once(SystemId::Orientation));
+
+                        inertial_buffer.clear();
+                        mag_buffer.clear();
                     }
                 }
 
