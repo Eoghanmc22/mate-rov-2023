@@ -30,7 +30,7 @@ pub fn main() -> anyhow::Result<()> {
 
     let rst = Command::new("scp")
         .arg("./robot/forward_motor_data.csv")
-        .arg("pi@mate.local:~/mate/forward_motor_data.csv")
+        .arg("pi@mate.local:~/forward_motor_data.csv")
         .spawn()
         .context("Spawn scp")?
         .wait()
@@ -38,7 +38,7 @@ pub fn main() -> anyhow::Result<()> {
 
     let rst = Command::new("scp")
         .arg("./robot/reverse_motor_data.csv")
-        .arg("pi@mate.local:~/mate/reverse_motor_data.csv")
+        .arg("pi@mate.local:~/reverse_motor_data.csv")
         .spawn()
         .context("Spawn scp")?
         .wait()

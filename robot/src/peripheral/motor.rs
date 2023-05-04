@@ -101,15 +101,15 @@ pub const SERVO_AUX4: Motor = Motor {
 #[derive(Copy, Clone, PartialEq, Debug)]
 pub struct Motor {
     /// PWM signal channel
-    channel: u8,
+    pub channel: u8,
 
     /// Speed settings, can be negative to reverse direction
-    max_value: Percent,
+    pub max_value: Percent,
 
     /// PWM info
-    reverse: Duration,
-    forward: Duration,
-    center: Duration,
+    pub reverse: Duration,
+    pub forward: Duration,
+    pub center: Duration,
 }
 
 impl Motor {
@@ -130,11 +130,6 @@ impl Motor {
             / 1000;
 
         Duration::from_micros(pulse as u64)
-    }
-
-    #[must_use]
-    pub const fn channel(&self) -> u8 {
-        self.channel
     }
 }
 

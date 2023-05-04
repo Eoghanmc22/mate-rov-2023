@@ -96,7 +96,7 @@ impl System for MotorSystem {
                                 };
                                 deadlines.insert(motor_id, deadline);
 
-                                speeds[motor.channel() as usize] = pwm;
+                                speeds[motor.channel as usize] = pwm;
                             }
 
                             let rst = pwm_controller.set_pwms(speeds);
@@ -115,7 +115,7 @@ impl System for MotorSystem {
                             };
                             deadlines.insert(motor_id, deadline);
 
-                            let rst = pwm_controller.set_pwm(motor.channel(), pwm);
+                            let rst = pwm_controller.set_pwm(motor.channel, pwm);
                             if let Err(error) = rst {
                                 events.send(Event::Error(
                                     error.context(format!("Couldn't set speed: {motor_id:?}")),
@@ -128,7 +128,7 @@ impl System for MotorSystem {
                                     let motor = Motor::from(*motor_id);
 
                                     let rst = pwm_controller
-                                        .set_pwm(motor.channel(), Duration::from_micros(1500));
+                                        .set_pwm(motor.channel, Duration::from_micros(1500));
                                     if let Err(error) = rst {
                                         events.send(Event::Error(
                                             error.context(format!(
@@ -321,9 +321,11 @@ pub fn mix_movement<'a>(mov: Movement, motor_data: &MotorData) -> HashMap<MotorI
 
     let mut raw_mix = HashMap::default();
 
-    for motor in drive_ids {
+    for motor_id in drive_ids {
+        let motor = Motor::from(motor_id);
+
         #[rustfmt::skip]
-        let speed = match motor {
+        let speed = match motor_id {
             MotorId::FrontLeftBottom =>   -x - y + z + x_rot + y_rot - z_rot,
             MotorId::FrontLeftTop =>      -x - y - z - x_rot - y_rot - z_rot,
             MotorId::FrontRightBottom =>   x - y + z + x_rot - y_rot + z_rot,
@@ -337,8 +339,9 @@ pub fn mix_movement<'a>(mov: Movement, motor_data: &MotorData) -> HashMap<MotorI
         };
 
         let skew = if speed >= 0.0 { 1.0 } else { 1.25 };
+        let direction = motor.max_value.get().signum();
 
-        raw_mix.insert(motor, speed * skew);
+        raw_mix.insert(motor_id, speed * skew * direction);
     }
 
     let max_raw = raw_mix.len() as f64;
