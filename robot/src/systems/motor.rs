@@ -336,7 +336,9 @@ pub fn mix_movement<'a>(mov: Movement, motor_data: &MotorData) -> HashMap<MotorI
             _ => unreachable!()
         };
 
-        raw_mix.insert(motor, speed);
+        let skew = if speed >= 0.0 { 1.0 } else { 1.25 };
+
+        raw_mix.insert(motor, speed * skew);
     }
 
     let max_raw = raw_mix.len() as f64;
@@ -405,9 +407,6 @@ impl MotorData {
         let pwm = if idx > 0 && idx < data_set.len() {
             let a = &data_set[idx - 1];
             let b = &data_set[idx];
-
-            println!("a: {a:?}");
-            println!("b: {b:?}");
 
             let alpha = (current - a.current) / (b.current - a.current);
 
