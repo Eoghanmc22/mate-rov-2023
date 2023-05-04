@@ -1,7 +1,7 @@
 //! Definitions of important types used throughout the project
 
 use fxhash::FxHashMap as HashMap;
-use mint::Quaternion;
+use mint::{Quaternion, Vector3};
 use serde::{Deserialize, Serialize};
 use std::fmt::{Display, Formatter};
 use std::net::SocketAddr;
@@ -48,11 +48,11 @@ pub struct Movement {
 
     /// Auxilary control 1
     pub aux_1: Percent,
-    /// Auxilary control 1
+    /// Auxilary control 2
     pub aux_2: Percent,
-    /// Auxilary control 1
+    /// Auxilary control 3
     pub aux_3: Percent,
-    /// Auxilary control 1
+    /// Auxilary control 4
     pub aux_4: Percent,
 }
 
@@ -521,7 +521,7 @@ impl PidController {
 
 #[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
 pub enum LevelingMode {
-    Enabled(Degrees, Degrees),
+    Enabled(Vector3<f32>),
     Disabled,
 }
 

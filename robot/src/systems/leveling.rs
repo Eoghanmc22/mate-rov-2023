@@ -10,7 +10,7 @@ use common::{
     types::{LevelingCorrection, LevelingMode, Movement, Percent, PidConfig, PidController},
 };
 use crossbeam::channel::bounded;
-use glam::{EulerRot, Quat};
+use glam::{EulerRot, Quat, Vec3};
 use tracing::{span, warn, Level};
 
 use crate::{event::Event, events::EventHandle, systems::stop, SystemId};
@@ -18,11 +18,13 @@ use crate::{event::Event, events::EventHandle, systems::stop, SystemId};
 use super::System;
 
 const PID_CONFIG: PidConfig = PidConfig {
-    kp: 0.5,
-    ki: 0.0,
-    kd: 0.0,
+    kp: 0.4,
+    ki: 0.1,
+    kd: 0.2,
     max_integral: 2.0,
 };
+const PID_PITCH_MULTIPLIER: f64 = 2.0;
+const PID_ROLL_MULTIPLIER: f64 = 1.0;
 const PERIOD: Duration = Duration::from_millis(20);
 
 pub struct LevelingSystem;
@@ -116,18 +118,13 @@ impl System for LevelingSystem {
                             ) {
                                 let orientation = Quat::from(orientation.0);
 
-                                if let LevelingMode::Enabled(pitch_target, roll_target) = *mode {
-                                    let (pitch_target, roll_target) = (
-                                        pitch_target.0.to_radians() as f32,
-                                        roll_target.0.to_radians() as f32,
-                                    );
-                                    let (_, pitch_observed, roll_observed) =
-                                        orientation.to_euler(EulerRot::ZXY);
+                                if let LevelingMode::Enabled(target_up) = *mode {
+                                    let target_up: Vec3 = target_up.into();
+                                    let observed_up = orientation * Vec3::Z;
 
-                                    let (pitch_error, roll_error) = (
-                                        pitch_target - pitch_observed,
-                                        roll_target - roll_observed,
-                                    );
+                                    let error = Quat::from_rotation_arc(observed_up, target_up);
+                                    let (pitch_error, _, _) = error.to_euler(EulerRot::XYZ);
+                                    let (roll_error, _, _) = error.to_euler(EulerRot::YXZ);
 
                                     let config = store
                                         .get(&tokens::LEVELING_PID_OVERRIDE)
@@ -158,8 +155,12 @@ impl System for LevelingSystem {
                                     store.insert(
                                         &tokens::MOVEMENT_LEVELING,
                                         Movement {
-                                            x_rot: Percent::new(pitch_corection as f64),
-                                            y_rot: Percent::new(roll_corection as f64),
+                                            x_rot: Percent::new(
+                                                pitch_corection as f64 * PID_PITCH_MULTIPLIER,
+                                            ),
+                                            y_rot: Percent::new(
+                                                roll_corection as f64 * PID_ROLL_MULTIPLIER,
+                                            ),
                                             ..Movement::default()
                                         },
                                     );

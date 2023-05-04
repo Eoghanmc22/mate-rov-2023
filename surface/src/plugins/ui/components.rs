@@ -233,7 +233,7 @@ impl UiComponent for StatusBar {
             }
 
             if let Some(ref leveling) = self.leveling {
-                let color = if matches!(**leveling, LevelingMode::Enabled(_, _)) {
+                let color = if matches!(**leveling, LevelingMode::Enabled(_)) {
                     Color32::GREEN
                 } else {
                     Color32::BLUE

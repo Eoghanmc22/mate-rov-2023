@@ -215,8 +215,8 @@ impl InputState {
                         if let Some(robot) = world.get_resource::<Robot>() {
                             let old_mode = robot.store().get(&tokens::LEVELING_MODE).map(|it| *it);
                             let new_mode = match old_mode {
-                                Some(LevelingMode::Enabled(_, _)) => LevelingMode::Disabled,
-                                _ => LevelingMode::Enabled(Degrees(0.0), Degrees(0.0)),
+                                Some(LevelingMode::Enabled(_)) => LevelingMode::Disabled,
+                                _ => LevelingMode::Enabled(Vec3::Z.into()),
                             };
                             Updater::from_world(world)
                                 .emit_update(&tokens::LEVELING_MODE, new_mode);
