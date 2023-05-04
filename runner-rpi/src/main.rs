@@ -28,6 +28,22 @@ pub fn main() -> anyhow::Result<()> {
         .context("Spawn scp")?
         .wait();
 
+    let rst = Command::new("scp")
+        .arg("./robot/forward_motor_data.csv")
+        .arg("pi@mate.local:~/mate/forward_motor_data.csv")
+        .spawn()
+        .context("Spawn scp")?
+        .wait()
+        .and(rst);
+
+    let rst = Command::new("scp")
+        .arg("./robot/reverse_motor_data.csv")
+        .arg("pi@mate.local:~/mate/reverse_motor_data.csv")
+        .spawn()
+        .context("Spawn scp")?
+        .wait()
+        .and(rst);
+
     let status = Command::new("scp")
         .arg(bin)
         .arg("pi@mate.local:~/mate/mate-exec")

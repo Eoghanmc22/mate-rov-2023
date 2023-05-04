@@ -257,7 +257,7 @@ mod tests {
     use super::*;
 
     #[test]
-    fn it_works() {
+    fn store_test() {
         let token_a = Token::new("a");
         let token_b = Token::new("b");
 

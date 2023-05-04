@@ -190,8 +190,30 @@ pub struct MagFrame {
     pub mag_z: Gauss,
 }
 
-#[derive(Debug, Copy, Clone, Default, Serialize, Deserialize, PartialEq)]
-pub struct MotorFrame(pub Percent);
+#[derive(Debug, Copy, Clone, Serialize, Deserialize, PartialEq)]
+pub enum MotorFrame {
+    Percent(Percent),
+    Raw(Duration),
+}
+
+impl MotorFrame {
+    pub fn to_f64(&self) -> f64 {
+        match self {
+            MotorFrame::Percent(pct) => pct.get(),
+            MotorFrame::Raw(raw) => {
+                let us = raw.as_micros() as f64;
+                let dist_center = us - 1500.0;
+                dist_center / (1900.0 - 1500.0)
+            }
+        }
+    }
+}
+
+impl Default for MotorFrame {
+    fn default() -> Self {
+        Self::Percent(Percent::ZERO)
+    }
+}
 
 #[derive(Debug, Copy, Clone, Default, Serialize, Deserialize, Eq, PartialEq)]
 pub enum Armed {

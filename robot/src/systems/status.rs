@@ -90,7 +90,7 @@ fn compute_status<C: UpdateCallback>(store: &Store<C>, peers: i32) -> RobotStatu
             if let Some(speeds) = store.get_alive(&tokens::MOTOR_SPEED, motor::MAX_UPDATE_AGE) {
                 let max_speed = speeds
                     .values()
-                    .map(|it| it.0.get().abs())
+                    .map(|it| it.to_f64().abs())
                     .max_by(f64::total_cmp);
                 if let Some(max_speed) = max_speed {
                     state = RobotStatus::Moving(Percent::new(max_speed));

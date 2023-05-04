@@ -4,6 +4,7 @@ use crate::systems::{stop, System};
 use crate::SystemId;
 use crate::{event::Event, peripheral::pca9685::Pca9685};
 use anyhow::{anyhow, Context};
+use common::store::UpdateCallback;
 use common::{
     error::LogErrorExt,
     store::{tokens, KeyImpl, Store},
@@ -11,6 +12,7 @@ use common::{
 };
 use crossbeam::channel;
 use fxhash::{FxHashMap as HashMap, FxHashSet as HashSet};
+use serde::Deserialize;
 use std::thread::{self, Scope};
 use std::time::Duration;
 use std::time::Instant;
@@ -37,6 +39,8 @@ impl System for MotorSystem {
         let listner = events.take_listner().unwrap();
 
         let (tx, rx) = channel::bounded(32);
+
+        let motor_data = read_motor_data().context("Load motor data")?;
 
         {
             let mut events = events.clone();
@@ -81,12 +85,15 @@ impl System for MotorSystem {
 
                     match message {
                         Message::MotorSpeeds(motors, deadline) => {
-                            let mut speeds = [Duration::ZERO; 16];
+                            let mut speeds = [Duration::from_micros(1500); 16];
 
                             for (motor_id, frame) in motors {
                                 let motor = Motor::from(motor_id);
-                                let pwm = motor.value_to_pwm(frame.0);
 
+                                let pwm = match frame {
+                                    MotorFrame::Percent(pct) => motor.value_to_pwm(pct),
+                                    MotorFrame::Raw(raw) => raw,
+                                };
                                 deadlines.insert(motor_id, deadline);
 
                                 speeds[motor.channel() as usize] = pwm;
@@ -100,10 +107,13 @@ impl System for MotorSystem {
                             }
                         }
                         Message::MotorSpeed(motor_id, frame, deadline) => {
-                            deadlines.insert(motor_id, deadline);
-
                             let motor = Motor::from(motor_id);
-                            let pwm = motor.value_to_pwm(frame.0);
+
+                            let pwm = match frame {
+                                MotorFrame::Percent(pct) => motor.value_to_pwm(pct),
+                                MotorFrame::Raw(raw) => raw,
+                            };
+                            deadlines.insert(motor_id, deadline);
 
                             let rst = pwm_controller.set_pwm(motor.channel(), pwm);
                             if let Err(error) = rst {
@@ -117,8 +127,8 @@ impl System for MotorSystem {
                                 if now - *deadline > MAX_UPDATE_AGE {
                                     let motor = Motor::from(*motor_id);
 
-                                    let rst =
-                                        pwm_controller.set_pwm(motor.channel(), Duration::ZERO);
+                                    let rst = pwm_controller
+                                        .set_pwm(motor.channel(), Duration::from_micros(1500));
                                     if let Err(error) = rst {
                                         events.send(Event::Error(
                                             error.context(format!(
@@ -146,31 +156,6 @@ impl System for MotorSystem {
                         events.send(Event::Store(update));
                     })
                 };
-
-                let motor_ids = [
-                    MotorId::FrontLeftBottom,
-                    MotorId::FrontLeftTop,
-                    MotorId::FrontRightBottom,
-                    MotorId::FrontRightTop,
-                    MotorId::BackLeftBottom,
-                    MotorId::BackLeftTop,
-                    MotorId::BackRightBottom,
-                    MotorId::BackRightTop,
-                    MotorId::Camera1,
-                    MotorId::Camera2,
-                    MotorId::Camera3,
-                    MotorId::Camera4,
-                    MotorId::Aux1,
-                    MotorId::Aux2,
-                    MotorId::Aux3,
-                    MotorId::Aux4,
-                ];
-                let motors = motor_ids
-                    .into_iter()
-                    .map(|it| (it, MotorFrame::default()))
-                    .collect();
-
-                store.insert(&tokens::MOTOR_SPEED, motors);
 
                 let listening: HashSet<KeyImpl> = vec![
                     tokens::ARMED.0,
@@ -208,38 +193,16 @@ impl System for MotorSystem {
                                             let mut new_speeds = HashMap::default();
 
                                             for (motor, speed) in speed_overrides.iter() {
-                                                new_speeds.insert(*motor, MotorFrame(*speed));
+                                                new_speeds
+                                                    .insert(*motor, MotorFrame::Percent(*speed));
                                             }
 
                                             new_speeds
                                         } else {
-                                            let mut movement = Movement::default();
-
-                                            if let Some(joystick) = store.get_alive(
-                                                &tokens::MOVEMENT_JOYSTICK,
-                                                MAX_UPDATE_AGE,
-                                            ) {
-                                                movement += *joystick;
-                                            }
-                                            if let Some(opencv) = store
-                                                .get_alive(&tokens::MOVEMENT_OPENCV, MAX_UPDATE_AGE)
-                                            {
-                                                movement += *opencv;
-                                            }
-                                            if let Some(leveling) = store.get_alive(
-                                                &tokens::MOVEMENT_LEVELING,
-                                                MAX_UPDATE_AGE,
-                                            ) {
-                                                movement += *leveling;
-                                            }
-                                            if let Some(depth) = store
-                                                .get_alive(&tokens::MOVEMENT_DEPTH, MAX_UPDATE_AGE)
-                                            {
-                                                movement += *depth;
-                                            }
+                                            let movement = sum_movements(&store);
                                             store.insert(&tokens::MOVEMENT_CALCULATED, movement);
 
-                                            mix_movement(movement, motor_ids.iter())
+                                            mix_movement(movement, &motor_data)
                                         }
                                     } else {
                                         // Disarmed
@@ -292,38 +255,203 @@ impl System for MotorSystem {
     }
 }
 
-// TODO Fix motor math
-pub fn mix_movement<'a>(
-    mov: Movement,
-    motors: impl IntoIterator<Item = &'a MotorId>,
-) -> HashMap<MotorId, MotorFrame> {
-    let mut speeds = HashMap::default();
+pub fn sum_movements<C: UpdateCallback>(store: &Store<C>) -> Movement {
+    let mut movement = Movement::default();
 
-    for motor in motors {
+    if let Some(joystick) = store.get_alive(&tokens::MOVEMENT_JOYSTICK, MAX_UPDATE_AGE) {
+        movement += *joystick;
+    }
+    if let Some(opencv) = store.get_alive(&tokens::MOVEMENT_OPENCV, MAX_UPDATE_AGE) {
+        movement += *opencv;
+    }
+    if let Some(leveling) = store.get_alive(&tokens::MOVEMENT_LEVELING, MAX_UPDATE_AGE) {
+        movement += *leveling;
+    }
+    if let Some(depth) = store.get_alive(&tokens::MOVEMENT_DEPTH, MAX_UPDATE_AGE) {
+        movement += *depth;
+    }
+
+    movement
+}
+
+// TODO Fix motor math
+pub fn mix_movement<'a>(mov: Movement, motor_data: &MotorData) -> HashMap<MotorId, MotorFrame> {
+    const MAX_AMPERAGE: f64 = 20.0;
+
+    let drive_ids = [
+        MotorId::FrontLeftBottom,
+        MotorId::FrontLeftTop,
+        MotorId::FrontRightBottom,
+        MotorId::FrontRightTop,
+        MotorId::BackLeftBottom,
+        MotorId::BackLeftTop,
+        MotorId::BackRightBottom,
+        MotorId::BackRightTop,
+    ];
+    let servo_ids = [
+        MotorId::Camera1,
+        MotorId::Camera2,
+        MotorId::Camera3,
+        MotorId::Camera4,
+        MotorId::Aux1,
+        MotorId::Aux2,
+        MotorId::Aux3,
+        MotorId::Aux4,
+    ];
+
+    let Movement {
+        x,
+        y,
+        z,
+        x_rot,
+        y_rot,
+        z_rot,
+        cam_1,
+        cam_2,
+        cam_3,
+        cam_4,
+        aux_1,
+        aux_2,
+        aux_3,
+        aux_4,
+    } = mov;
+
+    let (x, y, z) = (x.get(), y.get(), z.get());
+    let (x_rot, y_rot, z_rot) = (x_rot.get(), y_rot.get(), z_rot.get());
+
+    let mut raw_mix = HashMap::default();
+
+    for motor in drive_ids {
         #[rustfmt::skip]
         let speed = match motor {
-            MotorId::FrontLeftBottom =>   -mov.x - mov.y + mov.z + mov.x_rot + mov.y_rot - mov.z_rot,
-            MotorId::FrontLeftTop =>      -mov.x - mov.y - mov.z - mov.x_rot - mov.y_rot - mov.z_rot,
-            MotorId::FrontRightBottom =>   mov.x - mov.y + mov.z + mov.x_rot - mov.y_rot + mov.z_rot,
-            MotorId::FrontRightTop =>      mov.x - mov.y - mov.z - mov.x_rot + mov.y_rot + mov.z_rot,
-            MotorId::BackLeftBottom =>    -mov.x + mov.y + mov.z - mov.x_rot + mov.y_rot + mov.z_rot,
-            MotorId::BackLeftTop =>       -mov.x + mov.y - mov.z + mov.x_rot - mov.y_rot + mov.z_rot,
-            MotorId::BackRightBottom =>    mov.x + mov.y + mov.z - mov.x_rot - mov.y_rot - mov.z_rot,
-            MotorId::BackRightTop =>       mov.x + mov.y - mov.z + mov.x_rot + mov.y_rot - mov.z_rot,
+            MotorId::FrontLeftBottom =>   -x - y + z + x_rot + y_rot - z_rot,
+            MotorId::FrontLeftTop =>      -x - y - z - x_rot - y_rot - z_rot,
+            MotorId::FrontRightBottom =>   x - y + z + x_rot - y_rot + z_rot,
+            MotorId::FrontRightTop =>      x - y - z - x_rot + y_rot + z_rot,
+            MotorId::BackLeftBottom =>    -x + y + z - x_rot + y_rot + z_rot,
+            MotorId::BackLeftTop =>       -x + y - z + x_rot - y_rot + z_rot,
+            MotorId::BackRightBottom =>    x + y + z - x_rot - y_rot - z_rot,
+            MotorId::BackRightTop =>       x + y - z + x_rot + y_rot - z_rot,
 
-            MotorId::Camera1 => mov.cam_1,
-            MotorId::Camera2 => mov.cam_2,
-            MotorId::Camera3 => mov.cam_3,
-            MotorId::Camera4 => mov.cam_4,
-
-            MotorId::Aux1 => mov.aux_1,
-            MotorId::Aux2 => mov.aux_2,
-            MotorId::Aux3 => mov.aux_3,
-            MotorId::Aux4 => mov.aux_4,
+            _ => unreachable!()
         };
 
-        speeds.insert(*motor, MotorFrame(speed));
+        raw_mix.insert(motor, speed);
+    }
+
+    let max_raw = raw_mix.len() as f64;
+    let total_raw: f64 = raw_mix.values().map(|it| it.abs()).sum();
+    let scale_raw = if total_raw > max_raw {
+        max_raw / total_raw
+    } else {
+        // Handle cases where we dont want to go max speed
+        1.0
+    };
+
+    let motor_amperage = MAX_AMPERAGE / max_raw;
+    let mut speeds: HashMap<MotorId, MotorFrame> = raw_mix
+        .into_iter()
+        .map(|(motor, value)| (motor, value * scale_raw * motor_amperage))
+        .map(|(motor, current)| (motor, motor_data.pwm_for_current(current)))
+        .map(|(motor, pwm)| (motor, MotorFrame::Raw(pwm)))
+        .collect();
+
+    for motor in servo_ids {
+        #[rustfmt::skip]
+        let speed = match motor {
+            MotorId::Camera1 => cam_1,
+            MotorId::Camera2 => cam_2,
+            MotorId::Camera3 => cam_3,
+            MotorId::Camera4 => cam_4,
+
+            MotorId::Aux1 => aux_1,
+            MotorId::Aux2 => aux_2,
+            MotorId::Aux3 => aux_3,
+            MotorId::Aux4 => aux_4,
+
+            _ => unreachable!()
+        };
+
+        speeds.insert(motor, MotorFrame::Percent(speed));
     }
 
     speeds
+}
+
+pub struct MotorData {
+    forward: Vec<MotorRecord>,
+    backward: Vec<MotorRecord>,
+}
+
+impl MotorData {
+    pub fn sort(&mut self) {
+        self.forward
+            .sort_by(|a, b| f64::total_cmp(&a.current, &b.current));
+        self.backward
+            .sort_by(|a, b| f64::total_cmp(&a.current, &b.current));
+    }
+
+    pub fn pwm_for_current(&self, signed_current: f64) -> Duration {
+        let current = signed_current.abs();
+
+        let data_set = if signed_current >= 0.0 {
+            &self.forward
+        } else {
+            &self.backward
+        };
+        assert!(!data_set.is_empty());
+
+        let idx = data_set.partition_point(|x| x.current < current);
+        let pwm = if idx > 0 && idx < data_set.len() {
+            let a = &data_set[idx - 1];
+            let b = &data_set[idx];
+
+            println!("a: {a:?}");
+            println!("b: {b:?}");
+
+            let alpha = (current - a.current) / (b.current - a.current);
+
+            a.pwm * (1.0 - alpha) + (b.pwm * alpha)
+        } else {
+            data_set[0].pwm
+        };
+
+        Duration::from_micros(pwm as u64)
+    }
+}
+
+#[derive(Deserialize, Debug)]
+pub struct MotorRecord {
+    pwm: f64,
+    rpm: f64,
+    current: f64,
+    voltage: f64,
+    power: f64,
+    force: f64,
+    efficiency: f64,
+}
+
+pub fn read_motor_data() -> anyhow::Result<MotorData> {
+    let forward = csv::Reader::from_path("forward_motor_data.csv").context("Read forward data")?;
+    let reverse = csv::Reader::from_path("reverse_motor_data.csv").context("Read reverse data")?;
+
+    let mut forward_data = Vec::default();
+    for result in forward.into_deserialize() {
+        let record: MotorRecord = result.context("Parse motor record")?;
+        forward_data.push(record);
+    }
+
+    let mut reverse_data = Vec::default();
+    for result in reverse.into_deserialize() {
+        let record: MotorRecord = result.context("Parse motor record")?;
+        reverse_data.push(record);
+    }
+
+    let mut motor_data = MotorData {
+        forward: forward_data,
+        backward: reverse_data,
+    };
+    motor_data.sort();
+
+    Ok(motor_data)
 }

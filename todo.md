@@ -1,6 +1,7 @@
 # Queue
 
 - Improve thermals on robot
+- Make Motor frame an enum
 - Switch leveling to use vector math
 - Motor boost
 - Sensor fusion init
@@ -13,9 +14,9 @@
 
 # Important Things
 
-- [ ] Thermals
-  - [ ] System Ids and selective send
-  - [ ] Batch gyro updates
+- [?] Thermals
+  - [x] System Ids and selective send
+  - [x] Batch gyro updates
   - [ ] Look for other systems that are doing unnecessary work
 - [ ] Motors
   - [ ] Fix drop impl

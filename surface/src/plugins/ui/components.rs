@@ -786,7 +786,7 @@ impl UiComponent for MotorsUi {
                                 ui.label(format!("{name:?}"));
                             });
                             row.col(|ui| {
-                                ui.label(format!("{:.2?}", speed.0.get()));
+                                ui.label(format!("{:.2?}", speed.to_f64()));
                             });
                         });
                     });

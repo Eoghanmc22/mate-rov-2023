@@ -260,49 +260,63 @@ impl InputState {
     }
 }
 
+// fn next_servo(id: MotorId) -> MotorId {
+//     match id {
+//         MotorId::FrontLeftBottom
+//         | MotorId::FrontLeftTop
+//         | MotorId::FrontRightBottom
+//         | MotorId::FrontRightTop
+//         | MotorId::BackLeftBottom
+//         | MotorId::BackLeftTop
+//         | MotorId::BackRightBottom
+//         | MotorId::BackRightTop => {
+//             unimplemented!()
+//         }
+//         MotorId::Camera1 => MotorId::Camera2,
+//         MotorId::Camera2 => MotorId::Camera3,
+//         MotorId::Camera3 => MotorId::Camera4,
+//         MotorId::Camera4 => MotorId::Aux1,
+//         MotorId::Aux1 => MotorId::Aux2,
+//         MotorId::Aux2 => MotorId::Aux3,
+//         MotorId::Aux3 => MotorId::Aux4,
+//         MotorId::Aux4 => MotorId::Camera1,
+//     }
+// }
+//
+// fn last_servo(id: MotorId) -> MotorId {
+//     match id {
+//         MotorId::FrontLeftBottom
+//         | MotorId::FrontLeftTop
+//         | MotorId::FrontRightBottom
+//         | MotorId::FrontRightTop
+//         | MotorId::BackLeftBottom
+//         | MotorId::BackLeftTop
+//         | MotorId::BackRightBottom
+//         | MotorId::BackRightTop => {
+//             unimplemented!()
+//         }
+//         MotorId::Camera1 => MotorId::Aux4,
+//         MotorId::Camera2 => MotorId::Camera1,
+//         MotorId::Camera3 => MotorId::Camera2,
+//         MotorId::Camera4 => MotorId::Camera3,
+//         MotorId::Aux1 => MotorId::Camera4,
+//         MotorId::Aux2 => MotorId::Aux1,
+//         MotorId::Aux3 => MotorId::Aux2,
+//         MotorId::Aux4 => MotorId::Aux3,
+//     }
+// }
+
 fn next_servo(id: MotorId) -> MotorId {
     match id {
-        MotorId::FrontLeftBottom
-        | MotorId::FrontLeftTop
-        | MotorId::FrontRightBottom
-        | MotorId::FrontRightTop
-        | MotorId::BackLeftBottom
-        | MotorId::BackLeftTop
-        | MotorId::BackRightBottom
-        | MotorId::BackRightTop => {
-            unimplemented!()
-        }
-        MotorId::Camera1 => MotorId::Camera2,
-        MotorId::Camera2 => MotorId::Camera3,
-        MotorId::Camera3 => MotorId::Camera4,
-        MotorId::Camera4 => MotorId::Aux1,
-        MotorId::Aux1 => MotorId::Aux2,
-        MotorId::Aux2 => MotorId::Aux3,
-        MotorId::Aux3 => MotorId::Aux4,
-        MotorId::Aux4 => MotorId::Camera1,
+        MotorId::Camera1 => MotorId::Camera3,
+        _ => MotorId::Camera1,
     }
 }
 
 fn last_servo(id: MotorId) -> MotorId {
     match id {
-        MotorId::FrontLeftBottom
-        | MotorId::FrontLeftTop
-        | MotorId::FrontRightBottom
-        | MotorId::FrontRightTop
-        | MotorId::BackLeftBottom
-        | MotorId::BackLeftTop
-        | MotorId::BackRightBottom
-        | MotorId::BackRightTop => {
-            unimplemented!()
-        }
-        MotorId::Camera1 => MotorId::Aux4,
-        MotorId::Camera2 => MotorId::Camera1,
-        MotorId::Camera3 => MotorId::Camera2,
-        MotorId::Camera4 => MotorId::Camera3,
-        MotorId::Aux1 => MotorId::Camera4,
-        MotorId::Aux2 => MotorId::Aux1,
-        MotorId::Aux3 => MotorId::Aux2,
-        MotorId::Aux4 => MotorId::Aux3,
+        MotorId::Camera1 => MotorId::Camera3,
+        _ => MotorId::Camera1,
     }
 }
 
