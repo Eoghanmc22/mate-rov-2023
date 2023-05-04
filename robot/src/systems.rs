@@ -38,7 +38,7 @@ impl SystemManager {
     /// Registers a system
     #[tracing::instrument(skip(self))]
     pub fn add_system<S: System>(&mut self) -> anyhow::Result<()> {
-        assert!(!self.0.insert(S::ID));
+        assert!(self.0.insert(S::ID));
 
         self.1.push((S::start, S::ID));
         info!("Registered {} as {:?}", any::type_name::<S>(), S::ID);
