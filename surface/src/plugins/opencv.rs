@@ -55,7 +55,7 @@ fn spawn_video_captures(
     >,
 ) {
     for (entity, peer, thread) in query.iter() {
-        info!("Spawn vid thread");
+        info!("Spawn video thread");
         let thread = if let Some(thread) = thread {
             thread.to_owned()
         } else {

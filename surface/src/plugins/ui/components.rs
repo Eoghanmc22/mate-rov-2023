@@ -175,6 +175,20 @@ impl UiComponent for MenuBar {
                         }
                     });
                 }
+                if ui.button("Video").clicked() {
+                    commands.add(|world: &mut World| {
+                        if let Some(ui) = world.get_resource::<UiMessages>() {
+                            let id = rand::random();
+                            ui.0.try_send(UiMessage::OpenPanel(
+                                PaneId::Extension(id),
+                                panes::video_window(id, ui.0.clone()),
+                            ))
+                            .log_error("Open video display");
+                        } else {
+                            error!("No UiMessage resource found");
+                        }
+                    });
+                }
             });
             egui::menu::menu_button(ui, "Debug", |ui| {
                 if ui.button("Egui Settings").clicked() {
@@ -1032,13 +1046,22 @@ impl VideoUi {
 }
 
 impl UiComponent for VideoUi {
-    fn pre_draw(&mut self, world: &World, _commands: &mut Commands) {
+    fn pre_draw(&mut self, world: &World, commands: &mut Commands) {
         let tree = world
             .get_resource::<VideoState>()
             .and_then(|it| it.0.get(&self.position));
 
         if let Some(tree) = tree {
             self.collect_data(world, tree);
+        } else {
+            let position = self.position;
+            commands.add(move |world: &mut World| {
+                let video_state = world.get_resource_mut::<VideoState>();
+
+                if let Some(mut video_state) = video_state {
+                    video_state.0.entry(position).or_default();
+                }
+            });
         }
 
         self.video = tree.cloned();
@@ -1048,6 +1071,8 @@ impl UiComponent for VideoUi {
         if let Some(ref tree) = self.video {
             let tree = tree.clone();
             self.render(commands, ui, &tree);
+        } else {
+            ui.label("No video tree");
         }
     }
 }

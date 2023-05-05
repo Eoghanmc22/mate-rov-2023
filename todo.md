@@ -1,5 +1,6 @@
 # Queue
 
+- Support for absolute movement
 - Sensor fusion init
 - Improve user input
 - Tune pids

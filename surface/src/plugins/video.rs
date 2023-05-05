@@ -9,7 +9,7 @@ use egui::TextureId;
 
 use crate::plugins::opencv::VideoMessage;
 
-use super::opencv::VideoCaptureThread;
+use super::{opencv::VideoCaptureThread, ui::ExtensionId};
 
 pub struct VideoPlugin;
 
@@ -52,6 +52,7 @@ pub struct VideoState(pub HashMap<Position, VideoTree>);
 #[derive(PartialEq, Eq, Hash, Clone, Copy, Debug)]
 pub enum Position {
     Center,
+    Window(ExtensionId),
 }
 
 #[derive(Debug, Clone)]

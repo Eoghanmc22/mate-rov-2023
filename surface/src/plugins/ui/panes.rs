@@ -221,3 +221,25 @@ pub fn motor_override_window(id: ExtensionId, ui: Sender<UiMessage>) -> Pane {
 
     pane
 }
+
+pub fn video_window(id: ExtensionId, ui: Sender<UiMessage>) -> Pane {
+    let mut pane = {
+        Pane::new(move |ctx, add_contents| {
+            let mut open = true;
+
+            egui::Window::new("Video")
+                .id(Id::new(id))
+                .open(&mut open)
+                .show(ctx, add_contents);
+
+            if !open {
+                ui.try_send(UiMessage::ClosePanel(PaneId::Extension(id)))
+                    .log_error("Close override window");
+            }
+        })
+    };
+
+    pane.add(components::VideoUi::new(Position::Window(id)));
+
+    pane
+}

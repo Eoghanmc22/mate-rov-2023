@@ -9,7 +9,7 @@ use bevy::{
 };
 use common::{
     store::tokens,
-    types::{Degrees, DepthControlMode, LevelingMode, MotorId, Movement, Percent},
+    types::{DepthControlMode, LevelingMode, MotorId, Movement, Percent},
 };
 
 use super::robot::{Robot, Updater};
