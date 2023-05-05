@@ -1,63 +1,32 @@
 # Queue
 
-- Improve thermals on robot
-- Make Motor frame an enum
-- Switch leveling to use vector math
-- Motor boost
 - Sensor fusion init
 - Improve user input
 - Tune pids
 - Autonomous stuff
 - Make things customizable at run time
 - handle more unhappy paths, especially if let statements
-- use sensor hardware fifos?
 
 # Important Things
 
-- [?] Thermals
-  - [x] System Ids and selective send
-  - [x] Batch gyro updates
-  - [ ] Look for other systems that are doing unnecessary work
 - [ ] Motors
   - [ ] Fix drop impl
-  - [ ] Motor boost
-    - [ ] Prove that the motor speed values can be used as a target amperage multiplier
-      - [ ] Only works for pairs, speeds will need to be rescaled
-    - [ ] Is amperage and thrust proportional?
-    - [ ] Should we use 12v or 14v data
-    - 
 - [ ] Sensors
   - [-] Sensor fusion
     - [H] Use last sensor data as stating position
-    - [ ] Magnetometers?
   - [-] Make sure sensors power down, etc on drop
   - [-] Make sure sensors do a reset on init
 - [ ] Control
-  - [x] Pid stuff
-  - [x] Leveling control
-    - [ ] Use vector math
-    - [ ] Tuning
   - [M] Depth control
-  - [ ] Speeds larger than 1
 - [ ] Debugging
   - [?] Better logging
   - [ ] Make important settings editable in real time
 - [ ] UI
-  - [ ] Leveling ui
-    - [x] pid editing
-    - [x] Display automous modes in bottom status ui?
-    - [ ] Pitch/roll graph to help tune pid
   - [ ] Better pilot controls
     - [ ] Remap inputs to square joystick
     - [ ] 2 controller support
     - [ ] Dedicated controls for servo
     - [ ] Servo velocity control
-  - [ ] Window to view and edit global store
-    - [ ] Max motor speed, 
-- [ ] Misc
-  - [ ] Put more stuff in the global store, model after how pid config is handled for leveling
-  - [H] Fix nic sleep on laptop
-  - [M] Investigate high cpu usage on pi
 
 # Low Priority
 
@@ -92,4 +61,6 @@
   - [ ] Image pi
   - [ ] Systemd service
   - [ ] Surface prints errors on shutdown
+  - [L] Investigate high cpu usage on pi
+  - [ ] Put more stuff in the global store, model after how pid config is handled for leveling
 
