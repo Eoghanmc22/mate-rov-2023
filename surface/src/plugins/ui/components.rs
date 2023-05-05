@@ -75,7 +75,7 @@ impl UiComponent for MenuBar {
                     });
                 }
             });
-            egui::menu::menu_button(ui, "Robot", |ui| {
+            egui::menu::menu_button(ui, "Networking", |ui| {
                 if ui.button("Connect").clicked() {
                     commands.add(|world: &mut World| {
                         if let Some(ui) = world.get_resource::<UiMessages>() {
@@ -95,38 +95,8 @@ impl UiComponent for MenuBar {
                         world.send_event(NetworkEvent::SendPacket(Protocol::RequestSync));
                     });
                 }
-                if ui.button("Orientation").clicked() {
-                    commands.add(|world: &mut World| {
-                        if let Some(ui) = world.get_resource::<UiMessages>() {
-                            let id = rand::random();
-                            ui.0.try_send(UiMessage::OpenPanel(
-                                PaneId::Extension(id),
-                                panes::orientation_display_window(id, ui.0.clone()),
-                            ))
-                            .log_error("Open orientation display");
-                        } else {
-                            error!("No UiMessage resource found");
-                        }
-                    });
-                }
-                if ui.button("Arm Robot").clicked() {
-                    commands.add(|world: &mut World| {
-                        if let Some(mut robot) = world.get_resource_mut::<Robot>() {
-                            robot.arm();
-                        } else {
-                            error!("No robot resource");
-                        }
-                    });
-                }
-                if ui.button("Disarm Robot").clicked() {
-                    commands.add(|world: &mut World| {
-                        if let Some(mut robot) = world.get_resource_mut::<Robot>() {
-                            robot.disarm();
-                        } else {
-                            error!("No robot resource");
-                        }
-                    });
-                }
+            });
+            egui::menu::menu_button(ui, "PID", |ui| {
                 if ui.button("Tune Leveling PID").clicked() {
                     commands.add(|world: &mut World| {
                         if let Some(ui) = world.get_resource::<UiMessages>() {
@@ -155,6 +125,26 @@ impl UiComponent for MenuBar {
                         }
                     });
                 }
+            });
+            egui::menu::menu_button(ui, "Motors", |ui| {
+                if ui.button("Arm Robot").clicked() {
+                    commands.add(|world: &mut World| {
+                        if let Some(mut robot) = world.get_resource_mut::<Robot>() {
+                            robot.arm();
+                        } else {
+                            error!("No robot resource");
+                        }
+                    });
+                }
+                if ui.button("Disarm Robot").clicked() {
+                    commands.add(|world: &mut World| {
+                        if let Some(mut robot) = world.get_resource_mut::<Robot>() {
+                            robot.disarm();
+                        } else {
+                            error!("No robot resource");
+                        }
+                    });
+                }
                 if ui.button("Motor overrides").clicked() {
                     commands.add(|world: &mut World| {
                         if let Some(ui) = world.get_resource::<UiMessages>() {
@@ -164,6 +154,22 @@ impl UiComponent for MenuBar {
                                 panes::motor_override_window(id, ui.0.clone()),
                             ))
                             .log_error("Open motor window");
+                        } else {
+                            error!("No UiMessage resource found");
+                        }
+                    });
+                }
+            });
+            egui::menu::menu_button(ui, "View", |ui| {
+                if ui.button("Orientation").clicked() {
+                    commands.add(|world: &mut World| {
+                        if let Some(ui) = world.get_resource::<UiMessages>() {
+                            let id = rand::random();
+                            ui.0.try_send(UiMessage::OpenPanel(
+                                PaneId::Extension(id),
+                                panes::orientation_display_window(id, ui.0.clone()),
+                            ))
+                            .log_error("Open orientation display");
                         } else {
                             error!("No UiMessage resource found");
                         }
