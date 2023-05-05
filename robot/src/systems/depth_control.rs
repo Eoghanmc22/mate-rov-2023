@@ -17,7 +17,7 @@ use crate::{event::Event, events::EventHandle, systems::stop, SystemId};
 use super::System;
 
 const PID_CONFIG: PidConfig = PidConfig {
-    kp: 2.0,
+    kp: 1.2,
     ki: 0.1,
     kd: 0.3,
     max_integral: 2.0,
