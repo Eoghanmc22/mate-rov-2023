@@ -1,4 +1,5 @@
 use std::{
+    f32::consts::{PI, TAU},
     sync::Arc,
     thread::{self, Scope},
     time::{Duration, Instant},
@@ -10,7 +11,7 @@ use common::{
     types::{LevelingCorrection, LevelingMode, Movement, Percent, PidConfig, PidController},
 };
 use crossbeam::channel::bounded;
-use glam::{EulerRot, Quat, Vec3};
+use glam::{Quat, Vec3};
 use tracing::{span, warn, Level};
 
 use crate::{event::Event, events::EventHandle, systems::stop, SystemId};
@@ -123,8 +124,10 @@ impl System for LevelingSystem {
                                     let observed_up = orientation * Vec3::Z;
 
                                     let error = Quat::from_rotation_arc(observed_up, target_up);
-                                    let (pitch_error, _, _) = error.to_euler(EulerRot::XYZ);
-                                    let (roll_error, _, _) = error.to_euler(EulerRot::YXZ);
+                                    let pitch_error =
+                                        instant_twist(error, orientation * Vec3::X).to_degrees();
+                                    let roll_error =
+                                        instant_twist(error, orientation * Vec3::Y).to_degrees();
 
                                     let config = store
                                         .get(&tokens::LEVELING_PID_OVERRIDE)
@@ -191,4 +194,28 @@ enum LevelingEvent {
     Event(Arc<Event>),
     Tick,
     Exit,
+}
+
+fn instant_twist(q: Quat, twist_axis: Vec3) -> f32 {
+    let rotation_axis = Vec3::new(q.x, q.y, q.z);
+
+    let sign = rotation_axis.dot(twist_axis).signum();
+    let projected = rotation_axis.project_onto(twist_axis);
+    let twist = Quat::from_xyzw(projected.x, projected.y, projected.z, q.w).normalize() * sign;
+
+    let angle = twist.w.acos() * 2.0;
+    normalize_angle(angle)
+}
+
+fn normalize_angle(angle: f32) -> f32 {
+    let wrapped_angle = modf(angle, TAU);
+    if wrapped_angle > PI {
+        wrapped_angle - TAU
+    } else {
+        wrapped_angle
+    }
+}
+
+fn modf(a: f32, b: f32) -> f32 {
+    (a % b + b) % b
 }
