@@ -17,12 +17,12 @@ use crate::{event::Event, events::EventHandle, systems::stop, SystemId};
 use super::System;
 
 const PID_CONFIG: PidConfig = PidConfig {
-    kp: 0.5,
-    ki: 0.0,
-    kd: 0.0,
+    kp: 2.0,
+    ki: 0.1,
+    kd: 0.3,
     max_integral: 2.0,
 };
-const PERIOD: Duration = Duration::from_millis(100);
+const PERIOD: Duration = Duration::from_millis(20);
 
 pub struct DepthControlSystem;
 
