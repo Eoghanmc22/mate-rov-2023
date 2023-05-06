@@ -2,8 +2,6 @@ use common::{error::LogErrorExt, store::tokens};
 use crossbeam::channel::Sender;
 use egui::{vec2, Align2, Frame, Id};
 
-use crate::plugins::video::Position;
-
 use super::{components, ExtensionId, Pane, PaneId, UiMessage};
 
 pub fn menu_bar() -> Pane {
@@ -50,17 +48,7 @@ pub fn video_panel() -> Pane {
         egui::CentralPanel::default().show(ctx, add_contents);
     });
 
-    pane.add(components::VideoUi::new(Position::Center));
-
-    pane
-}
-
-pub fn camera_bar() -> Pane {
-    let mut pane = Pane::new(|ctx, add_contents| {
-        egui::TopBottomPanel::top("camera_bar").show(ctx, add_contents);
-    });
-
-    pane.add(components::CameraBar::default());
+    pane.add(components::VideoUi::default());
 
     pane
 }
@@ -239,7 +227,7 @@ pub fn video_window(id: ExtensionId, ui: Sender<UiMessage>) -> Pane {
         })
     };
 
-    pane.add(components::VideoUi::new(Position::Window(id)));
+    pane.add(components::VideoUi::default());
 
     pane
 }

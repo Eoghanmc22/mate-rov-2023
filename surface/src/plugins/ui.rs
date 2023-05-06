@@ -30,7 +30,6 @@ impl FromWorld for UiState {
         panes.insert(PaneId::MenuBar, panes::menu_bar());
         panes.insert(PaneId::StatusBar, panes::status_bar());
         panes.insert(PaneId::DataPane, panes::data_panel());
-        panes.insert(PaneId::CameraBar, panes::camera_bar());
         panes.insert(PaneId::Video, panes::video_panel());
         panes.insert(PaneId::Notifications, panes::notification_popup());
 
@@ -43,7 +42,6 @@ pub enum PaneId {
     MenuBar,
     StatusBar,
     DataPane,
-    CameraBar,
     Video,
     Notifications,
     Extension(ExtensionId),
@@ -146,7 +144,6 @@ fn handle_ui(
         &|(id, _pane)| matches!(id, PaneId::MenuBar),
         &|(id, _pane)| matches!(id, PaneId::StatusBar),
         &|(id, _pane)| matches!(id, PaneId::DataPane),
-        &|(id, _pane)| matches!(id, PaneId::CameraBar),
         &|(id, _pane)| matches!(id, PaneId::Video),
         &|(id, _pane)| matches!(id, PaneId::Notifications),
         &|(id, _pane)| matches!(id, PaneId::Extension(_)),

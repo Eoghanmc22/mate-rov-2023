@@ -434,7 +434,7 @@ pub struct Network {
     pub tx_errors: u64,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct Camera {
     pub name: String,
     pub location: SocketAddr,

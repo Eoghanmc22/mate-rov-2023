@@ -1,3 +1,4 @@
+#![feature(hash_drain_filter)]
 #![warn(meta_variable_misuse)]
 
 mod plugins;

@@ -55,7 +55,8 @@ const GAMMA8: [u8; 256] = [
     223, 225, 228, 231, 233, 236, 239, 241, 244, 247, 249, 252, 255,
 ];
 
-#[must_use] pub fn correct_color(color: RGB8) -> RGB8 {
+#[must_use]
+pub fn correct_color(color: RGB8) -> RGB8 {
     color.map(|it| GAMMA8[it as usize])
 }
 

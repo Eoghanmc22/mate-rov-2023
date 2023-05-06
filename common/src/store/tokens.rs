@@ -5,7 +5,7 @@ use crate::{
     store::{Key, Token},
     types::{
         Armed, Camera, DepthControlMode, DepthCorrection, DepthFrame, InertialFrame,
-        LevelingCorrection, LevelingMode, MagFrame, Meters, MotorFrame, MotorId, Movement,
+        LevelingCorrection, LevelingMode, MagFrame, MotorFrame, MotorId, Movement,
         MovementOverride, Orientation, PidConfig, PidResult, RobotStatus, SystemInfo,
     },
 };

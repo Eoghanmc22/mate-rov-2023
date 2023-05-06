@@ -1,3 +1,4 @@
+use std::mem;
 use std::sync::Arc;
 
 use anyhow::anyhow;
@@ -27,6 +28,8 @@ use common::{
         Orientation, SystemInfo,
     },
 };
+use egui::ComboBox;
+use egui::Direction;
 use egui::Slider;
 use egui::{vec2, Align, Layout};
 use egui::{Color32, Frame};
@@ -41,21 +44,19 @@ use crate::plugins::gamepad::CurrentGamepad;
 use crate::plugins::notification::NotificationResource;
 use crate::plugins::orientation::OrientationDisplay;
 use crate::plugins::robot::Updater;
-use crate::plugins::video::VideoName;
-use crate::plugins::video::VideoRemove;
-use crate::plugins::video::VideoState;
-use crate::plugins::video::VideoTexture;
+use crate::plugins::video::pipeline::MatId;
+use crate::plugins::video::VideoCamera;
+use crate::plugins::video::VideoSink;
+use crate::plugins::video::VideoSinkMarker;
+use crate::plugins::video::VideoSinkMat;
+use crate::plugins::video::VideoSinkPeer;
+use crate::plugins::video::VideoSinkRemove;
+use crate::plugins::video::VideoSinkTexture;
 use crate::plugins::video::VideoTree;
 use crate::plugins::{
-    networking::NetworkEvent,
-    notification::Notification,
-    opencv::VideoCapturePeer,
-    robot::Robot,
-    ui::UiComponent,
-    video::{self, Position},
+    networking::NetworkEvent, notification::Notification, robot::Robot, ui::UiComponent,
 };
 
-use super::widgets;
 use super::widgets::MovementWidget;
 use super::widgets::PidWidget;
 use super::{panes, ExtensionId, PaneId, UiMessage, UiMessages};
@@ -278,34 +279,6 @@ impl UiComponent for StatusBar {
                 ui.colored_label(Color32::RED, format!("Movement Override is SET"));
             } else {
                 ui.label("No movement override");
-            }
-        });
-    }
-}
-
-#[derive(Debug, Default)]
-pub struct CameraBar(Option<Arc<Vec<Camera>>>);
-
-impl UiComponent for CameraBar {
-    fn pre_draw(&mut self, world: &World, _commands: &mut Commands) {
-        let Some(robot) = world.get_resource::<Robot>() else {
-            return;
-        };
-        self.0 = robot.store().get(&tokens::CAMERAS);
-    }
-
-    fn draw(&mut self, _ctx: &egui::Context, ui: &mut egui::Ui, commands: &mut Commands) {
-        ui.horizontal(|ui| {
-            if let Some(ref cameras) = self.0 {
-                for camera in &**cameras {
-                    if ui.button(&camera.name).clicked() {
-                        commands
-                            .spawn(video::Video::new(camera.name.to_owned(), Position::Center))
-                            .insert(VideoCapturePeer(camera.to_owned()));
-                    }
-                }
-            } else {
-                ui.label("No cameras found");
             }
         });
     }
@@ -962,42 +935,25 @@ impl UiComponent for ConnectUi {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Default)]
 pub struct VideoUi {
-    position: Position,
-    video: Option<VideoTree>,
-    data: HashMap<Entity, (VideoName, Option<VideoTexture>)>,
+    tree: VideoTree,
+    sinks: HashMap<
+        Entity,
+        (
+            VideoCamera,
+            VideoSinkMat,
+            Option<VideoSinkTexture>,
+            Option<VideoSinkPeer>,
+        ),
+    >,
+    cameras: Option<Arc<Vec<Camera>>>,
 }
 
 impl VideoUi {
-    pub fn new(position: Position) -> Self {
-        Self {
-            position,
-            video: Default::default(),
-            data: Default::default(),
-        }
-    }
+    fn render(&mut self, cmds: &mut Commands, ui: &mut egui::Ui, tree: &mut VideoTree) -> bool {
+        let mut should_remove = false;
 
-    fn collect_data(&mut self, world: &World, tree: &VideoTree) {
-        match tree {
-            VideoTree::Node(a, b) => {
-                self.collect_data(world, a);
-                self.collect_data(world, b);
-            }
-            VideoTree::Leaf(leaf) => {
-                let name: Option<&VideoName> = world.get(*leaf);
-                let texture: Option<&VideoTexture> = world.get(*leaf);
-
-                if let Some(name) = name {
-                    self.data
-                        .insert(*leaf, (name.to_owned(), texture.map(|it| it.to_owned())));
-                }
-            }
-            VideoTree::Empty => {}
-        }
-    }
-
-    fn render(&mut self, cmds: &mut Commands, ui: &mut egui::Ui, tree: &VideoTree) {
         match tree {
             VideoTree::Node(a, b) => {
                 let available = ui.available_size();
@@ -1013,67 +969,156 @@ impl VideoUi {
                     )
                 };
 
-                ui.with_layout(layout, |ui| {
-                    ui.allocate_ui(size, |ui| {
-                        ui.set_min_size(size);
-                        self.render(cmds, ui, a);
-                    });
-                    ui.allocate_ui(size, |ui| {
-                        ui.set_min_size(size);
-                        self.render(cmds, ui, b);
-                    });
-                });
+                let remove = ui
+                    .with_layout(layout, |ui| {
+                        let remove_a = ui
+                            .allocate_ui(size, |ui| {
+                                ui.set_min_size(size);
+                                self.render(cmds, ui, a)
+                            })
+                            .inner;
+                        let remove_b = ui
+                            .allocate_ui(size, |ui| {
+                                ui.set_min_size(size);
+                                self.render(cmds, ui, b)
+                            })
+                            .inner;
+
+                        (remove_a, remove_b)
+                    })
+                    .inner;
+
+                match remove {
+                    (true, true) => *tree = VideoTree::Empty,
+                    (true, false) => *tree = mem::take(b),
+                    (false, true) => *tree = mem::take(a),
+                    (false, false) => {}
+                }
             }
             VideoTree::Leaf(entity) => {
-                if let Some((name, texture)) = self.data.get(entity) {
-                    let mut video =
-                        widgets::Video::new(&name.0, texture.as_ref().map(|it| it.1.to_owned()));
-
+                // Get around some silly rust rule
+                let entity = *entity;
+                // TODO mat selection
+                // TODO pipeline selection
+                if let Some((camera, mat, texture, _peer)) = self.sinks.get(&entity) {
                     ui.with_layout(Layout::top_down(Align::LEFT), |ui| {
-                        ui.add(&mut video);
-                    });
+                        ui.group(|ui| {
+                            ui.horizontal(|ui| {
+                                ui.group(|ui| {
+                                    ComboBox::from_id_source("cameras")
+                                        .selected_text(&format!("{:?}", camera.0.name))
+                                        .show_ui(ui, |ui| {
+                                            if let Some(ref cameras) = self.cameras {
+                                                for camera_option in cameras.iter() {
+                                                    if ui
+                                                        .selectable_label(
+                                                            camera_option == &camera.0,
+                                                            &format!("{:?}", camera_option.name),
+                                                        )
+                                                        .clicked()
+                                                    {
+                                                        cmds.entity(entity).insert(VideoCamera(
+                                                            camera_option.clone(),
+                                                        ));
+                                                    }
+                                                }
+                                            }
+                                        });
+                                    ui.label(&format!("{:?}", mat.0));
+                                    if ui.small_button("Split").clicked() {
+                                        let node = mem::take(tree);
+                                        *tree = VideoTree::Node(
+                                            Box::new(node),
+                                            Box::new(VideoTree::Empty),
+                                        )
+                                    }
+                                    if ui.small_button("Close").clicked() {
+                                        cmds.entity(entity).insert(VideoSinkRemove);
+                                        should_remove = true;
+                                    }
+                                });
+                            });
 
-                    if video.should_delete {
-                        cmds.entity(*entity).insert(VideoRemove);
-                    }
+                            if let Some(texture) = texture {
+                                ui.with_layout(
+                                    Layout::centered_and_justified(Direction::LeftToRight),
+                                    |ui| {
+                                        let available = ui.available_size();
+                                        let x = available.x;
+                                        let y = x / 16.0 * 9.0;
+
+                                        ui.image(texture.0, (x, y));
+                                    },
+                                );
+                            } else {
+                                ui.label("No video");
+                            }
+
+                            ui.allocate_space(ui.available_size());
+                        });
+                    });
                 }
             }
             VideoTree::Empty => {
-                ui.add_sized(ui.available_size(), |ui: &mut egui::Ui| ui.heading("Empty"));
+                ui.horizontal(|ui| {
+                    ui.group(|ui| {
+                        if let Some(ref cameras) = self.cameras {
+                            for camera in &**cameras {
+                                if ui.button(&camera.name).clicked() {
+                                    let sink = cmds
+                                        .spawn(VideoSink {
+                                            camera: VideoCamera(camera.clone()),
+                                            mat: VideoSinkMat(MatId::Raw),
+                                            marker: VideoSinkMarker,
+                                        })
+                                        .id();
+                                    *tree = VideoTree::Leaf(sink);
+                                }
+                            }
+                        } else {
+                            ui.label("No cameras found");
+                        }
+                    });
+                });
             }
         }
+
+        should_remove
     }
 }
 
 impl UiComponent for VideoUi {
-    fn pre_draw(&mut self, world: &World, commands: &mut Commands) {
-        let tree = world
-            .get_resource::<VideoState>()
-            .and_then(|it| it.0.get(&self.position));
+    fn pre_draw(&mut self, world: &World, _commands: &mut Commands) {
+        let data = HashMap::default();
 
-        if let Some(tree) = tree {
-            self.collect_data(world, tree);
-        } else {
-            let position = self.position;
-            commands.add(move |world: &mut World| {
-                let video_state = world.get_resource_mut::<VideoState>();
+        for sink in self.tree.entities() {
+            if let Some(entity) = world.get_entity(sink) {
+                let camera = entity.get::<VideoCamera>().cloned();
+                let mat = entity.get::<VideoSinkMat>().cloned();
+                let texture = entity.get::<VideoSinkTexture>().cloned();
+                let peer = entity.get::<VideoSinkPeer>().cloned();
 
-                if let Some(mut video_state) = video_state {
-                    video_state.0.entry(position).or_default();
+                if let Some((camera, mat)) = Option::zip(camera, mat) {
+                    self.sinks.insert(sink, (camera, mat, texture, peer));
                 }
-            });
+            }
         }
 
-        self.video = tree.cloned();
+        self.sinks = data;
+
+        let Some(robot) = world.get_resource::<Robot>() else {
+            return;
+        };
+        self.cameras = robot.store().get(&tokens::CAMERAS);
     }
 
     fn draw(&mut self, _ctx: &egui::Context, ui: &mut egui::Ui, commands: &mut Commands) {
-        if let Some(ref tree) = self.video {
-            let tree = tree.clone();
-            self.render(commands, ui, &tree);
-        } else {
-            ui.label("No video tree");
-        }
+        // The borrow checker is fun
+        let mut tree = mem::take(&mut self.tree);
+
+        self.render(commands, ui, &mut tree);
+
+        self.tree = tree;
     }
 }
 

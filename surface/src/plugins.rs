@@ -4,7 +4,6 @@ use bevy::prelude::*;
 pub mod gamepad;
 pub mod networking;
 pub mod notification;
-pub mod opencv;
 pub mod orientation;
 pub mod robot;
 pub mod ui;
@@ -21,7 +20,6 @@ impl PluginGroup for MatePlugins {
             .add(video::VideoPlugin)
             .add(notification::NotificationPlugin)
             .add(gamepad::GamepadPlugin)
-            .add(opencv::OpenCvPlugin)
             .add(orientation::OrientationPlugin)
     }
 }
