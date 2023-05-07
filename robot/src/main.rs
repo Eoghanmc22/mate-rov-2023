@@ -9,31 +9,18 @@ mod systems;
 
 use crate::systems::error::ErrorSystem;
 
-use crate::systems::robot::StoreSystem;
-use crate::systems::status::StatusSystem;
-use crate::systems::stop::StopSystem;
 use crate::systems::SystemManager;
-use crate::systems::{hw_stat::HwStatSystem, networking::NetworkSystem};
+#[cfg(rpi)]
+use crate::systems::{
+    cameras::CameraSystem, depth::DepthSystem, depth_control::DepthControlSystem,
+    indicators::IndicatorsSystem, inertial::InertialSystem, leak::LeakSystem,
+    leveling::LevelingSystem, motor::MotorSystem, orientation::OrientationSystem,
+};
+use crate::systems::{
+    hw_stat::HwStatSystem, networking::NetworkSystem, robot::StoreSystem, status::StatusSystem,
+    stop::StopSystem,
+};
 use tracing::{info, Level};
-
-#[cfg(rpi)]
-use crate::systems::cameras::CameraSystem;
-#[cfg(rpi)]
-use crate::systems::depth::DepthSystem;
-#[cfg(rpi)]
-use crate::systems::depth_control::DepthControlSystem;
-#[cfg(rpi)]
-use crate::systems::indicators::IndicatorsSystem;
-#[cfg(rpi)]
-use crate::systems::inertial::InertialSystem;
-#[cfg(rpi)]
-use crate::systems::leak::LeakSystem;
-#[cfg(rpi)]
-use crate::systems::leveling::LevelingSystem;
-#[cfg(rpi)]
-use crate::systems::motor::MotorSystem;
-#[cfg(rpi)]
-use crate::systems::orientation::OrientationSystem;
 
 fn main() -> anyhow::Result<()> {
     tracing_subscriber::fmt()
@@ -44,31 +31,27 @@ fn main() -> anyhow::Result<()> {
     let mut systems = SystemManager::default();
 
     info!("---------- Registering systems ----------");
-    systems.add_system::<StopSystem>()?;
-    // systems.add_system::<LogEventSystem>()?;
-    systems.add_system::<ErrorSystem>()?;
-    systems.add_system::<StoreSystem>()?;
-    systems.add_system::<NetworkSystem>()?;
-    systems.add_system::<HwStatSystem>()?;
-    systems.add_system::<StatusSystem>()?;
+    {
+        systems.add_system::<StopSystem>()?;
+        // systems.add_system::<LogEventSystem>()?;
+        systems.add_system::<ErrorSystem>()?;
+        systems.add_system::<StoreSystem>()?;
+        systems.add_system::<NetworkSystem>()?;
+        systems.add_system::<HwStatSystem>()?;
+        systems.add_system::<StatusSystem>()?;
+    }
     #[cfg(rpi)]
-    systems.add_system::<MotorSystem>()?;
-    #[cfg(rpi)]
-    systems.add_system::<IndicatorsSystem>()?;
-    #[cfg(rpi)]
-    systems.add_system::<LeakSystem>()?;
-    #[cfg(rpi)]
-    systems.add_system::<InertialSystem>()?;
-    #[cfg(rpi)]
-    systems.add_system::<OrientationSystem>()?;
-    #[cfg(rpi)]
-    systems.add_system::<DepthControlSystem>()?;
-    #[cfg(rpi)]
-    systems.add_system::<LevelingSystem>()?;
-    #[cfg(rpi)]
-    systems.add_system::<DepthSystem>()?;
-    #[cfg(rpi)]
-    systems.add_system::<CameraSystem>()?;
+    {
+        systems.add_system::<MotorSystem>()?;
+        systems.add_system::<IndicatorsSystem>()?;
+        systems.add_system::<LeakSystem>()?;
+        systems.add_system::<InertialSystem>()?;
+        systems.add_system::<OrientationSystem>()?;
+        systems.add_system::<DepthControlSystem>()?;
+        systems.add_system::<LevelingSystem>()?;
+        systems.add_system::<DepthSystem>()?;
+        systems.add_system::<CameraSystem>()?;
+    }
     info!("--------------------------------------");
 
     systems.start();

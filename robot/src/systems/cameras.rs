@@ -15,7 +15,7 @@ use common::{
 };
 use crossbeam::channel::bounded;
 use fxhash::{FxHashMap as HashMap, FxHashSet as HashSet};
-use tracing::{info, span, Level};
+use tracing::{error, info, span, Level};
 
 use crate::{
     event::Event,
@@ -131,6 +131,8 @@ impl System for CameraSystem {
                                                         )),
                                                     ));
                                                 }
+                                            } else {
+                                                error!("Attempted to remove a nonexistant camera");
                                             }
                                         }
 
@@ -148,6 +150,8 @@ impl System for CameraSystem {
                                                         format!("Start gstreamer for {new_camera}"),
                                                     )));
                                                 }
+                                            } else {
+                                                error!("Tried to update cameras without a peer");
                                             }
                                         }
 

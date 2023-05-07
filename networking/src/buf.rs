@@ -36,14 +36,6 @@ impl Buffer {
         self.read_index = 0;
     }
 
-    pub fn into_written(mut self) -> Vec<u8> {
-        unsafe {
-            self.vec.set_len(self.write_index);
-        }
-        self.vec.drain(..self.read_index);
-        self.vec
-    }
-
     pub fn get_written(&self) -> &[u8] {
         let ptr = self.vec.as_ptr();
         unsafe { std::slice::from_raw_parts(ptr.add(self.read_index), self.len()) }

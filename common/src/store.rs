@@ -52,6 +52,7 @@ impl<C: UpdateCallback> Store<C> {
     pub fn insert<V: Any + Send + Sync>(&mut self, key: &Token<V>, value: V) {
         if self.shared.contains_key(&key.0) {
             error!("Tried to update a shared key: {:?}", key.0);
+            return;
         }
 
         let value = Arc::new(value);
@@ -62,7 +63,10 @@ impl<C: UpdateCallback> Store<C> {
     }
 
     pub fn remove<V: Any>(&mut self, key: &Token<V>) {
-        debug_assert!(!self.shared.contains_key(&key.0));
+        if self.shared.contains_key(&key.0) {
+            error!("Tried to remove a shared key: {:?}", key.0);
+            return;
+        }
 
         self.callback.call((key.0.clone(), None));
         self.owned.remove(&key.0);
