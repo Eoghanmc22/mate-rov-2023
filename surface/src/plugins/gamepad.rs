@@ -453,7 +453,7 @@ fn emit_updates(updater: Local<Updater>, current_gamepad: Option<ResMut<CurrentG
     if let Some(CurrentGamepad(_, state)) = current_gamepad.as_deref() {
         updater.emit_update(&tokens::MOVEMENT_JOYSTICK, state.movement);
     } else {
-        updater.emit_update(&tokens::MOVEMENT_JOYSTICK, Default::default());
+        updater.emit_delete(&tokens::MOVEMENT_JOYSTICK);
     }
 }
 

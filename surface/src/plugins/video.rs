@@ -2,12 +2,14 @@
 
 use std::ffi::c_void;
 use std::mem;
+use std::time::Instant;
 use std::{cell::RefCell, thread, time::Duration};
 
 use anyhow::Context;
 use bevy::render::texture::Volume;
 use bevy::{prelude::*, render::render_resource::Extent3d};
 use bevy_egui::EguiContexts;
+use common::store::tokens;
 use common::{
     error::LogErrorExt,
     types::{Camera, Movement},
@@ -26,8 +28,12 @@ use tracing::{error, span, Level};
 
 use self::pipeline::{MatId, Mats, PipelineProto, ProcessorFn, SourceFn};
 
+use super::robot::Updater;
+
 pub mod camera;
 pub mod pipeline;
+
+pub const MAX_UPDATE_AGE: Duration = Duration::from_millis(250);
 
 pub struct VideoPlugin;
 
@@ -37,6 +43,12 @@ impl Plugin for VideoPlugin {
         app.add_system(spawn_video_captures);
         app.add_system(update_pipelines);
         app.add_system(video_frames);
+        app.add_system(video_movement.in_schedule(CoreSchedule::FixedUpdate));
+        app.add_system(
+            video_movement_emitter
+                .in_schedule(CoreSchedule::FixedUpdate)
+                .after(video_movement),
+        );
     }
 }
 
@@ -74,7 +86,7 @@ pub struct VideoSink {
 struct VideoCaptureThread(
     Sender<VideoMessage>,
     Receiver<(HashMap<MatId, Image>, HashSet<MatId>)>,
-    Receiver<Movement>,
+    Receiver<(Movement, Instant)>,
 );
 
 #[derive(Component, Clone, Debug)]
@@ -82,6 +94,12 @@ pub struct VideoCapturePipeline(pub PipelineProto, HashSet<MatId>);
 
 #[derive(Component, Clone, Debug)]
 pub struct VideoCaptureFrames(pub HashMap<MatId, Handle<Image>>, pub HashSet<MatId>);
+
+#[derive(Component, Clone, Debug)]
+pub struct VideoCaptureMovement(pub Movement, pub Instant);
+
+#[derive(Component, Clone, Debug)]
+pub struct VideoCaptureMovementEnabled;
 
 #[derive(Debug, Component, Clone)]
 pub struct VideoCaptureMarker;
@@ -384,6 +402,49 @@ fn video_frames(
     }
 }
 
+/// Process new movements from opencv
+fn video_movement(
+    mut commands: Commands,
+    mut sources: Query<(Entity, &VideoCaptureThread), With<VideoCaptureMarker>>,
+) {
+    for (entity, thread) in &mut sources {
+        let mut new_movement = None;
+
+        for movement in thread.2.try_iter() {
+            new_movement = Some(movement);
+        }
+
+        if let Some((movement, instant)) = new_movement {
+            commands
+                .entity(entity)
+                .insert(VideoCaptureMovement(movement, instant));
+        }
+    }
+}
+
+fn video_movement_emitter(
+    updater: Local<Updater>,
+    sources: Query<
+        (&VideoCaptureMovement, Option<&VideoCaptureMovementEnabled>),
+        With<VideoCaptureMarker>,
+    >,
+) {
+    let mut movements = Vec::new();
+
+    for (VideoCaptureMovement(movement, instant), enabled) in &sources {
+        if enabled.is_some() && instant.elapsed() < MAX_UPDATE_AGE {
+            movements.push(movement);
+        }
+    }
+
+    if !movements.is_empty() {
+        let movement = movements.into_iter().copied().sum();
+        updater.emit_update(&tokens::MOVEMENT_OPENCV, movement);
+    } else {
+        updater.emit_delete(&tokens::MOVEMENT_OPENCV);
+    }
+}
+
 pub enum VideoMessage {
     ReuseImages(HashMap<MatId, Image>),
     ConnectTo(Camera),
@@ -394,7 +455,7 @@ pub enum VideoMessage {
 fn video_capture_thread(
     msg_receiver: Receiver<VideoMessage>,
     image_sender: Sender<(HashMap<MatId, Image>, HashSet<MatId>)>,
-    _move_sender: Sender<Movement>,
+    move_sender: Sender<(Movement, Instant)>,
 ) {
     span!(Level::INFO, "Video capture thread");
     let mut mats = Mats::default();
@@ -460,7 +521,9 @@ fn video_capture_thread(
 
                     // Return processed mats
                     let rst = image_sender.send((images, available_mats));
-                    // move_sender.try_send(movement_total).log_error("Send move");
+                    move_sender
+                        .try_send((movement_total, Instant::now()))
+                        .log_error("Send move");
 
                     if rst.is_err() {
                         info!("Image receiver disconnected, stoping video capture thread");

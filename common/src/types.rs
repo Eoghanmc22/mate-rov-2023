@@ -4,6 +4,7 @@ use fxhash::FxHashMap as HashMap;
 use mint::{Quaternion, Vector3};
 use serde::{Deserialize, Serialize};
 use std::fmt::{Display, Formatter};
+use std::iter::Sum;
 use std::net::SocketAddr;
 use std::ops::{Add, AddAssign, Neg, Sub};
 use std::time::Duration;
@@ -134,6 +135,12 @@ impl Add for Movement {
 impl AddAssign for Movement {
     fn add_assign(&mut self, rhs: Self) {
         *self = *self + rhs;
+    }
+}
+
+impl Sum for Movement {
+    fn sum<I: Iterator<Item = Self>>(iter: I) -> Self {
+        iter.fold(Self::default(), Self::add)
     }
 }
 

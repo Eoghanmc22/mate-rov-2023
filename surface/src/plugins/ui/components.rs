@@ -48,6 +48,8 @@ use crate::plugins::video::pipeline::MatId;
 use crate::plugins::video::pipeline::PipelineStage;
 use crate::plugins::video::VideoCamera;
 use crate::plugins::video::VideoCaptureFrames;
+use crate::plugins::video::VideoCaptureMovement;
+use crate::plugins::video::VideoCaptureMovementEnabled;
 use crate::plugins::video::VideoCapturePipeline;
 use crate::plugins::video::VideoSink;
 use crate::plugins::video::VideoSinkMarker;
@@ -729,9 +731,6 @@ impl UiComponent for RawSensorDataUi {
                     ui.label("No magnetometer data");
                 }
             });
-            ui.collapsing("Fusion", |ui| {
-                ui.label("TODO");
-            });
             ui.collapsing("Depth", |ui| {
                 if let Some(ref depth) = self.depth {
                     ui.label(format!("Pressure: {}", depth.pressure));
@@ -950,6 +949,8 @@ pub struct VideoUi {
             Option<VideoSinkPeer>,
             Option<VideoCapturePipeline>,
             Option<VideoCaptureFrames>,
+            Option<VideoCaptureMovement>,
+            Option<VideoCaptureMovementEnabled>,
         ),
     >,
     cameras: Option<Arc<Vec<Camera>>>,
@@ -1003,8 +1004,16 @@ impl VideoUi {
             VideoTree::Leaf(entity) => {
                 // Get around some silly rust rule
                 let entity = *entity;
-                if let Some((camera, mat, texture, peer, pipeline, frames)) =
-                    self.sinks.get(&entity)
+                if let Some((
+                    camera,
+                    mat,
+                    texture,
+                    peer,
+                    pipeline,
+                    frames,
+                    movement,
+                    movement_enabled,
+                )) = self.sinks.get(&entity)
                 {
                     ui.with_layout(Layout::top_down(Align::LEFT), |ui| {
                         ui.group(|ui| {
@@ -1096,6 +1105,24 @@ impl VideoUi {
                                                     }
                                                 }
                                             });
+                                        if ui.selectable_label(movement_enabled.is_some(), "Movement").on_hover_ui(|ui| {
+                                            if let Some(movement) = movement {
+                                                ui.add(MovementWidget(&movement.0));
+                                            } else {
+                                                ui.label("No movement");
+                                            }
+                                        }).clicked() {
+                                            if let Some(peer) = peer {
+                                                match movement_enabled {
+                                                    Some(_) => {
+                                                        cmds.entity(peer.0).remove::<VideoCaptureMovementEnabled>();
+                                                    },
+                                                    None => {
+                                                        cmds.entity(peer.0).insert(VideoCaptureMovementEnabled);
+                                                    },
+                                                }
+                                            }
+                                        }
                                         if ui.small_button("Split").clicked() {
                                             let node = mem::take(tree);
                                             *tree = VideoTree::Node(
@@ -1168,18 +1195,32 @@ impl UiComponent for VideoUi {
                 let texture = entity.get::<VideoSinkTexture>().cloned();
                 let peer = entity.get::<VideoSinkPeer>().cloned();
 
-                let (pipeline, frames) =
+                let (pipeline, frames, movement, movement_enabled) =
                     if let Some(peer) = peer.as_ref().and_then(|it| world.get_entity(it.0)) {
                         let pipeline = peer.get::<VideoCapturePipeline>().cloned();
                         let frames = peer.get::<VideoCaptureFrames>().cloned();
+                        let movement = peer.get::<VideoCaptureMovement>().cloned();
+                        let movement_enabled = peer.get::<VideoCaptureMovementEnabled>().cloned();
 
-                        (pipeline, frames)
+                        (pipeline, frames, movement, movement_enabled)
                     } else {
-                        (None, None)
+                        (None, None, None, None)
                     };
 
                 if let Some((camera, mat)) = Option::zip(camera, mat) {
-                    sinks.insert(sink, (camera, mat, texture, peer, pipeline, frames));
+                    sinks.insert(
+                        sink,
+                        (
+                            camera,
+                            mat,
+                            texture,
+                            peer,
+                            pipeline,
+                            frames,
+                            movement,
+                            movement_enabled,
+                        ),
+                    );
                 } else {
                     error!("Found invalid sink");
                 }
