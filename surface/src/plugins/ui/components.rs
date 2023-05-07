@@ -45,6 +45,7 @@ use crate::plugins::notification::NotificationResource;
 use crate::plugins::orientation::OrientationDisplay;
 use crate::plugins::robot::Updater;
 use crate::plugins::video::pipeline::MatId;
+use crate::plugins::video::pipeline::PipelineStage;
 use crate::plugins::video::VideoCamera;
 use crate::plugins::video::VideoCaptureFrames;
 use crate::plugins::video::VideoCapturePipeline;
@@ -1002,9 +1003,7 @@ impl VideoUi {
             VideoTree::Leaf(entity) => {
                 // Get around some silly rust rule
                 let entity = *entity;
-                // TODO mat selection
-                // TODO pipeline selection
-                if let Some((camera, mat, texture, _peer, _pipeline, frames)) =
+                if let Some((camera, mat, texture, peer, pipeline, frames)) =
                     self.sinks.get(&entity)
                 {
                     ui.with_layout(Layout::top_down(Align::LEFT), |ui| {
@@ -1049,6 +1048,50 @@ impl VideoUi {
                                                             cmds.entity(entity).insert(
                                                                 VideoSinkMat(*available_mat),
                                                             );
+                                                        }
+                                                    }
+                                                }
+                                            });
+                                        ComboBox::from_id_source("pipeline")
+                                            .selected_text("Pipeline")
+                                            .show_ui(ui, |ui| {
+                                                if let (Some(ref pipeline), Some(ref peer)) =
+                                                    (pipeline, peer)
+                                                {
+                                                    for stage in PipelineStage::all() {
+                                                        let selected = pipeline.0.contains(&stage);
+
+                                                        if ui
+                                                            .selectable_label(
+                                                                selected,
+                                                                &format!("{:?}", stage),
+                                                            )
+                                                            .clicked()
+                                                        {
+                                                            if !selected {
+                                                                // Add this stage
+                                                                let stage = stage;
+                                                                let peer = peer.0;
+                                                                cmds.add(move |world: &mut World| {
+                                                                    if let Some(mut peer) = world.get_entity_mut(peer) {
+                                                                        if let Some(mut pipeline) = peer.get_mut::<VideoCapturePipeline>() {
+                                                                            pipeline.0.push(stage);
+                                                                            pipeline.0.sort();
+                                                                        }
+                                                                    }
+                                                                });
+                                                            } else {
+                                                                // Remove this stage
+                                                                let stage = stage;
+                                                                let peer = peer.0;
+                                                                cmds.add(move |world: &mut World| {
+                                                                    if let Some(mut peer) = world.get_entity_mut(peer) {
+                                                                        if let Some(mut pipeline) = peer.get_mut::<VideoCapturePipeline>() {
+                                                                            pipeline.0.drain_filter(|it| it == &stage);
+                                                                        }
+                                                                    }
+                                                                });
+                                                            }
                                                         }
                                                     }
                                                 }

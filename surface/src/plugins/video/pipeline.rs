@@ -26,11 +26,15 @@ impl Display for MatId {
 }
 
 /// Repersents a stage in the image processing pipeline
-#[derive(Debug, Hash, PartialEq, Eq, Clone, Copy)]
+#[derive(Debug, Hash, PartialEq, Eq, PartialOrd, Ord, Clone, Copy)]
 pub enum PipelineStage {}
 
 impl PipelineStage {
     pub fn construct(&self) -> ProcessorFn {
         todo!()
+    }
+
+    pub fn all() -> PipelineProto {
+        vec![]
     }
 }
