@@ -960,12 +960,12 @@ impl VideoUi {
                 let (layout, size) = if available.x > available.y {
                     (
                         Layout::left_to_right(Align::LEFT),
-                        vec2(available.x / 2.0, available.y),
+                        vec2(available.x / 2.0 - 4.0, available.y),
                     )
                 } else {
                     (
                         Layout::top_down(Align::LEFT),
-                        vec2(available.x, available.y / 2.0),
+                        vec2(available.x, available.y / 2.0 - 4.0),
                     )
                 };
 
@@ -1005,7 +1005,7 @@ impl VideoUi {
                         ui.group(|ui| {
                             ui.horizontal(|ui| {
                                 ui.group(|ui| {
-                                    ComboBox::from_id_source("cameras")
+                                    ComboBox::from_id_source(entity)
                                         .selected_text(&format!("{:?}", camera.0.name))
                                         .show_ui(ui, |ui| {
                                             if let Some(ref cameras) = self.cameras {
@@ -1053,32 +1053,30 @@ impl VideoUi {
                             } else {
                                 ui.label("No video");
                             }
-
-                            ui.allocate_space(ui.available_size());
                         });
                     });
+                } else {
+                    ui.label("Waiting on sink");
                 }
             }
             VideoTree::Empty => {
-                ui.horizontal(|ui| {
-                    ui.group(|ui| {
-                        if let Some(ref cameras) = self.cameras {
-                            for camera in &**cameras {
-                                if ui.button(&camera.name).clicked() {
-                                    let sink = cmds
-                                        .spawn(VideoSink {
-                                            camera: VideoCamera(camera.clone()),
-                                            mat: VideoSinkMat(MatId::Raw),
-                                            marker: VideoSinkMarker,
-                                        })
-                                        .id();
-                                    *tree = VideoTree::Leaf(sink);
-                                }
+                ui.vertical_centered_justified(|ui| {
+                    if let Some(ref cameras) = self.cameras {
+                        for camera in &**cameras {
+                            if ui.button(&camera.name).clicked() {
+                                let sink = cmds
+                                    .spawn(VideoSink {
+                                        camera: VideoCamera(camera.clone()),
+                                        mat: VideoSinkMat(MatId::Raw),
+                                        marker: VideoSinkMarker,
+                                    })
+                                    .id();
+                                *tree = VideoTree::Leaf(sink);
                             }
-                        } else {
-                            ui.label("No cameras found");
                         }
-                    });
+                    } else {
+                        ui.label("No cameras found");
+                    }
                 });
             }
         }
@@ -1089,7 +1087,7 @@ impl VideoUi {
 
 impl UiComponent for VideoUi {
     fn pre_draw(&mut self, world: &World, _commands: &mut Commands) {
-        let data = HashMap::default();
+        let mut sinks = HashMap::default();
 
         for sink in self.tree.entities() {
             if let Some(entity) = world.get_entity(sink) {
@@ -1099,12 +1097,16 @@ impl UiComponent for VideoUi {
                 let peer = entity.get::<VideoSinkPeer>().cloned();
 
                 if let Some((camera, mat)) = Option::zip(camera, mat) {
-                    self.sinks.insert(sink, (camera, mat, texture, peer));
+                    sinks.insert(sink, (camera, mat, texture, peer));
+                } else {
+                    error!("Found invalid sink");
                 }
+            } else {
+                error!("Could not find sink");
             }
         }
 
-        self.sinks = data;
+        self.sinks = sinks;
 
         let Some(robot) = world.get_resource::<Robot>() else {
             return;
@@ -1116,9 +1118,13 @@ impl UiComponent for VideoUi {
         // The borrow checker is fun
         let mut tree = mem::take(&mut self.tree);
 
-        self.render(commands, ui, &mut tree);
+        let should_remove = self.render(commands, ui, &mut tree);
 
-        self.tree = tree;
+        if !should_remove {
+            self.tree = tree;
+        } else {
+            self.tree = VideoTree::Empty;
+        }
     }
 }
 

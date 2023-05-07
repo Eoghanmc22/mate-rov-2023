@@ -41,6 +41,9 @@ impl Plugin for VideoPlugin {
 #[derive(Component, Clone, Debug, PartialEq, Eq)]
 pub struct VideoCamera(pub Camera);
 
+#[derive(Component, Clone, Debug, PartialEq, Eq)]
+struct VideoCameraLast(Camera);
+
 #[derive(Debug, Component, Clone)]
 pub struct VideoSinkMat(pub MatId);
 
@@ -128,6 +131,7 @@ fn video_sink(
         (
             Entity,
             &VideoCamera,
+            Option<&VideoCameraLast>,
             &VideoSinkMat,
             Option<&VideoSinkRemove>,
         ),
@@ -151,8 +155,33 @@ fn video_sink(
     >,
     sinks: Query<(Entity, &VideoCamera, &VideoSinkMat), With<VideoSinkMarker>>,
 ) {
-    for (entity, sink_camera, sink_mat, remove) in &changed_sinks {
+    for (entity, sink_camera, sink_camera_old, sink_mat, remove) in &changed_sinks {
         let should_remove = remove.is_some();
+
+        // If the source changes, recalculate its targets
+        if let Some(sink_camera_old) = sink_camera_old {
+            if sink_camera_old.0 != sink_camera.0 {
+                // Determine which mats are being requested
+                let mats: HashSet<MatId> = sinks
+                    .iter()
+                    .filter(|(_, camera, _)| {
+                        // Does this sink need the old camera?
+                        camera.0 == sink_camera_old.0
+                    })
+                    .map(|(_, _, mat)| mat.0)
+                    .collect();
+                // Determine sources could need updating
+                let mut old_sources: Vec<_> = sources
+                    .iter_mut()
+                    .filter(|(_, camera, _, _)| camera.0 == sink_camera_old.0)
+                    .collect();
+
+                // Set the mats to be sourced
+                for (_, _, ref mut pipeline, _) in &mut old_sources {
+                    pipeline.1 = mats.clone();
+                }
+            }
+        }
 
         // Determine which mats are being requested
         let mats: HashSet<MatId> = sinks
@@ -209,9 +238,11 @@ fn video_sink(
             };
 
             let texture = egui_ctx.add_image(image.clone_weak());
-            commands
-                .entity(entity)
-                .insert((VideoSinkTexture(texture), VideoSinkPeer(source)));
+            commands.entity(entity).insert((
+                VideoSinkTexture(texture),
+                VideoSinkPeer(source),
+                VideoCameraLast(sink_camera.0.clone()),
+            ));
         } else {
             // The removal of the sink has been requested, remove it
             commands.entity(entity).despawn_recursive();
@@ -444,6 +475,7 @@ fn video_capture_thread(
             VideoMessage::Pipeline(proto_pipeline, mats) => {
                 if mats.is_empty() {
                     // No sinks are listening, stop
+                    info!("Stopping video thread");
                     return;
                 }
 
