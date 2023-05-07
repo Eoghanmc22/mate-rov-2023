@@ -1,9 +1,11 @@
 //! Handles video display, video io, and video processing
 
+use std::ffi::c_void;
 use std::mem;
 use std::{cell::RefCell, thread, time::Duration};
 
 use anyhow::Context;
+use bevy::render::texture::Volume;
 use bevy::{prelude::*, render::render_resource::Extent3d};
 use bevy_egui::EguiContexts;
 use common::{
@@ -14,6 +16,8 @@ use crossbeam::channel::{self, Receiver, Sender};
 use egui::TextureId;
 use fxhash::FxHashMap as HashMap;
 use fxhash::FxHashSet as HashSet;
+use opencv::core::CV_8UC4;
+use opencv::platform_types::size_t;
 use opencv::{
     imgproc,
     prelude::{Mat, MatTraitConstManual},
@@ -69,7 +73,7 @@ pub struct VideoSink {
 #[derive(Component, Clone, Debug)]
 struct VideoCaptureThread(
     Sender<VideoMessage>,
-    Receiver<HashMap<MatId, Image>>,
+    Receiver<(HashMap<MatId, Image>, HashSet<MatId>)>,
     Receiver<Movement>,
 );
 
@@ -77,7 +81,7 @@ struct VideoCaptureThread(
 pub struct VideoCapturePipeline(pub PipelineProto, HashSet<MatId>);
 
 #[derive(Component, Clone, Debug)]
-pub struct VideoCaptureFrames(pub HashMap<MatId, Handle<Image>>);
+pub struct VideoCaptureFrames(pub HashMap<MatId, Handle<Image>>, pub HashSet<MatId>);
 
 #[derive(Debug, Component, Clone)]
 pub struct VideoCaptureMarker;
@@ -231,7 +235,7 @@ fn video_sink(
                         marker: VideoCaptureMarker,
                         pipeline: VideoCapturePipeline(PipelineProto::default(), mats),
                     })
-                    .insert(VideoCaptureFrames(frames))
+                    .insert(VideoCaptureFrames(frames, Default::default()))
                     .id();
 
                 (source, image_weak)
@@ -340,20 +344,21 @@ fn video_frames(
     >,
 ) {
     for (_, _, thread, mut frames) in sources.iter_mut() {
-        let mut new_images = None;
+        let mut new_image_data = None;
 
-        for images in thread.1.try_iter() {
-            if let Some(reuse_images) = new_images {
+        for image_data in thread.1.try_iter() {
+            // Recycle last image set
+            if let Some((reuse_images, _)) = new_image_data {
                 thread
                     .0
                     .send(VideoMessage::ReuseImages(reuse_images))
                     .log_error("Reuse images");
             }
 
-            new_images = Some(images);
+            new_image_data = Some(image_data);
         }
 
-        if let Some(new_images) = new_images {
+        if let Some((new_images, available_mats)) = new_image_data {
             let mut to_recycle = HashMap::default();
 
             frames.0.drain_filter(|id, _| !new_images.contains_key(id));
@@ -368,6 +373,8 @@ fn video_frames(
 
                 to_recycle.insert(id, old_image);
             }
+
+            frames.1 = available_mats;
 
             thread
                 .0
@@ -386,12 +393,11 @@ pub enum VideoMessage {
 /// The video capture thread
 fn video_capture_thread(
     msg_receiver: Receiver<VideoMessage>,
-    image_sender: Sender<HashMap<MatId, Image>>,
+    image_sender: Sender<(HashMap<MatId, Image>, HashSet<MatId>)>,
     _move_sender: Sender<Movement>,
 ) {
     span!(Level::INFO, "Video capture thread");
     let mut mats = Mats::default();
-    let mut mat_tmp = Mat::default();
     let mut to_reuse: HashMap<MatId, Vec<Image>> = HashMap::default();
 
     let src: RefCell<Option<SourceFn>> = RefCell::new(None);
@@ -426,22 +432,34 @@ fn video_capture_thread(
 
                     // Convert target mats to bevy images
                     let mut images = HashMap::default();
-                    for mat in &target_mats {
-                        let mut image: Image =
-                            to_reuse.entry(*mat).or_default().pop().unwrap_or_default();
-                        let rst = mats_to_image(&mats, *mat, &mut mat_tmp, &mut image);
-                        if let Err(err) = rst {
-                            error!("Could not convert mat to bevy image: {:?}", err);
-                            error!("Dropping frame");
+                    for mat_id in &target_mats {
+                        if let Some(mat) = mats.get(mat_id) {
+                            let mut image: Image = to_reuse
+                                .entry(*mat_id)
+                                .or_default()
+                                .pop()
+                                .unwrap_or_default();
 
-                            continue 'main_loop;
+                            let rst = mats_to_image(mat, &mut image);
+                            if let Err(err) = rst {
+                                error!(
+                                    "Could not convert mat to bevy image: {:?}. Dropping frame!",
+                                    err
+                                );
+
+                                continue 'main_loop;
+                            }
+
+                            images.insert(*mat_id, image);
+                        } else {
+                            error!("Target mats included {mat_id:?} which is not in `mats`");
                         }
-
-                        images.insert(*mat, image);
                     }
 
+                    let available_mats = mats.keys().copied().collect();
+
                     // Return processed mats
-                    let rst = image_sender.send(images);
+                    let rst = image_sender.send((images, available_mats));
                     // move_sender.try_send(movement_total).log_error("Send move");
 
                     if rst.is_err() {
@@ -472,15 +490,17 @@ fn video_capture_thread(
             VideoMessage::ConnectTo(camera) => {
                 *src.borrow_mut() = Some(camera::camera_source(camera).unwrap());
             }
-            VideoMessage::Pipeline(proto_pipeline, mats) => {
-                if mats.is_empty() {
+            VideoMessage::Pipeline(proto_pipeline, new_target_mats) => {
+                if new_target_mats.is_empty() {
                     // No sinks are listening, stop
                     info!("Stopping video thread");
                     return;
                 }
 
                 pipeline.clear();
-                target_mats = mats;
+                mats.clear();
+                to_reuse.clear();
+                target_mats = new_target_mats;
 
                 for proto_stage in proto_pipeline {
                     pipeline.push(proto_stage.construct());
@@ -502,26 +522,39 @@ fn video_capture_thread(
     }
 }
 
-/// Converts opencv `Mat`s to bevy `Image`s
-fn mats_to_image(
-    mats: &Mats,
-    mat_id: MatId,
-    mat_tmp: &mut Mat,
-    image: &mut Image,
-) -> anyhow::Result<()> {
-    let mat = mats.get(&mat_id).context("Get mat")?;
-    imgproc::cvt_color(&mat, mat_tmp, imgproc::COLOR_BGR2RGBA, 4).context("Convert colors")?;
-    let mat = &mat_tmp;
-
+/// Efficiently converts opencv `Mat`s to bevy `Image`s
+fn mats_to_image(mat: &Mat, image: &mut Image) -> anyhow::Result<()> {
+    // Convert opencv size to bevy size
     let size = mat.size().context("Get size")?;
-    let data = mat.data_bytes().context("Get data")?;
-
-    image.resize(Extent3d {
+    let extent = Extent3d {
         width: size.width as u32,
         height: size.height as u32,
         depth_or_array_layers: 1,
-    });
-    image.data.copy_from_slice(data);
+    };
+
+    // Allocate bevy image if needed
+    let cap = extent.volume() * 4;
+    image.data.clear();
+    image.data.reserve(cap);
+
+    // Make the bevy image into a opencv mat
+    // SAFETY: The vector outlives the returned mat and we dont do anything that could cause the
+    // vec to re allocate until after the mat gets dropped
+    let mut out_mat = unsafe {
+        let dst_ptr = image.data.as_mut_ptr() as *mut c_void;
+        let dst_step = size.width as size_t * 4;
+
+        let out_mat =
+            Mat::new_rows_cols_with_data(size.height, size.width, CV_8UC4, dst_ptr, dst_step)
+                .context("Convert colors")?;
+        image.data.set_len(cap);
+
+        out_mat
+    };
+
+    // Convert opencv mat to bevy image, out_mat must go out of scope before we touch `image.data`
+    imgproc::cvt_color(mat, &mut out_mat, imgproc::COLOR_BGR2RGBA, 4).context("Convert colors")?;
+    mem::drop(out_mat);
 
     Ok(())
 }

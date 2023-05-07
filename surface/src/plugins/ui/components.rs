@@ -46,6 +46,8 @@ use crate::plugins::orientation::OrientationDisplay;
 use crate::plugins::robot::Updater;
 use crate::plugins::video::pipeline::MatId;
 use crate::plugins::video::VideoCamera;
+use crate::plugins::video::VideoCaptureFrames;
+use crate::plugins::video::VideoCapturePipeline;
 use crate::plugins::video::VideoSink;
 use crate::plugins::video::VideoSinkMarker;
 use crate::plugins::video::VideoSinkMat;
@@ -945,6 +947,8 @@ pub struct VideoUi {
             VideoSinkMat,
             Option<VideoSinkTexture>,
             Option<VideoSinkPeer>,
+            Option<VideoCapturePipeline>,
+            Option<VideoCaptureFrames>,
         ),
     >,
     cameras: Option<Arc<Vec<Camera>>>,
@@ -1000,42 +1004,67 @@ impl VideoUi {
                 let entity = *entity;
                 // TODO mat selection
                 // TODO pipeline selection
-                if let Some((camera, mat, texture, _peer)) = self.sinks.get(&entity) {
+                if let Some((camera, mat, texture, _peer, _pipeline, frames)) =
+                    self.sinks.get(&entity)
+                {
                     ui.with_layout(Layout::top_down(Align::LEFT), |ui| {
                         ui.group(|ui| {
                             ui.horizontal(|ui| {
                                 ui.group(|ui| {
-                                    ComboBox::from_id_source(entity)
-                                        .selected_text(&format!("{:?}", camera.0.name))
-                                        .show_ui(ui, |ui| {
-                                            if let Some(ref cameras) = self.cameras {
-                                                for camera_option in cameras.iter() {
-                                                    if ui
-                                                        .selectable_label(
-                                                            camera_option == &camera.0,
-                                                            &format!("{:?}", camera_option.name),
-                                                        )
-                                                        .clicked()
-                                                    {
-                                                        cmds.entity(entity).insert(VideoCamera(
-                                                            camera_option.clone(),
-                                                        ));
+                                    ui.push_id(entity, |ui| {
+                                        ComboBox::from_id_source("name")
+                                            .selected_text(&format!("{:?}", camera.0.name))
+                                            .show_ui(ui, |ui| {
+                                                if let Some(ref cameras) = self.cameras {
+                                                    for camera_option in &**cameras {
+                                                        if ui
+                                                            .selectable_label(
+                                                                camera_option == &camera.0,
+                                                                &format!(
+                                                                    "{:?}",
+                                                                    camera_option.name
+                                                                ),
+                                                            )
+                                                            .clicked()
+                                                        {
+                                                            cmds.entity(entity).insert(
+                                                                VideoCamera(camera_option.clone()),
+                                                            );
+                                                        }
                                                     }
                                                 }
-                                            }
-                                        });
-                                    ui.label(&format!("{:?}", mat.0));
-                                    if ui.small_button("Split").clicked() {
-                                        let node = mem::take(tree);
-                                        *tree = VideoTree::Node(
-                                            Box::new(node),
-                                            Box::new(VideoTree::Empty),
-                                        )
-                                    }
-                                    if ui.small_button("Close").clicked() {
-                                        cmds.entity(entity).insert(VideoSinkRemove);
-                                        should_remove = true;
-                                    }
+                                            });
+                                        ComboBox::from_id_source("mat")
+                                            .selected_text(&format!("{:?}", mat.0))
+                                            .show_ui(ui, |ui| {
+                                                if let Some(ref frames) = frames {
+                                                    for available_mat in &frames.1 {
+                                                        if ui
+                                                            .selectable_label(
+                                                                available_mat == &mat.0,
+                                                                &format!("{:?}", available_mat),
+                                                            )
+                                                            .clicked()
+                                                        {
+                                                            cmds.entity(entity).insert(
+                                                                VideoSinkMat(*available_mat),
+                                                            );
+                                                        }
+                                                    }
+                                                }
+                                            });
+                                        if ui.small_button("Split").clicked() {
+                                            let node = mem::take(tree);
+                                            *tree = VideoTree::Node(
+                                                Box::new(node),
+                                                Box::new(VideoTree::Empty),
+                                            )
+                                        }
+                                        if ui.small_button("Close").clicked() {
+                                            cmds.entity(entity).insert(VideoSinkRemove);
+                                            should_remove = true;
+                                        }
+                                    });
                                 });
                             });
 
@@ -1096,8 +1125,18 @@ impl UiComponent for VideoUi {
                 let texture = entity.get::<VideoSinkTexture>().cloned();
                 let peer = entity.get::<VideoSinkPeer>().cloned();
 
+                let (pipeline, frames) =
+                    if let Some(peer) = peer.as_ref().and_then(|it| world.get_entity(it.0)) {
+                        let pipeline = peer.get::<VideoCapturePipeline>().cloned();
+                        let frames = peer.get::<VideoCaptureFrames>().cloned();
+
+                        (pipeline, frames)
+                    } else {
+                        (None, None)
+                    };
+
                 if let Some((camera, mat)) = Option::zip(camera, mat) {
-                    sinks.insert(sink, (camera, mat, texture, peer));
+                    sinks.insert(sink, (camera, mat, texture, peer, pipeline, frames));
                 } else {
                     error!("Found invalid sink");
                 }

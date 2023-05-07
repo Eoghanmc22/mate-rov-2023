@@ -1,24 +1,16 @@
 # Queue
 
-- Support for absolute movement
-- Sensor fusion init
 - Improve user input
-- Tune pids
 - Autonomous stuff
-- Make things customizable at run time
 - go through every todo
 
 # Important Things
 
-- [ ] Motors
-  - [ ] Fix drop impl
 - [ ] Sensors
   - [-] Sensor fusion
     - [H] Use last sensor data as stating position
   - [-] Make sure sensors power down, etc on drop
   - [-] Make sure sensors do a reset on init
-- [ ] Control
-  - [M] Depth control
 - [ ] Debugging
   - [?] Better logging
   - [ ] Make important settings editable in real time
@@ -31,6 +23,8 @@
 
 # Low Priority
 
+- [ ] Motors
+  - [ ] Fix drop impl
 - [ ] Sensors
   - [-] Magnetometers
     - [ ] Other compass as well
