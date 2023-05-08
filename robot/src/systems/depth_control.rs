@@ -120,24 +120,24 @@ impl System for DepthControlSystem {
                                         .map(|it| *it)
                                         .unwrap_or(PID_CONFIG);
                                     let depth_pid_result =
-                                        depth_controller.update(depth_error as f32, config);
+                                        depth_controller.update(depth_error, config);
 
                                     let max_correction = 0.30;
                                     let depth_corection = depth_pid_result
-                                        .corection()
+                                        .correction()
                                         .clamp(-max_correction, max_correction);
 
                                     store.insert(&tokens::DEPTH_CONTROL_RESULT, depth_pid_result);
                                     store.insert(
                                         &tokens::DEPTH_CONTROL_CORRECTION,
                                         DepthCorrection {
-                                            depth: depth_pid_result.corection(),
+                                            depth: depth_pid_result.correction(),
                                         },
                                     );
                                     store.insert(
                                         &tokens::MOVEMENT_DEPTH,
                                         Movement {
-                                            z: Percent::new(-depth_corection as f64),
+                                            z: Percent::new(-depth_corection),
                                             ..Movement::default()
                                         },
                                     );

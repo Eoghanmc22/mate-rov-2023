@@ -501,7 +501,7 @@ fn video_capture_thread(
                                 .pop()
                                 .unwrap_or_default();
 
-                            let rst = mats_to_image(mat, &mut image);
+                            let rst = mats_to_image(&*mat.borrow(), *mat_id, &mut image);
                             if let Err(err) = rst {
                                 error!(
                                     "Could not convert mat to bevy image: {:?}. Dropping frame!",
@@ -586,7 +586,7 @@ fn video_capture_thread(
 }
 
 /// Efficiently converts opencv `Mat`s to bevy `Image`s
-fn mats_to_image(mat: &Mat, image: &mut Image) -> anyhow::Result<()> {
+fn mats_to_image(mat: &Mat, mat_id: MatId, image: &mut Image) -> anyhow::Result<()> {
     // Convert opencv size to bevy size
     let size = mat.size().context("Get size")?;
     let extent = Extent3d {
@@ -616,7 +616,7 @@ fn mats_to_image(mat: &Mat, image: &mut Image) -> anyhow::Result<()> {
     };
 
     // Convert opencv mat to bevy image, out_mat must go out of scope before we touch `image.data`
-    imgproc::cvt_color(mat, &mut out_mat, imgproc::COLOR_BGR2RGBA, 4).context("Convert colors")?;
+    imgproc::cvt_color(mat, &mut out_mat, mat_id.conversion_code(), 4).context("Convert colors")?;
     mem::drop(out_mat);
 
     Ok(())

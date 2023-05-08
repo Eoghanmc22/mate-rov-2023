@@ -11,7 +11,7 @@ pub fn camera_source(camera: Camera) -> anyhow::Result<SourceFn> {
 
     Ok(Box::new(move |mats: &mut Mats| {
         let mat = mats.entry(MatId::Raw).or_default();
-        src.read(mat).context("Read stream")
+        src.read(&mut *mat.borrow_mut()).context("Read stream")
     }))
 }
 

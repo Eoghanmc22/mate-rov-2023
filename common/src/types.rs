@@ -469,29 +469,29 @@ pub enum RobotStatus {
 
 #[derive(Clone, Copy)]
 pub struct PidController {
-    last_error: Option<f32>,
-    integral: f32,
+    last_error: Option<f64>,
+    integral: f64,
     interval: Duration,
 }
 
 #[derive(Default, Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
 pub struct PidConfig {
-    pub kp: f32,
-    pub ki: f32,
-    pub kd: f32,
+    pub kp: f64,
+    pub ki: f64,
+    pub kd: f64,
 
-    pub max_integral: f32,
+    pub max_integral: f64,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
 pub struct PidResult {
-    pub p: f32,
-    pub i: f32,
-    pub d: f32,
+    pub p: f64,
+    pub i: f64,
+    pub d: f64,
 }
 
 impl PidResult {
-    pub const fn corection(&self) -> f32 {
+    pub const fn correction(&self) -> f64 {
         self.p + self.i + self.d
     }
 }
@@ -505,9 +505,9 @@ impl PidController {
         }
     }
 
-    pub fn update(&mut self, error: f32, config: PidConfig) -> PidResult {
+    pub fn update(&mut self, error: f64, config: PidConfig) -> PidResult {
         let cfg = config;
-        let interval = self.interval.as_secs_f32();
+        let interval = self.interval.as_secs_f64();
 
         self.integral += error * interval;
         self.integral = self.integral.clamp(-cfg.max_integral, cfg.max_integral);
@@ -540,11 +540,11 @@ pub enum DepthControlMode {
 
 #[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
 pub struct LevelingCorrection {
-    pub pitch: f32,
-    pub roll: f32,
+    pub pitch: f64,
+    pub roll: f64,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
 pub struct DepthCorrection {
-    pub depth: f32,
+    pub depth: f64,
 }

@@ -134,16 +134,16 @@ impl System for LevelingSystem {
                                         .map(|it| *it)
                                         .unwrap_or(PID_CONFIG);
                                     let pitch_pid_result =
-                                        pitch_controller.update(pitch_error, config);
+                                        pitch_controller.update(pitch_error as f64, config);
                                     let roll_pid_result =
-                                        roll_controller.update(roll_error, config);
+                                        roll_controller.update(roll_error as f64, config);
 
                                     let max_correction = 0.30;
                                     let pitch_corection = pitch_pid_result
-                                        .corection()
+                                        .correction()
                                         .clamp(-max_correction, max_correction);
                                     let roll_corection = roll_pid_result
-                                        .corection()
+                                        .correction()
                                         .clamp(-max_correction, max_correction);
 
                                     store.insert(&tokens::LEVELING_PITCH_RESULT, pitch_pid_result);
@@ -151,18 +151,18 @@ impl System for LevelingSystem {
                                     store.insert(
                                         &tokens::LEVELING_CORRECTION,
                                         LevelingCorrection {
-                                            pitch: pitch_pid_result.corection(),
-                                            roll: roll_pid_result.corection(),
+                                            pitch: pitch_pid_result.correction(),
+                                            roll: roll_pid_result.correction(),
                                         },
                                     );
                                     store.insert(
                                         &tokens::MOVEMENT_LEVELING,
                                         Movement {
                                             x_rot: Percent::new(
-                                                pitch_corection as f64 * PID_PITCH_MULTIPLIER,
+                                                pitch_corection * PID_PITCH_MULTIPLIER,
                                             ),
                                             y_rot: Percent::new(
-                                                roll_corection as f64 * PID_ROLL_MULTIPLIER,
+                                                roll_corection * PID_ROLL_MULTIPLIER,
                                             ),
                                             ..Movement::default()
                                         },
