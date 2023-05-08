@@ -379,7 +379,7 @@ fn video_frames(
         if let Some((new_images, available_mats)) = new_image_data {
             let mut to_recycle = HashMap::default();
 
-            frames.0.drain_filter(|id, _| !new_images.contains_key(id));
+            frames.0.drain_filter(|id, _| !available_mats.contains(id));
 
             for (id, new_image) in new_images {
                 let handle = frames
@@ -466,6 +466,45 @@ fn video_capture_thread(
     let mut target_mats: HashSet<MatId> = HashSet::default();
 
     'main_loop: loop {
+        let mut handle = |message| match message {
+            VideoMessage::ReuseImages(images) => {
+                for (id, image) in images {
+                    to_reuse.entry(id).or_default().push(image);
+                }
+            }
+            VideoMessage::ConnectTo(camera) => {
+                *src.borrow_mut() = Some(camera::camera_source(camera).unwrap());
+            }
+            VideoMessage::Pipeline(proto_pipeline, new_target_mats) => {
+                if new_target_mats.is_empty() {
+                    // No sinks are listening, stop
+                    info!("Stopping video thread");
+                    return;
+                }
+
+                pipeline.clear();
+                mats.clear();
+                to_reuse.clear();
+                target_mats = new_target_mats;
+
+                for proto_stage in proto_pipeline {
+                    pipeline.push(proto_stage.construct());
+                }
+            }
+        };
+
+        let dont_block = src.borrow().is_some();
+
+        // Avoid spinning when no source is set
+        if dont_block {
+            for message in msg_receiver.try_iter() {
+                (handle)(message);
+            }
+        } else {
+            let message = msg_receiver.recv().unwrap();
+            (handle)(message);
+        }
+
         if let Some(src_fn) = &mut *src.borrow_mut() {
             let mut movement_total = Movement::default();
 
@@ -484,9 +523,6 @@ fn video_capture_thread(
                             }
                             Err(err) => {
                                 error!("Could not process frame: {:?}", err);
-                                error!("Dropping frame");
-
-                                continue 'main_loop;
                             }
                         }
                     }
@@ -543,45 +579,6 @@ fn video_capture_thread(
                 }
             }
         }
-
-        let mut handle = |message| match message {
-            VideoMessage::ReuseImages(images) => {
-                for (id, image) in images {
-                    to_reuse.entry(id).or_default().push(image);
-                }
-            }
-            VideoMessage::ConnectTo(camera) => {
-                *src.borrow_mut() = Some(camera::camera_source(camera).unwrap());
-            }
-            VideoMessage::Pipeline(proto_pipeline, new_target_mats) => {
-                if new_target_mats.is_empty() {
-                    // No sinks are listening, stop
-                    info!("Stopping video thread");
-                    return;
-                }
-
-                pipeline.clear();
-                mats.clear();
-                to_reuse.clear();
-                target_mats = new_target_mats;
-
-                for proto_stage in proto_pipeline {
-                    pipeline.push(proto_stage.construct());
-                }
-            }
-        };
-
-        let dont_block = src.borrow().is_some();
-
-        // Avoid spinning when no source is set
-        if dont_block {
-            for message in msg_receiver.try_iter() {
-                (handle)(message);
-            }
-        } else {
-            let message = msg_receiver.recv().unwrap();
-            (handle)(message);
-        }
     }
 }
 
@@ -594,6 +591,7 @@ fn mats_to_image(mat: &Mat, mat_id: MatId, image: &mut Image) -> anyhow::Result<
         height: size.height as u32,
         depth_or_array_layers: 1,
     };
+    image.texture_descriptor.size = extent;
 
     // Allocate bevy image if needed
     let cap = extent.volume() * 4;

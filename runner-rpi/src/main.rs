@@ -29,6 +29,14 @@ pub fn main() -> anyhow::Result<()> {
         .wait();
 
     let rst = Command::new("scp")
+        .arg("./setup_camera.sh")
+        .arg("pi@mate.local:~/mate/setup_camera.sh")
+        .spawn()
+        .context("Spawn scp")?
+        .wait()
+        .and(rst);
+
+    let rst = Command::new("scp")
         .arg("./robot/forward_motor_data.csv")
         .arg("pi@mate.local:~/forward_motor_data.csv")
         .spawn()

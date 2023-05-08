@@ -1106,6 +1106,7 @@ impl VideoUi {
                                                 }
                                             });
                                         if ui.selectable_label(movement_enabled.is_some(), "Movement").on_hover_ui(|ui| {
+                                            ui.set_max_width(100.0);
                                             if let Some(movement) = movement {
                                                 ui.add(MovementWidget(&movement.0));
                                             } else {

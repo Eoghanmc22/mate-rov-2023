@@ -4,10 +4,11 @@ use std::{
     io,
     net::{IpAddr, SocketAddr},
     process::{Child, Command},
-    thread::Scope,
+    thread::{self, Scope},
+    time::Duration,
 };
 
-use anyhow::{anyhow, Context, Error};
+use anyhow::{anyhow, bail, Context, Error};
 use common::{
     error::LogErrorExt,
     store::{self, tokens},
@@ -84,6 +85,8 @@ impl System for CameraSystem {
                             }
                         }
 
+                        thread::sleep(Duration::from_millis(500));
+
                         for camera in &last_cameras {
                             let rst = add_camera(camera, addrs.ip(), &mut cameras, &mut port);
 
@@ -120,7 +123,7 @@ impl System for CameraSystem {
                                         let next_cameras: HashSet<String> =
                                             data.lines().map(ToOwned::to_owned).collect();
 
-                                        for old_camera in next_cameras.difference(&last_cameras) {
+                                        for old_camera in last_cameras.difference(&next_cameras) {
                                             if let Some(mut child) = cameras.remove(old_camera) {
                                                 let rst = child.0.kill();
 
@@ -220,6 +223,16 @@ fn add_camera(
     cameras: &mut HashMap<String, (Child, SocketAddr)>,
     port: &mut u16,
 ) -> anyhow::Result<()> {
+    let setup_exit = Command::new("/home/pi/mate/setup_camera.sh")
+        .arg(camera)
+        .spawn()
+        .context("Setup cameras")?
+        .wait()
+        .context("wait on setup")?;
+    if !setup_exit.success() {
+        bail!("Could not setup cameras");
+    }
+
     let bind = (ip, *port).into();
     let child =
         start_gstreamer(camera, bind).with_context(|| format!("Spawn gstreamer for {camera}"))?;

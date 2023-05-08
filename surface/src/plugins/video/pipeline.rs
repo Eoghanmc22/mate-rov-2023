@@ -64,8 +64,8 @@ impl PipelineStage {
                     pid_y: PidController::new(period),
                     target_x: 0.0,
                     target_y: 0.5,
-                    color: (100, 160, 140),
-                    color_varance: (20, 20, 20),
+                    color: (130, 180, 130),
+                    color_varance: (90, 30, 40),
                 };
 
                 Box::new(move |mats| button_tracker.update(mats))
@@ -219,9 +219,9 @@ impl TrackButton {
             .clamp(-max_correction, max_correction);
 
         Ok(Movement {
-            x: Percent::new(correction_x),
+            x: Percent::new(-correction_x),
             y: Percent::new(0.2),
-            z: Percent::new(-correction_y),
+            z: Percent::new(correction_y),
             ..Default::default()
         })
     }
