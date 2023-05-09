@@ -24,9 +24,8 @@ pub const MAX_UPDATE_AGE: Duration = Duration::from_millis(250);
 pub struct MotorSystem;
 
 enum Message {
-    MotorSpeeds(HashMap<MotorId, MotorFrame>, Instant),
-    MotorSpeed(MotorId, MotorFrame, Instant),
-    CheckDeadlines,
+    MotorSpeeds(HashMap<MotorId, MotorFrame>),
+    Tick,
 }
 
 impl System for MotorSystem {
@@ -60,9 +59,9 @@ impl System for MotorSystem {
                     }
                 };
 
-                let init_pwms = [Duration::from_micros(1500); 16];
+                const STOP_PWMS: [Duration; 16] = [Duration::from_micros(1500); 16];
                 let rst = pwm_controller
-                    .set_pwms(init_pwms)
+                    .set_pwms(STOP_PWMS)
                     .context("Set initial pwms");
                 if let Err(error) = rst {
                     events.send(Event::Error(
@@ -73,7 +72,8 @@ impl System for MotorSystem {
 
                 pwm_controller.output_enable();
 
-                let mut deadlines: HashMap<MotorId, Instant> = HashMap::default();
+                let mut motor_speeds = HashMap::default();
+                let mut motor_timestamp = Instant::now();
 
                 for message in rx {
                     if stop::world_stopped() {
@@ -81,62 +81,37 @@ impl System for MotorSystem {
                         return;
                     }
 
-                    let now = Instant::now();
-
                     match message {
-                        Message::MotorSpeeds(motors, deadline) => {
-                            let mut speeds = [Duration::from_micros(1500); 16];
+                        Message::MotorSpeeds(motors) => {
+                            motor_speeds = motors;
+                            motor_timestamp = Instant::now();
+                        }
+                        Message::Tick => {
+                            // Update motor speeds
+                            let speeds = if motor_timestamp.elapsed() < MAX_UPDATE_AGE {
+                                let mut speeds = [Duration::from_micros(1500); 16];
 
-                            for (motor_id, frame) in motors {
-                                let motor = Motor::from(motor_id);
+                                for (motor_id, frame) in &motor_speeds {
+                                    let motor = Motor::from(*motor_id);
 
-                                let pwm = match frame {
-                                    MotorFrame::Percent(pct) => motor.value_to_pwm(pct),
-                                    MotorFrame::Raw(raw) => raw,
-                                };
-                                deadlines.insert(motor_id, deadline);
+                                    let pwm = match frame {
+                                        MotorFrame::Percent(pct) => motor.value_to_pwm(*pct),
+                                        MotorFrame::Raw(raw) => *raw,
+                                    };
 
-                                speeds[motor.channel as usize] = pwm;
-                            }
+                                    speeds[motor.channel as usize] = pwm;
+                                }
+
+                                speeds
+                            } else {
+                                STOP_PWMS
+                            };
 
                             let rst = pwm_controller.set_pwms(speeds);
                             if let Err(error) = rst {
                                 events.send(Event::Error(
                                     error.context("Couldn't set speeds".to_string()),
                                 ));
-                            }
-                        }
-                        Message::MotorSpeed(motor_id, frame, deadline) => {
-                            let motor = Motor::from(motor_id);
-
-                            let pwm = match frame {
-                                MotorFrame::Percent(pct) => motor.value_to_pwm(pct),
-                                MotorFrame::Raw(raw) => raw,
-                            };
-                            deadlines.insert(motor_id, deadline);
-
-                            let rst = pwm_controller.set_pwm(motor.channel, pwm);
-                            if let Err(error) = rst {
-                                events.send(Event::Error(
-                                    error.context(format!("Couldn't set speed: {motor_id:?}")),
-                                ));
-                            }
-                        }
-                        Message::CheckDeadlines => {
-                            for (motor_id, deadline) in &deadlines {
-                                if now - *deadline > MAX_UPDATE_AGE {
-                                    let motor = Motor::from(*motor_id);
-
-                                    let rst = pwm_controller
-                                        .set_pwm(motor.channel, Duration::from_micros(1500));
-                                    if let Err(error) = rst {
-                                        events.send(Event::Error(
-                                            error.context(format!(
-                                                "Couldn't set speed: {motor_id:?}"
-                                            )),
-                                        ));
-                                    }
-                                }
                             }
                         }
                     }
@@ -181,8 +156,6 @@ impl System for MotorSystem {
 
                             // Need to recalculate motor speeds
                             if listening.contains(&update.0) {
-                                let now = Instant::now();
-
                                 let new_speeds = if let Some(armed) =
                                     store.get_alive(&tokens::ARMED, MAX_UPDATE_AGE)
                                 {
@@ -213,10 +186,7 @@ impl System for MotorSystem {
                                     Default::default()
                                 };
 
-                                let deadline = now + MAX_UPDATE_AGE;
-
-                                let ret =
-                                    tx.try_send(Message::MotorSpeeds(new_speeds.clone(), deadline));
+                                let ret = tx.try_send(Message::MotorSpeeds(new_speeds.clone()));
                                 if let Err(error) = ret {
                                     events.send(Event::Error(anyhow!(
                                         "Couldn't update new speed: {error}"
@@ -227,7 +197,7 @@ impl System for MotorSystem {
                             }
                         }
                         Event::Exit => {
-                            tx.send(Message::CheckDeadlines)
+                            tx.send(Message::Tick)
                                 .log_error("Could not send deadline check");
                             return;
                         }
@@ -243,10 +213,10 @@ impl System for MotorSystem {
                 span!(Level::INFO, "Motor deadline check thread");
 
                 while !stop::world_stopped() {
-                    tx.send(Message::CheckDeadlines)
+                    tx.send(Message::Tick)
                         .log_error("Could not send deadline check");
 
-                    thread::sleep(Duration::from_millis(20));
+                    thread::sleep(Duration::from_millis(10));
                 }
             });
         }
