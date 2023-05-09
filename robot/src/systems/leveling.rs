@@ -24,7 +24,7 @@ const PID_CONFIG: PidConfig = PidConfig {
     kd: 0.2,
     max_integral: 2.0,
 };
-const PID_PITCH_MULTIPLIER: f64 = 2.0;
+const PID_PITCH_MULTIPLIER: f64 = -2.0;
 const PID_ROLL_MULTIPLIER: f64 = 1.0;
 const PERIOD: Duration = Duration::from_millis(20);
 
