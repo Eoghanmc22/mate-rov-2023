@@ -246,7 +246,7 @@ pub fn sum_movements<C: UpdateCallback>(store: &Store<C>) -> Movement {
 
 // TODO Fix motor math
 pub fn mix_movement<'a>(mov: Movement, motor_data: &MotorData) -> HashMap<MotorId, MotorFrame> {
-    const MAX_AMPERAGE: f64 = 20.0;
+    const MAX_AMPERAGE: f64 = 23.0;
 
     let drive_ids = [
         MotorId::FrontLeftBottom,
