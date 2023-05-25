@@ -22,7 +22,8 @@ pub type PipelineProto = Vec<PipelineStage>;
 /// Repersents a image created in the image process pipeline
 #[derive(Debug, Hash, PartialEq, Eq, Clone, Copy)]
 pub enum MatId {
-    Raw,
+    RotateIntermediate,
+    Camera,
     Blur,
     Lab,
     Mask,
@@ -32,7 +33,8 @@ pub enum MatId {
 impl MatId {
     pub fn conversion_code(&self) -> i32 {
         match self {
-            MatId::Raw => COLOR_BGR2RGBA,
+            MatId::RotateIntermediate => COLOR_BGR2RGBA,
+            MatId::Camera => COLOR_BGR2RGBA,
             MatId::Blur => COLOR_BGR2RGBA,
             MatId::Lab => COLOR_BGR2RGBA,
             MatId::Mask => COLOR_GRAY2RGBA,
@@ -97,7 +99,7 @@ impl TrackButton {
         mats.entry(MatId::Mask).or_default();
         mats.entry(MatId::ButtonOverlay).or_default();
 
-        let image = mats.get(&MatId::Raw).context("No raw frame")?;
+        let image = mats.get(&MatId::Camera).context("No raw frame")?;
 
         let blur = mats.get(&MatId::Blur).unwrap();
         imgproc::gaussian_blur(

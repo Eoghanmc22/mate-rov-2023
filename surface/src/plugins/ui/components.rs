@@ -1167,7 +1167,7 @@ impl VideoUi {
                                 let sink = cmds
                                     .spawn(VideoSink {
                                         camera: VideoCamera(camera.clone()),
-                                        mat: VideoSinkMat(MatId::Raw),
+                                        mat: VideoSinkMat(MatId::Camera),
                                         marker: VideoSinkMarker,
                                     })
                                     .id();
