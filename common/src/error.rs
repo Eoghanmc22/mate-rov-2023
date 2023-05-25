@@ -1,4 +1,4 @@
-use std::fmt::Debug;
+use std::{backtrace::Backtrace, fmt::Debug};
 
 use tracing::error;
 
@@ -9,7 +9,12 @@ pub trait LogErrorExt {
 impl<T, E: Debug> LogErrorExt for Result<T, E> {
     fn log_error(self, message: &str) {
         if let Err(err) = self {
-            error!("{}: {:?}", message, err);
+            error!(
+                "{}: {:?}, Backtrace: {}",
+                message,
+                err,
+                Backtrace::force_capture()
+            );
         }
     }
 }
