@@ -51,6 +51,10 @@ impl EventHandle {
         let mut dropped_peers = Vec::new();
 
         for (id, peer) in self.peers.iter() {
+            if id == &self.id {
+                continue;
+            }
+
             let ret = peer.try_send(event.clone());
             if let Err(err) = ret {
                 match err {
