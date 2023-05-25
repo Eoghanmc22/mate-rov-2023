@@ -13,6 +13,7 @@ use common::{
 use crossbeam::channel;
 use fxhash::{FxHashMap as HashMap, FxHashSet as HashSet};
 use serde::Deserialize;
+use std::sync::Arc;
 use std::thread::{self, Scope};
 use std::time::Duration;
 use std::time::Instant;
@@ -24,7 +25,7 @@ pub const MAX_UPDATE_AGE: Duration = Duration::from_millis(250);
 pub struct MotorSystem;
 
 enum Message {
-    MotorSpeeds(HashMap<MotorId, MotorFrame>),
+    Event(Arc<Event>),
     Tick,
 }
 
@@ -45,6 +46,13 @@ impl System for MotorSystem {
             let mut events = events.clone();
             spawner.spawn(move || {
                 span!(Level::INFO, "Motor thread");
+
+                let mut store = {
+                    let mut events = events.clone();
+                    Store::new(move |update| {
+                        events.send(Event::Store(update));
+                    })
+                };
 
                 let pwm_controller = Pca9685::new(
                     Pca9685::I2C_BUS,
@@ -72,9 +80,6 @@ impl System for MotorSystem {
 
                 pwm_controller.output_enable();
 
-                let mut motor_speeds = HashMap::default();
-                let mut motor_timestamp = Instant::now();
-
                 for message in rx {
                     if stop::world_stopped() {
                         // Pca9685 stops on drop
@@ -82,38 +87,75 @@ impl System for MotorSystem {
                     }
 
                     match message {
-                        Message::MotorSpeeds(motors) => {
-                            motor_speeds = motors;
-                            motor_timestamp = Instant::now();
-                        }
                         Message::Tick => {
-                            // Update motor speeds
-                            let speeds = if motor_timestamp.elapsed() < MAX_UPDATE_AGE {
-                                let mut speeds = [Duration::from_micros(1500); 16];
+                            // Recalculate motor speeds
+                            let calculated_speeds = if let Some(armed) =
+                                store.get_alive(&tokens::ARMED, MAX_UPDATE_AGE)
+                            {
+                                if matches!(*armed, Armed::Armed) {
+                                    if let Some(speed_overrides) =
+                                        store.get(&tokens::MOVEMENT_OVERRIDE)
+                                    {
+                                        let mut new_speeds = HashMap::default();
 
-                                for (motor_id, frame) in &motor_speeds {
-                                    let motor = Motor::from(*motor_id);
+                                        // TODO: Use an iterator?
+                                        for (motor, speed) in speed_overrides.iter() {
+                                            new_speeds.insert(*motor, MotorFrame::Percent(*speed));
+                                        }
 
-                                    let pwm = match frame {
-                                        MotorFrame::Percent(pct) => motor.value_to_pwm(*pct),
-                                        MotorFrame::Raw(raw) => *raw,
-                                    };
+                                        new_speeds
+                                    } else {
+                                        let movement = sum_movements(&store);
+                                        store.insert(&tokens::MOVEMENT_CALCULATED, movement);
 
-                                    speeds[motor.channel as usize] = pwm;
+                                        mix_movement(movement, &motor_data)
+                                    }
+                                } else {
+                                    // Disarmed
+                                    Default::default()
                                 }
-
-                                speeds
                             } else {
-                                STOP_PWMS
+                                // events.send(Event::Error(anyhow!("No armed token")));
+                                Default::default()
                             };
+                            store.insert(&tokens::MOTOR_SPEED, calculated_speeds.clone());
 
-                            let rst = pwm_controller.set_pwms(speeds);
+                            // Speeds to PWMs
+                            let mut pwms = STOP_PWMS;
+                            for (motor_id, frame) in &calculated_speeds {
+                                let motor = Motor::from(*motor_id);
+
+                                let pwm = match frame {
+                                    MotorFrame::Percent(pct) => motor.value_to_pwm(*pct),
+                                    MotorFrame::Raw(raw) => *raw,
+                                };
+
+                                pwms[motor.channel as usize] = pwm;
+                            }
+
+                            // Write motor speeds
+                            let rst = pwm_controller.set_pwms(pwms);
                             if let Err(error) = rst {
                                 events.send(Event::Error(
                                     error.context("Couldn't set speeds".to_string()),
                                 ));
                             }
                         }
+                        Message::Event(event) => match &*event {
+                            Event::SyncStore => {
+                                store.refresh();
+                            }
+                            Event::ResetForignStore => {
+                                store.reset_shared();
+                            }
+                            Event::Store(update) => {
+                                store.handle_update_shared(update);
+                            }
+                            Event::Exit => {
+                                return;
+                            }
+                            _ => {}
+                        },
                     }
                 }
             });
@@ -124,13 +166,6 @@ impl System for MotorSystem {
             let tx = tx.clone();
             spawner.spawn(move || {
                 span!(Level::INFO, "Motor forward thread");
-
-                let mut store = {
-                    let mut events = events.clone();
-                    Store::new(move |update| {
-                        events.send(Event::Store(update));
-                    })
-                };
 
                 let listening: HashSet<KeyImpl> = vec![
                     tokens::ARMED.0,
@@ -145,60 +180,19 @@ impl System for MotorSystem {
 
                 for event in listner {
                     match &*event {
-                        Event::SyncStore => {
-                            store.refresh();
-                        }
-                        Event::ResetForignStore => {
-                            store.reset_shared();
-                        }
-                        Event::Store(update) => {
-                            store.handle_update_shared(update);
-
-                            // Need to recalculate motor speeds
-                            if listening.contains(&update.0) {
-                                let new_speeds = if let Some(armed) =
-                                    store.get_alive(&tokens::ARMED, MAX_UPDATE_AGE)
-                                {
-                                    if matches!(*armed, Armed::Armed) {
-                                        if let Some(speed_overrides) =
-                                            store.get(&tokens::MOVEMENT_OVERRIDE)
-                                        {
-                                            let mut new_speeds = HashMap::default();
-
-                                            for (motor, speed) in speed_overrides.iter() {
-                                                new_speeds
-                                                    .insert(*motor, MotorFrame::Percent(*speed));
-                                            }
-
-                                            new_speeds
-                                        } else {
-                                            let movement = sum_movements(&store);
-                                            store.insert(&tokens::MOVEMENT_CALCULATED, movement);
-
-                                            mix_movement(movement, &motor_data)
-                                        }
-                                    } else {
-                                        // Disarmed
-                                        Default::default()
-                                    }
-                                } else {
-                                    // events.send(Event::Error(anyhow!("No armed token")));
-                                    Default::default()
-                                };
-
-                                let ret = tx.try_send(Message::MotorSpeeds(new_speeds.clone()));
-                                if let Err(error) = ret {
-                                    events.send(Event::Error(anyhow!(
-                                        "Couldn't update new speed: {error}"
-                                    )));
-                                }
-
-                                store.insert(&tokens::MOTOR_SPEED, new_speeds);
+                        Event::Store(store) => {
+                            if listening.contains(&store.0) {
+                                tx.try_send(Message::Event(event))
+                                    .log_error("Forward event to motor thread");
                             }
                         }
+                        Event::SyncStore | Event::ResetForignStore => {
+                            tx.try_send(Message::Event(event))
+                                .log_error("Forward event to motor thread");
+                        }
                         Event::Exit => {
-                            tx.send(Message::Tick)
-                                .log_error("Could not send deadline check");
+                            tx.try_send(Message::Event(event))
+                                .log_error("Forward event to motor thread");
                             return;
                         }
                         _ => {}
@@ -212,11 +206,17 @@ impl System for MotorSystem {
             spawner.spawn(move || {
                 span!(Level::INFO, "Motor deadline check thread");
 
+                let interval = Duration::from_secs_f64(1.0 / 100.0);
+                let mut deadline = Instant::now();
+
                 while !stop::world_stopped() {
+                    deadline += interval;
+
                     tx.send(Message::Tick)
                         .log_error("Could not send deadline check");
 
-                    thread::sleep(Duration::from_millis(10));
+                    let remaining = deadline - Instant::now();
+                    thread::sleep(remaining);
                 }
             });
         }
