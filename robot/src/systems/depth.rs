@@ -52,6 +52,7 @@ impl System for DepthSystem {
                         events.send(Event::Error(err.context("Could not read depth")));
                     }
                 }
+
                 let remaining = deadline - Instant::now();
                 thread::sleep(remaining);
             }
