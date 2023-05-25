@@ -1,5 +1,6 @@
 use std::sync::Arc;
 
+use common::error::LogErrorExt;
 use crossbeam::channel::{Receiver, Sender, TrySendError};
 use fxhash::FxHashMap as HashMap;
 use tracing::error;
@@ -54,7 +55,8 @@ impl EventHandle {
             if let Err(err) = ret {
                 match err {
                     TrySendError::Full(_) => {
-                        error!("Message channel full, event dropped. Peer id: {id:?}");
+                        Err::<(), _>(format!("Peer id: {id:?}"))
+                            .log_error("Message channel full, event dropped.");
                     }
                     TrySendError::Disconnected(_) => {
                         dropped_peers.push(*id);
@@ -77,7 +79,8 @@ impl EventHandle {
                 if let Err(err) = ret {
                     match err {
                         TrySendError::Full(_) => {
-                            error!("Message channel full, event dropped. Peer id: {peer_id:?}");
+                            Err::<(), _>(format!("Peer id: {peer_id:?}"))
+                                .log_error("Message channel full, event dropped.");
                         }
                         TrySendError::Disconnected(_) => {
                             self.peers.remove(&peer_id);
