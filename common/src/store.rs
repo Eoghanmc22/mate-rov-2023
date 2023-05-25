@@ -15,6 +15,8 @@ use std::{
 use fxhash::FxHashMap as HashMap;
 use tracing::error;
 
+use crate::error::LogErrorExt;
+
 pub type Key = KeyImpl;
 pub type Value = Arc<dyn Any + Send + Sync>;
 pub type Update = (Key, Option<Value>);
@@ -132,6 +134,7 @@ impl<C> Store<C> {
 
     pub fn handle_update_shared(&mut self, update: &Update) {
         if self.owned.contains_key(&update.0) {
+            Err::<(), _>(format!("Bad update")).log_error("handle_update_shared");
             return;
         }
 
@@ -146,6 +149,7 @@ impl<C> Store<C> {
 
     pub fn handle_update_owned(&mut self, update: &Update) {
         if self.shared.contains_key(&update.0) {
+            Err::<(), _>(format!("Bad update")).log_error("handle_update_owned");
             return;
         }
 
