@@ -10,6 +10,7 @@ use common::{
     types::{DepthControlMode, DepthCorrection, Movement, Percent, PidConfig, PidController},
 };
 use crossbeam::channel::bounded;
+use glam::{Quat, Vec3};
 use tracing::{span, warn, Level};
 
 use crate::{event::Event, events::EventHandle, systems::stop, SystemId};
@@ -17,9 +18,9 @@ use crate::{event::Event, events::EventHandle, systems::stop, SystemId};
 use super::System;
 
 const PID_CONFIG: PidConfig = PidConfig {
-    kp: 1.2,
-    ki: 0.1,
-    kd: 0.3,
+    kp: 0.4,
+    ki: 0.0,
+    kd: 0.0,
     max_integral: 2.0,
 };
 const PERIOD: Duration = Duration::from_millis(20);
@@ -108,9 +109,10 @@ impl System for DepthControlSystem {
                             _ => unreachable!(),
                         },
                         DepthControlEvent::Tick => {
-                            if let Some((mode, depth_observed)) = Option::zip(
+                            if let (Some(mode), Some(depth_observed), Some(orientation)) = (
                                 store.get(&tokens::DEPTH_CONTROL_MODE),
                                 store.get(&tokens::RAW_DEPTH),
+                                store.get(&tokens::ORIENTATION),
                             ) {
                                 if let DepthControlMode::Enabled(depth_target) = *mode {
                                     let depth_error = depth_target.0 - depth_observed.depth.0;
@@ -122,7 +124,7 @@ impl System for DepthControlSystem {
                                     let depth_pid_result =
                                         depth_controller.update(depth_error, config);
 
-                                    let max_correction = 0.30;
+                                    let max_correction = 0.60;
                                     let depth_corection = depth_pid_result
                                         .correction()
                                         .clamp(-max_correction, max_correction);
@@ -134,10 +136,26 @@ impl System for DepthControlSystem {
                                             depth: depth_pid_result.correction(),
                                         },
                                     );
+
+                                    let orientation: Quat = orientation.0.into();
+                                    let correction_vec = orientation.inverse()
+                                        * Vec3::new(0.0, 0.0, -depth_corection as f32);
+
                                     store.insert(
                                         &tokens::MOVEMENT_DEPTH,
                                         Movement {
-                                            z: Percent::new(-depth_corection),
+                                            x: Percent::new(high_pass(
+                                                correction_vec.x as f64,
+                                                0.05,
+                                            )),
+                                            y: Percent::new(high_pass(
+                                                correction_vec.y as f64,
+                                                0.05,
+                                            )),
+                                            z: Percent::new(high_pass(
+                                                correction_vec.z as f64,
+                                                0.05,
+                                            )),
                                             ..Movement::default()
                                         },
                                     );
@@ -166,4 +184,12 @@ enum DepthControlEvent {
     Event(Arc<Event>),
     Tick,
     Exit,
+}
+
+fn high_pass(value: f64, threshold: f64) -> f64 {
+    if value.abs() > threshold {
+        value
+    } else {
+        0.0
+    }
 }

@@ -20,11 +20,11 @@ use super::System;
 
 const PID_CONFIG: PidConfig = PidConfig {
     kp: 0.4,
-    ki: 0.1,
-    kd: 0.2,
-    max_integral: 2.0,
+    ki: 0.0,
+    kd: 0.0,
+    max_integral: 0.0,
 };
-const PID_PITCH_MULTIPLIER: f64 = -2.0;
+const PID_PITCH_MULTIPLIER: f64 = 2.0;
 const PID_ROLL_MULTIPLIER: f64 = 1.0;
 const PERIOD: Duration = Duration::from_millis(20);
 
@@ -158,12 +158,14 @@ impl System for LevelingSystem {
                                     store.insert(
                                         &tokens::MOVEMENT_LEVELING,
                                         Movement {
-                                            x_rot: Percent::new(
+                                            x_rot: Percent::new(high_pass(
                                                 pitch_corection * PID_PITCH_MULTIPLIER,
-                                            ),
-                                            y_rot: Percent::new(
+                                                0.05,
+                                            )),
+                                            y_rot: Percent::new(high_pass(
                                                 roll_corection * PID_ROLL_MULTIPLIER,
-                                            ),
+                                                0.05,
+                                            )),
                                             ..Movement::default()
                                         },
                                     );
@@ -218,4 +220,12 @@ fn normalize_angle(angle: f32) -> f32 {
 
 fn modf(a: f32, b: f32) -> f32 {
     (a % b + b) % b
+}
+
+fn high_pass(value: f64, threshold: f64) -> f64 {
+    if value.abs() > threshold {
+        value
+    } else {
+        0.0
+    }
 }
