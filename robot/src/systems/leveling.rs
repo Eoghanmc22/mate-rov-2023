@@ -19,12 +19,12 @@ use crate::{event::Event, events::EventHandle, systems::stop, SystemId};
 use super::System;
 
 const PID_CONFIG: PidConfig = PidConfig {
-    kp: 0.4,
+    kp: 0.007,
     ki: 0.0,
     kd: 0.0,
     max_integral: 0.0,
 };
-const PID_PITCH_MULTIPLIER: f64 = 2.0;
+const PID_PITCH_MULTIPLIER: f64 = 0.0;
 const PID_ROLL_MULTIPLIER: f64 = 1.0;
 const PERIOD: Duration = Duration::from_millis(20);
 
