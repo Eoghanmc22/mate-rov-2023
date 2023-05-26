@@ -18,7 +18,7 @@ use crossbeam::channel::{self, Receiver, Sender};
 use egui::TextureId;
 use fxhash::FxHashMap as HashMap;
 use fxhash::FxHashSet as HashSet;
-use opencv::core::CV_8UC4;
+use opencv::core::{Vector, CV_8UC4};
 use opencv::platform_types::size_t;
 use opencv::{
     imgproc,
@@ -83,10 +83,10 @@ pub struct VideoSink {
 }
 
 #[derive(Component, Clone, Debug)]
-struct VideoCaptureThread(
-    Sender<VideoMessage>,
-    Receiver<(HashMap<MatId, Image>, HashSet<MatId>)>,
-    Receiver<(Movement, Instant)>,
+pub struct VideoCaptureThread(
+    pub Sender<VideoMessage>,
+    pub Receiver<(HashMap<MatId, Image>, HashSet<MatId>)>,
+    pub Receiver<(Movement, Instant)>,
 );
 
 #[derive(Component, Clone, Debug)]
@@ -306,13 +306,13 @@ fn spawn_video_captures(
         // Tell the video thread which camera to use
         thread
             .0
-            .send(VideoMessage::ConnectTo(peer.0.clone()))
+            .try_send(VideoMessage::ConnectTo(peer.0.clone()))
             .log_error("Send tx message");
 
         // Tell the video the pipeline necessary
         thread
             .0
-            .send(VideoMessage::Pipeline(
+            .try_send(VideoMessage::Pipeline(
                 pipeline.0.clone(),
                 pipeline.1.clone(),
             ))
@@ -333,7 +333,7 @@ fn update_pipelines(
     for (source, thread, pipeline) in query.iter() {
         thread
             .0
-            .send(VideoMessage::Pipeline(
+            .try_send(VideoMessage::Pipeline(
                 pipeline.0.clone(),
                 pipeline.1.clone(),
             ))
@@ -369,7 +369,7 @@ fn video_frames(
             if let Some((reuse_images, _)) = new_image_data {
                 thread
                     .0
-                    .send(VideoMessage::ReuseImages(reuse_images))
+                    .try_send(VideoMessage::ReuseImages(reuse_images))
                     .log_error("Reuse images");
             }
 
@@ -396,7 +396,7 @@ fn video_frames(
 
             thread
                 .0
-                .send(VideoMessage::ReuseImages(to_recycle))
+                .try_send(VideoMessage::ReuseImages(to_recycle))
                 .log_error("Reuse images");
         }
     }
@@ -449,6 +449,7 @@ pub enum VideoMessage {
     ReuseImages(HashMap<MatId, Image>),
     ConnectTo(Camera),
     Pipeline(PipelineProto, HashSet<MatId>),
+    SaveFrame(String, MatId),
 }
 
 /// The video capture thread
@@ -489,6 +490,16 @@ fn video_capture_thread(
 
                 for proto_stage in proto_pipeline {
                     pipeline.push(proto_stage.construct());
+                }
+            }
+            VideoMessage::SaveFrame(name, mat) => {
+                let mat = mats.get(&mat);
+
+                if let Some(mat) = mat {
+                    opencv::imgcodecs::imwrite(&name, &*mat.borrow(), &Vector::new())
+                        .log_error("Write screenshot");
+                } else {
+                    warn!("A screen shot requested bad mat id");
                 }
             }
         };

@@ -51,6 +51,8 @@ use crate::plugins::video::VideoCaptureFrames;
 use crate::plugins::video::VideoCaptureMovement;
 use crate::plugins::video::VideoCaptureMovementEnabled;
 use crate::plugins::video::VideoCapturePipeline;
+use crate::plugins::video::VideoCaptureThread;
+use crate::plugins::video::VideoMessage;
 use crate::plugins::video::VideoSink;
 use crate::plugins::video::VideoSinkMarker;
 use crate::plugins::video::VideoSinkMat;
@@ -1122,6 +1124,19 @@ impl VideoUi {
                                                         cmds.entity(peer.0).insert(VideoCaptureMovementEnabled);
                                                     },
                                                 }
+                                            }
+                                        }
+                                        if ui.small_button("Capture").clicked() {
+                                            if let Some(peer) = peer {
+                                                let peer = peer.0;
+                                                let mat = mat.0;
+                                                cmds.add(move |world: &mut World| {
+                                                    if let Some(peer) = world.get_entity(peer) {
+                                                        if let Some(thread) = peer.get::<VideoCaptureThread>() {
+                                                            thread.0.try_send(VideoMessage::SaveFrame(format!("images.png"), mat)).log_error("Request screenshot");
+                                                        }
+                                                    }
+                                                });
                                             }
                                         }
                                         if ui.small_button("Split").clicked() {
