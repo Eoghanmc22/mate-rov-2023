@@ -65,9 +65,9 @@ impl PipelineStage {
                     pid_x: PidController::new(period),
                     pid_y: PidController::new(period),
                     target_x: 0.0,
-                    target_y: 0.5,
-                    color: (130, 180, 130),
-                    color_varance: (90, 30, 40),
+                    target_y: 0.4,
+                    color: (100, 160, 140),
+                    color_varance: (20, 20, 20),
                 };
 
                 Box::new(move |mats| button_tracker.update(mats))
