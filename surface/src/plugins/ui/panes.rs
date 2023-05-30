@@ -102,6 +102,7 @@ pub fn orientation_display_window(id: ExtensionId, ui: Sender<UiMessage>) -> Pan
             egui::Window::new("Orientation")
                 .id(Id::new(id))
                 .open(&mut open)
+                .default_size((512.0, 512.0))
                 .show(ctx, add_contents);
 
             if !open {

@@ -832,7 +832,16 @@ impl UiComponent for InputUi {
         ui.collapsing("Input", |ui| {
             if let Some(ref gamepad) = self.0 {
                 ui.label(format!("Gamepad id: {}", gamepad.0.id));
-                ui.label(format!("Selected servo: {:?}", gamepad.1.servo));
+                ui.horizontal(|ui| {
+                    ui.label("Selected servo: ");
+
+                    let name = match gamepad.1.servo {
+                        MotorId::Camera2 => "Claw".to_owned(),
+                        MotorId::Camera3 => "Camera".to_owned(),
+                        _ => format!("{:?}", gamepad.1.servo),
+                    };
+                    ui.heading(name);
+                });
                 ui.label(format!("Selected map: {:?}", gamepad.1.selected_map));
                 ui.label(format!("Gain: {:.2?}", gamepad.1.gain));
                 ui.label(format!("Hold: {:?}", gamepad.1.hold_axis));
@@ -1301,7 +1310,11 @@ impl UiComponent for OrientationDisplayUi {
 
     fn draw(&mut self, _ctx: &egui::Context, ui: &mut egui::Ui, _commands: &mut Commands) {
         if let Some(ref texture) = self.0 {
-            ui.image(texture.1, (512.0, 512.0));
+            let available = ui.available_size();
+            let size = f32::min(available.x, available.y);
+            ui.centered_and_justified(|ui| {
+                ui.image(texture.1, (size, size));
+            });
         }
     }
 }
