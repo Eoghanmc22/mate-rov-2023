@@ -206,17 +206,18 @@ impl InputState {
 
                     self.movement.z = Percent::new((value * self.gain) as f64);
                 }
-                Action::ToggleLeveling => {
+                Action::ToggleLeveling(vec) => {
                     if value == 0.0 {
                         return;
                     }
 
-                    commands.add(|world: &mut World| {
+                    let vec = *vec;
+                    commands.add(move |world: &mut World| {
                         if let Some(robot) = world.get_resource::<Robot>() {
                             let old_mode = robot.store().get(&tokens::LEVELING_MODE).map(|it| *it);
                             let new_mode = match old_mode {
                                 Some(LevelingMode::Enabled(_)) => LevelingMode::Disabled,
-                                _ => LevelingMode::Enabled(Vec3::Z.into()),
+                                _ => LevelingMode::Enabled(vec.into()),
                             };
                             Updater::from_world(world)
                                 .emit_update(&tokens::LEVELING_MODE, new_mode);
@@ -308,15 +309,15 @@ impl InputState {
 
 fn next_servo(id: MotorId) -> MotorId {
     match id {
-        MotorId::Camera1 => MotorId::Camera2,
-        _ => MotorId::Camera1,
+        MotorId::Camera3 => MotorId::Camera2,
+        _ => MotorId::Camera3,
     }
 }
 
 fn last_servo(id: MotorId) -> MotorId {
     match id {
-        MotorId::Camera1 => MotorId::Camera2,
-        _ => MotorId::Camera1,
+        MotorId::Camera3 => MotorId::Camera2,
+        _ => MotorId::Camera3,
     }
 }
 
@@ -324,7 +325,7 @@ impl Default for InputState {
     fn default() -> Self {
         Self {
             movement: Default::default(),
-            servo: MotorId::Camera1,
+            servo: MotorId::Camera3,
             maps: create_mapping(),
             selected_map: "default",
             gain: 0.5,
@@ -409,7 +410,8 @@ fn create_mapping() -> ControllerMappings {
         (Input::Button(GamepadButtonType::DPadLeft), Action::SelectServoDecrement),
         (Input::Button(GamepadButtonType::Mode), Action::SetControlMapping("pitch and roll")),
         // (Input::Button(GamepadButtonType::South), Action::SetControlMapping("trim")),
-        (Input::Button(GamepadButtonType::East), Action::ToggleLeveling),
+        (Input::Button(GamepadButtonType::North), Action::ToggleLeveling(Vec3::NEG_Z)),
+        (Input::Button(GamepadButtonType::East), Action::ToggleLeveling(Vec3::Z)),
         (Input::Button(GamepadButtonType::West), Action::ToggleDepth),
         (Input::Button(GamepadButtonType::LeftTrigger2), Action::RotateServoInverted),
         (Input::Button(GamepadButtonType::RightTrigger2), Action::RotateServo),
@@ -484,7 +486,7 @@ pub enum Action {
     ResetGain,
 
     ToggleDepth,
-    ToggleLeveling,
+    ToggleLeveling(Vec3),
 
     TrimPitch,
     TrimPitchInverted,
