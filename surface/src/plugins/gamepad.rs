@@ -328,7 +328,7 @@ impl Default for InputState {
             servo: MotorId::Camera3,
             maps: create_mapping(),
             selected_map: "default",
-            gain: 0.5,
+            gain: 1.0,
             hold_axis: false,
             servo_position_normal: 0.0,
             servo_position_inverted: 0.0,
