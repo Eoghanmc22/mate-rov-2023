@@ -24,7 +24,7 @@ const PID_CONFIG: PidConfig = PidConfig {
     kd: 0.0,
     max_integral: 0.0,
 };
-const PID_PITCH_MULTIPLIER: f64 = 0.0;
+const PID_PITCH_MULTIPLIER: f64 = 1.0;
 const PID_ROLL_MULTIPLIER: f64 = 1.0;
 const PERIOD: Duration = Duration::from_millis(20);
 
@@ -158,6 +158,10 @@ impl System for LevelingSystem {
                                     store.insert(
                                         &tokens::MOVEMENT_LEVELING,
                                         Movement {
+                                            z: Percent::new(high_pass(
+                                                pitch_corection * PID_PITCH_MULTIPLIER,
+                                                0.05,
+                                            )),
                                             x_rot: Percent::new(high_pass(
                                                 pitch_corection * PID_PITCH_MULTIPLIER,
                                                 0.05,
