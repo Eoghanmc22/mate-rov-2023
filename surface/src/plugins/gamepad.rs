@@ -9,7 +9,7 @@ use bevy::{
 };
 use common::{
     store::tokens,
-    types::{DepthControlMode, LevelingMode, MotorId, Movement, Percent},
+    types::{DepthControlMode, LevelingMode, Meters, MotorId, Movement, Percent},
 };
 
 use super::robot::{Robot, Updater};
@@ -226,22 +226,24 @@ impl InputState {
                         }
                     })
                 }
-                Action::ToggleDepth => {
+                Action::ToggleDepth(depth) => {
                     if value == 0.0 {
                         return;
                     }
 
-                    commands.add(|world: &mut World| {
+                    let depth = *depth;
+                    commands.add(move |world: &mut World| {
                         if let Some(robot) = world.get_resource::<Robot>() {
-                            if let Some(depth) = robot.store().get(&tokens::RAW_DEPTH).map(|it| *it)
-                            {
+                            if let Some(depth) = depth.or_else(|| {
+                                robot.store().get(&tokens::RAW_DEPTH).map(|it| it.depth)
+                            }) {
                                 let old_mode =
                                     robot.store().get(&tokens::DEPTH_CONTROL_MODE).map(|it| *it);
                                 let new_mode = match old_mode {
                                     Some(DepthControlMode::Enabled(_)) => {
                                         DepthControlMode::Disabled
                                     }
-                                    _ => DepthControlMode::Enabled(depth.depth),
+                                    _ => DepthControlMode::Enabled(depth),
                                 };
                                 Updater::from_world(world)
                                     .emit_update(&tokens::DEPTH_CONTROL_MODE, new_mode);
@@ -412,7 +414,8 @@ fn create_mapping() -> ControllerMappings {
         // (Input::Button(GamepadButtonType::South), Action::SetControlMapping("trim")),
         (Input::Button(GamepadButtonType::North), Action::ToggleLeveling(Vec3::NEG_Z)),
         (Input::Button(GamepadButtonType::East), Action::ToggleLeveling(Vec3::Z)),
-        (Input::Button(GamepadButtonType::West), Action::ToggleDepth),
+        (Input::Button(GamepadButtonType::West), Action::ToggleDepth(None)),
+        (Input::Button(GamepadButtonType::South), Action::ToggleDepth(Some(Meters(-1.0)))),
         (Input::Button(GamepadButtonType::LeftTrigger2), Action::RotateServoInverted),
         (Input::Button(GamepadButtonType::RightTrigger2), Action::RotateServo),
         (Input::Axis(GamepadAxisType::LeftStickX), Action::Yaw),
@@ -485,7 +488,7 @@ pub enum Action {
     DecreaseGain,
     ResetGain,
 
-    ToggleDepth,
+    ToggleDepth(Option<Meters>),
     ToggleLeveling(Vec3),
 
     TrimPitch,
