@@ -164,6 +164,9 @@ impl InputState {
                         ),
                     );
                 }
+                Action::SetServo(pct, servo) => {
+                    self.movement.set_by_id(*servo, *pct);
+                }
                 Action::Pitch => {
                     if self.hold_axis {
                         return;
@@ -418,6 +421,8 @@ fn create_mapping() -> ControllerMappings {
         (Input::Button(GamepadButtonType::East), Action::ToggleLeveling(Vec3::Z)),
         (Input::Button(GamepadButtonType::West), Action::ToggleDepth(None)),
         (Input::Button(GamepadButtonType::South), Action::ToggleDepth(Some(Meters(-1.0)))),
+        (Input::Button(GamepadButtonType::LeftTrigger), Action::SetServo(Percent::new(-1.0), MotorId::Camera2)),
+        (Input::Button(GamepadButtonType::RightTrigger), Action::SetServo(Percent::new(1.0), MotorId::Camera2)),
         (Input::Button(GamepadButtonType::LeftTrigger2), Action::RotateServoInverted),
         (Input::Button(GamepadButtonType::RightTrigger2), Action::RotateServo),
         (Input::Axis(GamepadAxisType::LeftStickX), Action::Yaw),
@@ -485,6 +490,7 @@ pub enum Action {
     SelectServoDecrement,
     RotateServo,
     RotateServoInverted,
+    SetServo(Percent, MotorId),
 
     IncreaseGain,
     DecreaseGain,
