@@ -58,7 +58,7 @@ impl PipelineStage {
 
                 let mut button_tracker = TrackButton {
                     pid_config: PidConfig {
-                        kp: 0.003,
+                        kp: 0.0025,
                         ki: 0.0,
                         kd: 0.0,
                         max_integral: 0.0,
