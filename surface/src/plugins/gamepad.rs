@@ -316,14 +316,14 @@ impl InputState {
 
 fn next_servo(id: MotorId) -> MotorId {
     match id {
-        MotorId::Camera3 => MotorId::Camera2,
+        MotorId::Camera3 => MotorId::Camera1,
         _ => MotorId::Camera3,
     }
 }
 
 fn last_servo(id: MotorId) -> MotorId {
     match id {
-        MotorId::Camera3 => MotorId::Camera2,
+        MotorId::Camera3 => MotorId::Camera1,
         _ => MotorId::Camera3,
     }
 }
