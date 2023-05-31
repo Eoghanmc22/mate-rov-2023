@@ -259,6 +259,8 @@ impl InputState {
                     })
                 }
             }
+        } else {
+            warn!("No action bound to {input:?}");
         }
     }
 }
@@ -404,8 +406,8 @@ fn create_mapping() -> ControllerMappings {
     let default_mapping: ControllerMapping = [
         (Input::Button(GamepadButtonType::Select), Action::Disarm),
         (Input::Button(GamepadButtonType::Start), Action::Arm),
-        (Input::Button(GamepadButtonType::LeftThumb), Action::ResetGain),
-        (Input::Button(GamepadButtonType::RightThumb), Action::HoldAxis),
+        // (Input::Button(GamepadButtonType::LeftThumb), Action::ResetGain),
+        // (Input::Button(GamepadButtonType::RightThumb), Action::HoldAxis),
         (Input::Button(GamepadButtonType::DPadUp), Action::IncreaseGain),
         (Input::Button(GamepadButtonType::DPadDown), Action::DecreaseGain),
         (Input::Button(GamepadButtonType::DPadRight), Action::SelectServoIncrement),
