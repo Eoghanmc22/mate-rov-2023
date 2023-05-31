@@ -18,7 +18,7 @@ use crate::{event::Event, events::EventHandle, systems::stop, SystemId};
 use super::System;
 
 const PID_CONFIG: PidConfig = PidConfig {
-    kp: 0.4,
+    kp: 0.7,
     ki: 0.0,
     kd: 0.0,
     max_integral: 2.0,
@@ -124,7 +124,7 @@ impl System for DepthControlSystem {
                                     let depth_pid_result =
                                         depth_controller.update(depth_error, config);
 
-                                    let max_correction = 0.60;
+                                    let max_correction = 1.0;
                                     let depth_corection = depth_pid_result
                                         .correction()
                                         .clamp(-max_correction, max_correction);
