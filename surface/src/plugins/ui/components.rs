@@ -30,6 +30,7 @@ use common::{
 };
 use egui::ComboBox;
 use egui::Direction;
+use egui::RichText;
 use egui::Slider;
 use egui::{vec2, Align, Layout};
 use egui::{Color32, Frame};
@@ -248,14 +249,20 @@ impl UiComponent for StatusBar {
                     RobotStatus::Disarmed => Color32::RED,
                     RobotStatus::NoPeer => Color32::LIGHT_BLUE,
                 };
-                ui.colored_label(color, format!("Status: {status:?}"));
+                ui.colored_label(
+                    color,
+                    RichText::new(format!("Status: {status:?}")).heading(),
+                );
             } else {
                 ui.label("No status data");
             }
 
             if let Some(ref leak) = self.leak {
                 let color = if **leak { Color32::RED } else { Color32::GREEN };
-                ui.colored_label(color, format!("Leak detected: {leak:?}"));
+                ui.colored_label(
+                    color,
+                    RichText::new(format!("Leak detected: {leak:?}")).heading(),
+                );
             } else {
                 ui.label("No leak data");
             }
@@ -266,7 +273,10 @@ impl UiComponent for StatusBar {
                 } else {
                     Color32::BLUE
                 };
-                ui.colored_label(color, format!("Leveling: {leveling:?}"));
+                ui.colored_label(
+                    color,
+                    RichText::new(format!("Leveling: {leveling:?}")).heading(),
+                );
             } else {
                 ui.label("No leveling data");
             }
@@ -277,13 +287,19 @@ impl UiComponent for StatusBar {
                 } else {
                     Color32::BLUE
                 };
-                ui.colored_label(color, format!("Depth control: {depth_control:?}"));
+                ui.colored_label(
+                    color,
+                    RichText::new(format!("Depth control: {depth_control:?}")).heading(),
+                );
             } else {
                 ui.label("No depth control data");
             }
 
             if let Some(_) = self.movement_override {
-                ui.colored_label(Color32::RED, format!("Movement Override is SET"));
+                ui.colored_label(
+                    Color32::RED,
+                    RichText::new(format!("Movement Override is SET")).heading(),
+                );
             } else {
                 ui.label("No movement override");
             }
