@@ -186,7 +186,7 @@ impl InputState {
                         return;
                     }
 
-                    self.movement.z_rot = Percent::new((value * self.gain) as f64);
+                    self.movement.z_rot = Percent::new((value * self.gain * 0.5) as f64);
                 }
                 Action::Forward => {
                     if self.hold_axis {
