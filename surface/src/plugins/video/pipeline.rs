@@ -1,7 +1,10 @@
 use std::{cell::RefCell, time::Duration};
 
 use anyhow::{bail, Context};
-use common::types::{Movement, Percent, PidConfig, PidController};
+use common::{
+    error::LogErrorExt,
+    types::{Movement, Percent, PidConfig, PidController},
+};
 use egui::epaint::ahash::HashMap;
 use opencv::{
     core::{self as cvcore, Scalar, VecN},
@@ -67,11 +70,19 @@ impl PipelineStage {
                     pid_y: PidController::new(period),
                     target_x: 0.0,
                     target_y: 0.4,
-                    color: (100, 160, 140),
-                    color_varance: (20, 20, 20),
+                    color: (110, 170, 145),
+                    color_varance: (40, 30, 30),
                 };
 
-                Box::new(move |mats| button_tracker.update(mats))
+                Box::new(move |mats| {
+                    let rst = button_tracker.update(mats);
+                    rst.log_error("Button tracker could not process frame");
+
+                    Ok(rst.unwrap_or(Movement {
+                        y: Percent::new(0.2),
+                        ..Default::default()
+                    }))
+                })
             }
             PipelineStage::FlyTransect => {
                 let period = Duration::from_secs_f64(1.0 / 30.0);
